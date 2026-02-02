@@ -1,352 +1,329 @@
 # JanSathi (जनसाथी)
 
-## Voice-First AI Civic Assistant for India
+## A Multilingual, Voice-First AI Civic Assistant for India
 
 ---
 
-## 1. Project Overview
+## 1. The Core Problem — Why JanSathi Is Needed
 
-**JanSathi** is a **voice-first, AI-powered civic assistant** designed to help Indian citizens—especially rural and semi-urban users—access government schemes, certificates, and public services **in simple language** using **voice or text**.
+In India, **public information exists, but access does not**.
 
-The core philosophy is:
+Government schemes, healthcare guidelines, scholarships, market prices, and advisories are:
 
-> *Meet citizens where they are — voice first, low bandwidth, minimal UI, high reliability.*
+* Written mainly in **English or Hindi**
+* Spread across **complex, fragmented portals**
+* Difficult to navigate even for digitally literate users
 
-JanSathi is built to work even in:
+### Ground Reality
 
-* Low-bandwidth environments
-* Intermittent connectivity
-* Users unfamiliar with complex apps
+* Only **~11% of Indians speak English**
+* Large sections of the population face:
 
-It supports:
+  * Low literacy
+  * Low bandwidth
+  * Low digital skills
 
-* 🎙️ Voice queries
-* ⌨️ Text queries
-* 🌐 Web + Mobile
-* 📴 Offline fallback (cached FAQs)
+As a result:
 
----
+* Farmers travel to offices just to ask market prices
+* Health workers struggle to find updated guidelines
+* Students miss scholarships due to lack of awareness
 
-## 2. Problem Statement
+This creates a **language + literacy + connectivity gap**, disproportionately affecting:
 
-Many Indian government services are:
-
-* Fragmented across portals
-* Hard to understand due to complex language
-* Inaccessible to users without digital literacy
-
-Citizens often struggle with:
-
-* How to apply for certificates (income, caste, residence)
-* Understanding eligibility for schemes
-* Knowing required documents and steps
-
-**JanSathi solves this by acting as a conversational layer** over government knowledge.
+* Farmers
+* Community health workers
+* Rural students
+* Marginalized communities
 
 ---
 
-## 3. High-Level Solution
+## 2. The Solution — One Line
 
-JanSathi provides:
+**JanSathi is a multilingual, voice-first AI assistant that lets people ask civic questions in their own language and receive simple, reliable answers — even with low internet or basic devices.**
 
-1. **Voice/Text Interface** for user queries
-2. **Backend AI pipeline** to:
-
-   * Transcribe speech
-   * Retrieve relevant context
-   * Generate clear, human-friendly answers
-3. **Graceful fallback** when AI services are unavailable
+> *Think of JanSathi as a digital government helper that speaks your language and works where the internet doesn’t.*
 
 ---
 
-## 4. Tech Stack
+## 3. What JanSathi Actually Does (Plain Explanation)
 
-### Frontend
+Users can ask questions such as:
 
-* **Flutter** (Web + Android)
-* `record` – microphone streaming
-* `connectivity_plus` – offline detection
-* `permission_handler` – mic permissions
+* “Am I eligible for PM-Kisan?”
+* “What is today’s wheat price in my mandi?”
+* “Which scholarships can I apply for after 12th?”
+* “What maternal health schemes apply in my village?”
 
-### Backend
+They can ask via:
 
-* **Python (Flask)**
-* Modular service architecture
-* AWS-ready (but not hard-dependent)
+* 🎙️ Voice or ⌨️ text
+* Multiple Indian languages (Hindi, Tamil, Telugu, Bengali, etc.)
+* Mobile app, WhatsApp, SMS, or even a phone call (IVR)
 
-### AI / Cloud (Optional / Future)
+JanSathi:
 
-* AWS Transcribe (Speech-to-Text)
-* AWS Bedrock (LLM generation)
-* AWS Polly (Text-to-Speech – optional)
-
-> ⚠️ The system is intentionally designed to **work without AWS credentials** for hackathon demos.
-
----
-
-## 5. Repository Structure
-
-```
-JanSathi/
-├── backend/
-│   ├── server.py                # Flask API
-│   ├── lambda_handler.py        # Lambda compatibility
-│   ├── requirements.txt
-│   ├── utils.py                 # Logging, helpers
-│   └── services/
-│       ├── transcribe_service.py
-│       ├── bedrock_service.py
-│       ├── rag_service.py
-│       └── polly_service.py     # (Optional)
-│
-├── frontend/
-│   ├── lib/
-│   │   ├── screens/
-│   │   │   └── home_screen.dart
-│   │   ├── services/
-│   │   │   ├── api_service.dart
-│   │   │   └── offline_service.dart
-│   │   └── main.dart
-│   └── pubspec.yaml
-│
-├── docs/
-│   ├── architecture.md
-│   ├── failure_mode_analysis.md
-│   └── pitch_narration.md
-│
-└── README.md
-```
+1. Understands the **local language**
+2. Identifies **user intent**
+3. Retrieves **relevant public data**
+4. Responds **clearly and briefly in the same language**
+5. Can **speak the answer aloud** if needed
 
 ---
 
-## 6. Backend Architecture
+## 4. Real Users — Why This Is Practical
 
-### API Endpoints
+### 👨‍🌾 Ramesh — Farmer (Hindi)
 
-| Endpoint  | Method | Purpose                             |
-| --------- | ------ | ----------------------------------- |
-| `/health` | GET    | Backend health check                |
-| `/query`  | POST   | Main query endpoint (text or audio) |
+* Uses a basic Android phone
+* Not tech-savvy, not English-speaking
+* Asks:
 
-### `/query` Input Formats
+  > “इस महीने गेहूँ का भाव क्या है?”
+* Gets a **spoken answer in Hindi**
 
-**Text (JSON):**
+### 👩‍⚕️ Priya — Community Health Worker (Telugu)
 
-```json
-{ "text_query": "How to apply for income certificate" }
-```
+* Needs maternal health & COVID guidelines
+* Uses voice queries
+* Gets **step-by-step instructions in Telugu**
+* App works with **intermittent internet**
 
-**Audio (multipart/form-data):**
+### 🎓 Amit — Student (Bengali)
 
-```
-audio_file: <wav/pcm bytes>
-```
-
-### `/query` Output Format
-
-```json
-{
-  "query": "...",
-  "answer": "Human-readable response",
-  "context": []
-}
-```
+* Uses WhatsApp
+* Asks about scholarships & exams
+* Gets guidance in Bengali **without browsing multiple sites**
 
 ---
 
-## 7. Backend Internal Flow
+## 5. How JanSathi Works (Judge-Friendly Overview)
+
+High-level workflow:
+
+1. User asks a question (voice or text)
+2. System detects language
+3. AI understands intent
+4. Relevant government data is retrieved
+5. AI generates a short, accurate answer
+6. Answer is returned as:
+
+   * Text
+   * Voice
+   * SMS / IVR (for low bandwidth)
+
+This uses **Retrieval-Augmented Generation (RAG)**, ensuring answers are **grounded in real data**, not hallucinations.
+
+---
+
+## 6. Key Differentiators
+
+* ✅ Multilingual **by design** (not English-first)
+* ✅ Voice-first UX
+* ✅ Offline & low-bandwidth support
+* ✅ Works on WhatsApp, SMS, IVR
+* ✅ Proactive alerts (schemes, weather, health camps)
+* ✅ Built for Indian realities, not urban assumptions
+
+> JanSathi is not just a chatbot — it is a **civic assistant**.
+
+---
+
+## 7. Complete Technology Stack
+
+### 7.1 Frontend — User Interaction Layer
+
+#### 📱 Mobile & Web App
+
+* **Flutter** (Android, iOS, Web)
+
+**Why Flutter?**
+
+* Single codebase
+* Lightweight UI (low-end phones)
+* Excellent voice & offline support
+* Faster hackathon development
+
+Used for:
+
+* Voice recording
+* Text chat
+* Offline cached FAQs
+
+#### 💬 Messaging Interface
+
+* **WhatsApp Cloud API**
+
+Why WhatsApp?
+
+* Already used by rural users
+* No new app install
+* Low bandwidth friendly
+* High demo impact
+
+#### ☎️ IVR / Phone Call (Optional)
+
+* **Amazon Connect**
+* Enables toll-free voice access
+
+---
+
+### 7.2 Backend — Fast & Serverless
+
+* **AWS API Gateway + AWS Lambda**
+
+Responsibilities:
+
+* Receive queries
+* Route to AI services
+* Return responses
+* Log usage
+
+---
+
+### 7.3 AI & Language Intelligence
+
+#### 🧠 Large Language Model
+
+* **Amazon Bedrock (Claude / Llama-3)**
+
+Used for:
+
+* Intent understanding
+* Multilingual responses
+* Multi-turn conversations
+
+#### 📚 Retrieval (Accuracy Layer)
+
+* **Amazon Kendra**
+* Alternative: OpenSearch + embeddings
+
+Ensures:
+
+* No hallucination
+* Answers grounded in official documents
+
+---
+
+### 7.4 Voice & Language Processing
+
+* **AWS Transcribe** — Speech → Text
+* **AWS Polly** — Text → Speech
+* **Amazon Translate / Bedrock** — Language handling
+
+---
+
+### 7.5 Data Storage
+
+* **Amazon DynamoDB** — user profiles, preferences
+* **Amazon S3** — scheme PDFs, FAQs, documents
+
+---
+
+### 7.6 Offline & Low-Bandwidth Support
+
+* On-device cached top civic FAQs
+* Rule-based offline fallback
+* Syncs when connectivity returns
+
+---
+
+## 8. System Architecture Diagram
 
 ```mermaid
 flowchart TD
-    A[Client Request] --> B[Flask /query]
-    B --> C{Audio or Text?}
-    C -->|Audio| D[TranscribeService]
-    C -->|Text| E[Normalize Query]
-    D --> E
-    E --> F[RagService]
-    F --> G[BedrockService]
-    G --> H[Response JSON]
-```
-
-### Design Principles
-
-* No infinite loops
-* All temp files cleaned via `finally`
-* Bounded polling for AWS calls
-* Graceful mock fallback when AWS unavailable
-
----
-
-## 8. Frontend Architecture
-
-### Key Screens
-
-* **HomeScreen** (single-screen UX)
-
-### Frontend Responsibilities
-
-* Handle mic permissions
-* Record audio using streaming (Web-safe)
-* Send queries to backend
-* Display responses
-* Handle offline fallback
-
----
-
-## 9. Frontend → Backend Interaction
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant FlutterApp
-    participant FlaskAPI
-
-    User->>FlutterApp: Speak / Type Query
-    FlutterApp->>FlaskAPI: POST /query
-    FlaskAPI-->>FlutterApp: JSON Response
-    FlutterApp-->>User: Display Answer
+    User -->|Voice/Text| Frontend
+    Frontend --> API[API Gateway / Lambda]
+    API --> STT[AWS Transcribe]
+    API --> RAG[Amazon Kendra]
+    RAG --> LLM[Amazon Bedrock]
+    LLM --> API
+    API -->|Text/Voice| Frontend
 ```
 
 ---
 
-## 10. User Flow
+## 9. User Flow Diagram
 
 ```mermaid
 flowchart LR
     U[User] --> Q{Voice or Text?}
-    Q -->|Voice| V[Mic Input]
-    Q -->|Text| T[Text Input]
-    V --> S[Send Audio Bytes]
-    T --> S
-    S --> A[AI Response]
-    A --> D[Display Answer]
+    Q -->|Voice| V[Record Audio]
+    Q -->|Text| T[Type Query]
+    V --> B[Backend]
+    T --> B
+    B --> A[AI Answer]
+    A --> R[Response to User]
 ```
 
 ---
 
-## 11. Offline Mode
+## 10. Current Project Status (So Far)
 
-When internet is unavailable:
+### ✅ Completed
 
-* App checks connectivity
-* Searches cached FAQ keywords
-* Returns best matching local answer
+**Backend**
 
-This ensures:
+* Stable API
+* No infinite loops
+* Safe temp-file handling
+* AWS-optional fallback logic
 
-* No blank screen
-* No crashes
-* Honest UX messaging
+**Frontend**
 
----
+* Flutter Web + Android compatible
+* Web-safe audio recording
+* Offline fallback
+* Backend contract aligned
 
-## 12. Current Project Status (✅ COMPLETED)
+**Documentation**
 
-### Backend
-
-* ✅ Stable Flask server
-* ✅ No resource leaks
-* ✅ No infinite loops
-* ✅ AWS-optional design
-* ✅ Production-safe error handling
-
-### Frontend
-
-* ✅ Flutter Web compatible
-* ✅ Mobile compatible
-* ✅ No `dart:io`
-* ✅ Web-safe audio recording
-* ✅ Backend contract aligned
-* ✅ No runtime crashes
-
-### DevOps / Git
-
-* ✅ Branch-based workflow
-* ✅ Clean commit history
+* Architecture
+* Failure mode analysis
+* Complete README
 
 ---
 
-## 13. Known Non-Blocking Risks
+## 11. What Is Pending
 
-### PCM vs WAV Header
-
-* Frontend records PCM16 stream
-* AWS Transcribe expects WAV headers
-
-Impact:
-
-* Transcription may fail when AWS enabled
-* App **will not crash**
-
-Fix (Future):
-
-* Wrap PCM with WAV header on frontend
-* OR accept PCM on backend
+* 🔲 Add real AWS credentials
+* 🔲 Enable real AWS Transcribe & Bedrock
+* 🔲 Integrate Amazon Kendra with real documents
+* 🔲 Add WhatsApp & IVR integration
+* 🔲 Improve multilingual coverage
+* 🔲 Production deployment
 
 ---
 
-## 14. What Is Pending (Future Work)
+## 12. Important Note on AWS Credentials
 
-### AI Enhancements
+⚠️ **This project is designed to run on AWS**, but:
 
-* 🔲 Enable real AWS credentials
-* 🔲 Improve RAG knowledge base
-* 🔲 Add multilingual support
+* AWS credentials have **NOT been added yet**
+* Current system uses **safe mock / fallback logic**
+* This allows:
 
-### UX Enhancements
+  * Hackathon demos
+  * Local testing
+  * No accidental cloud costs
 
-* 🔲 Text-to-Speech playback
-* 🔲 Conversation history
-* 🔲 Scheme deep-linking
-
-### Production Readiness
-
-* 🔲 Authentication (if needed)
-* 🔲 Rate limiting
-* 🔲 Deployment (EC2 / Lambda)
+Once AWS credentials are added, the system will seamlessly switch to real AI services.
 
 ---
 
-## 15. How to Run Locally
+## 13. Vision
 
-### Backend
+JanSathi aims to become:
 
-```bash
-cd backend
-pip install -r requirements.txt
-python server.py
-```
+* A national-scale civic AI
+* Accessible across languages & devices
+* A trusted interface between citizens and the government
 
-### Frontend
-
-```bash
-cd frontend
-flutter pub get
-flutter run -d chrome
-```
+**Goal:** Make governance understandable, inclusive, and human.
 
 ---
 
-## 16. Project Vision
+## 14. Authors
 
-JanSathi is not just a hackathon demo.
-It is designed as a **foundational civic AI layer** that can:
-
-* Scale across states
-* Support multiple dialects
-* Integrate with official data sources
-
-**Goal:** Make government services understandable, accessible, and human.
-
----
-
-## 17. Authors & Contributors
-
-* Poornachandran (Primary Developer)
+* **Poornachandran** — Primary Developer
 * Team JanSathi
-
----
-
-## 18. License
-
-To be decided (Hackathon / Open Source).

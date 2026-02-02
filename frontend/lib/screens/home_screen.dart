@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import 'dart:async';
+
 import '../services/api_service.dart';
+import '../services/offline_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,14 +16,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late AudioRecorder _audioRecorder;
-  final AudioPlayer _audioPlayer = AudioPlayer();
   final ApiService _apiService = ApiService();
-  
+  final OfflineService _offlineService = OfflineService();
+  final TextEditingController _textController = TextEditingController();
+
   bool _isRecording = false;
   bool _isLoading = false;
-  String _statusText = "Tap to Speak";
+  String _statusText = "Tap Mic to Speak or Type Query";
   String _responseText = "";
-  String? _recordedPath;
+
+  // Stream state for Web compatibility
+  StreamSubscription<List<int>>? _micStream;
+  List<int> _audioBytes = [];
 
   @override
   void initState() {
@@ -33,118 +38,206 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _audioRecorder.dispose();
-    _audioPlayer.dispose();
+    _micStream?.cancel();
+    _textController.dispose();
     super.dispose();
   }
 
+  // ---------------- Voice Logic ----------------
   Future<void> _startRecording() async {
     try {
+      final status = await Permission.microphone.request();
+      if (!status.isGranted) {
+        setState(() => _statusText = "Microphone permission denied");
+        return;
+      }
+
       if (await _audioRecorder.hasPermission()) {
-        final directory = await getTemporaryDirectory();
-        final path = '${directory.path}/my_audio.wav';
-        
-        await _audioRecorder.start(const RecordConfig(), path: path);
-        
+        _audioBytes = [];
+
+        final stream = await _audioRecorder.startStream(
+          const RecordConfig(encoder: AudioEncoder.pcm16bits),
+        );
+
+        _micStream = stream.listen((data) {
+          _audioBytes.addAll(data);
+        });
+
         setState(() {
           _isRecording = true;
           _statusText = "Listening...";
           _responseText = "";
         });
-        _recordedPath = path;
       }
     } catch (e) {
-      print(e);
+      _handleError(e);
     }
   }
 
   Future<void> _stopRecording() async {
     try {
-      final path = await _audioRecorder.stop();
+      await _audioRecorder.stop();
+      await _micStream?.cancel();
+
       setState(() {
         _isRecording = false;
         _isLoading = true;
-        _statusText = "Processing...";
+        _statusText = "Processing Audio...";
       });
 
-      if (path != null) {
-        final response = await _apiService.sendVoiceQuery(path);
-        
+      if (_audioBytes.isEmpty) {
         setState(() {
-          _responseText = response['answer'] ?? "No answer received.";
-          _statusText = "Tap to Speak";
           _isLoading = false;
+          _statusText = "No audio recorded";
         });
-
-        // Play audio if backend sends URL (not implemented in backend yet, but prepared)
-        // await _audioPlayer.play(UrlSource(response['audio_url']));
+        return;
       }
+
+      final response = await _apiService.sendVoiceQuery(_audioBytes);
+      _handleResponse(response);
     } catch (e) {
-      setState(() {
-        _responseText = "Error: ${e.toString()}";
-        _isLoading = false;
-        _statusText = "Tap to retry";
-      });
+      _handleError(e);
     }
   }
 
+  // ---------------- Text Logic ----------------
+  Future<void> _sendText() async {
+    if (_textController.text.trim().isEmpty) return;
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isLoading = true;
+      _responseText = "";
+      _statusText = "Processing Text...";
+    });
+
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity == ConnectivityResult.none) {
+      final offlineAnswer = _offlineService.search(_textController.text);
+      setState(() {
+        _responseText = offlineAnswer ??
+            "You are offline. Try asking about ration, health, or kisan schemes.";
+        _statusText = "Offline Mode";
+        _isLoading = false;
+      });
+      _textController.clear();
+      return;
+    }
+
+    try {
+      final response = await _apiService.sendTextQuery(_textController.text);
+      _handleResponse(response);
+      _textController.clear();
+    } catch (e) {
+      _handleError(e);
+    }
+  }
+
+  // ---------------- Common Handlers ----------------
+  void _handleResponse(Map<String, dynamic> response) {
+    setState(() {
+      _responseText = response['answer'] ?? "No answer received.";
+      _statusText = "Query Complete";
+      _isLoading = false;
+    });
+  }
+
+  void _handleError(Object e) {
+    setState(() {
+      _responseText = "Error: ${e.toString()}";
+      _statusText = "Tap to retry";
+      _isLoading = false;
+    });
+  }
+
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('JanSathi'),
+        title: const Text('JanSathi (Digital Assistant)'),
         backgroundColor: Colors.orange,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              if (_responseText.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange.shade200)
-                  ),
-                  child: Text(
-                    _responseText,
-                    style: const TextStyle(fontSize: 18),
-                    textAlign: TextAlign.center,
-                  ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_responseText.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade200),
                 ),
-              const SizedBox(height: 40),
-              GestureDetector(
-                onTap: _isLoading ? null : (_isRecording ? _stopRecording : _startRecording),
+                child: Text(
+                  _responseText,
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+              ),
+            const SizedBox(height: 20),
+            Center(
+              child: Text(
+                _statusText,
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 30),
+            Center(
+              child: GestureDetector(
+                onTap: _isLoading
+                    ? null
+                    : (_isRecording ? _stopRecording : _startRecording),
                 child: Container(
-                  width: 120,
-                  height: 120,
+                  width: 100,
+                  height: 100,
                   decoration: BoxDecoration(
-                    color: _isLoading ? Colors.grey : (_isRecording ? Colors.red : Colors.blue),
+                    color: _isLoading
+                        ? Colors.grey
+                        : (_isRecording ? Colors.red : Colors.blue),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      )
-                    ],
                   ),
                   child: Icon(
-                    _isLoading ? Icons.hourglass_bottom : (_isRecording ? Icons.stop : Icons.mic),
+                    _isLoading
+                        ? Icons.hourglass_bottom
+                        : (_isRecording ? Icons.stop : Icons.mic),
                     color: Colors.white,
-                    size: 50,
+                    size: 40,
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(
-                _statusText,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 40),
+            const Divider(),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    enabled: !_isLoading,
+                    decoration: InputDecoration(
+                      hintText: "Type your query here...",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  icon: const Icon(Icons.send, size: 30),
+                  onPressed: _isLoading ? null : _sendText,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

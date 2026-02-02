@@ -16,6 +16,7 @@ dependencies:
   path_provider: ^2.1.1 # File storage
   permission_handler: ^11.0.1 # Permissions
   http_parser: ^4.0.2
+  connectivity_plus: ^5.0.2 # Network Detection
 
 dev_dependencies:
   flutter_test:

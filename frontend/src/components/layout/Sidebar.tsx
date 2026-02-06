@@ -1,78 +1,151 @@
-import React from 'react';
-import { MessageSquarePlus, LayoutDashboard, FileText, Settings, User } from 'lucide-react';
+'use client';
 
-interface SidebarProps {
+import React, { useState, useEffect } from 'react';
+import {
+    LayoutDashboard,
+    FileText,
+    User,
+    Settings,
+    PlusCircle,
+    LogOut,
+    MessageCircle,
+    ChevronRight,
+    Home
+} from 'lucide-react';
+import Link from 'next/link';
+
+type SidebarProps = {
     activePage: string;
     onPageChange: (page: string) => void;
     onNewChat?: () => void;
-}
+};
 
-const Sidebar = ({ activePage, onPageChange, onNewChat }: SidebarProps) => {
+type ChatSession = {
+    id: string;
+    title: string;
+    timestamp: string;
+};
+
+export default function Sidebar({ activePage, onPageChange, onNewChat }: SidebarProps) {
+    const [sessions, setSessions] = useState<ChatSession[]>([]);
+
+    const loadSessions = () => {
+        try {
+            const stored = localStorage.getItem('jansathi_chat_sessions');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                const sorted = Object.values(parsed).sort((a: any, b: any) =>
+                    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                ) as ChatSession[];
+                setSessions(sorted);
+            }
+        } catch (e) {
+            console.error("Failed to load sessions", e);
+        }
+    };
+
+    useEffect(() => {
+        loadSessions();
+        const handleUpdate = () => loadSessions();
+        window.addEventListener('chat-storage-update', handleUpdate);
+        return () => window.removeEventListener('chat-storage-update', handleUpdate);
+    }, []);
+
     const navItems = [
-        { id: 'dashboard', icon: LayoutDashboard, label: "Dashboard" },
-        { id: 'documents', icon: FileText, label: "Documents" },
-        { id: 'profile', icon: User, label: "Profile" },
-        { id: 'settings', icon: Settings, label: "Settings" },
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'documents', label: 'Documents', icon: FileText },
+        { id: 'profile', label: 'Profile', icon: User },
+        { id: 'settings', label: 'Settings', icon: Settings },
     ];
 
     return (
-        <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-slate-900/95 lg:bg-transparent backdrop-blur-2xl lg:backdrop-blur-none border-r border-white/10 relative z-20 transition-all duration-300">
+        <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-slate-900/95 lg:bg-transparent backdrop-blur-2xl lg:backdrop-blur-none border-r border-white/10 relative z-20">
 
-            {/* Logo Area */}
-            <div className="flex items-center gap-3 mb-10 pl-2">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <span className="text-white font-bold text-xl">JS</span>
+            <div className="space-y-8 overflow-y-auto scrollbar-none">
+                {/* Brand */}
+                <div className="px-2 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <span className="font-black text-xs">JS</span>
+                    </div>
+                    <div>
+                        <h1 className="font-black text-xl tracking-tighter text-white">JanSathi</h1>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Enterprise AI</p>
+                    </div>
                 </div>
-                <div className="hidden lg:block">
-                    <h1 className="font-bold text-lg text-slate-800 dark:text-white leading-tight">JanSathi</h1>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Enterprise AI</p>
-                </div>
-            </div>
 
-            {/* Navigation */}
-            <div className="flex-1 flex flex-col gap-2">
+                {/* New Chat Button */}
                 <button
-                    onClick={() => {
-                        onPageChange('dashboard');
-                        if (onNewChat) onNewChat();
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700 hover:shadow-blue-500/40 transition-all group mb-6"
+                    onClick={onNewChat}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95 group"
                 >
-                    <MessageSquarePlus className="w-5 h-5" />
-                    <span className="hidden lg:block font-medium">New Chat</span>
+                    <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                    <span>New Consultation</span>
                 </button>
 
+                {/* Main Nav */}
                 <nav className="space-y-1">
+                    <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Platform</p>
                     {navItems.map((item) => (
                         <button
                             key={item.id}
                             onClick={() => onPageChange(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activePage === item.id
-                                ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-sm'
-                                : 'text-slate-500 dark:text-slate-400 hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'
-                                }`}
+                            className={`
+                                w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group
+                                ${activePage === item.id
+                                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                    : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'}
+                            `}
                         >
-                            <item.icon className={`w-5 h-5 ${activePage === item.id ? 'text-blue-600 dark:text-blue-400' : ''}`} />
-                            <span className="hidden lg:block font-medium text-sm">{item.label}</span>
+                            <item.icon className={`w-5 h-5 ${activePage === item.id ? 'text-blue-400' : 'group-hover:text-white'}`} />
+                            <span className="font-bold text-sm">{item.label}</span>
+                            {activePage === item.id && <ChevronRight className="w-4 h-4 ml-auto opacity-50" />}
                         </button>
                     ))}
-                </nav>
-            </div>
 
-            {/* User Profile (Mini) */}
-            <div className="mt-auto pt-6 border-t border-white/10">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-xs text-white font-bold shadow-sm">
-                        DU
-                    </div>
-                    <div className="hidden lg:block overflow-hidden">
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">Demo User</p>
-                        <p className="text-[10px] text-slate-400 truncate">demo@jansathi.ai</p>
+                    <Link
+                        href="/"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-white/5 hover:text-white"
+                    >
+                        <Home className="w-5 h-5" />
+                        <span className="font-bold text-sm">Landing Page</span>
+                    </Link>
+                </nav>
+
+                {/* Recent Consultations (Poornachandran's Addition) */}
+                <div className="space-y-1">
+                    <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Recent Conversations</p>
+                    <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-none px-1">
+                        {sessions.length === 0 ? (
+                            <div className="px-4 py-3 rounded-xl bg-white/5 border border-dashed border-white/10 text-center">
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">No history yet</p>
+                            </div>
+                        ) : (
+                            sessions.map((session) => (
+                                <button
+                                    key={session.id}
+                                    onClick={() => {
+                                        // Logic to switch to dashboard and load this session
+                                        onPageChange('dashboard');
+                                        window.dispatchEvent(new CustomEvent('load-chat-session', { detail: session.id }));
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all text-left group"
+                                >
+                                    <MessageCircle className="w-4 h-4 flex-shrink-0 opacity-40 group-hover:opacity-100" />
+                                    <span className="truncate text-xs font-medium">{session.title}</span>
+                                </button>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Footer */}
+            <div className="pt-6 border-t border-white/5">
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-400 transition-colors group">
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-bold text-sm">Sign Out</span>
+                </button>
+            </div>
         </div>
     );
-};
-
-export default Sidebar;
+}

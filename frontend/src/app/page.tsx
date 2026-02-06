@@ -1,101 +1,165 @@
 'use client';
 
-import React, { useState } from 'react';
-import Sidebar from "@/components/layout/Sidebar";
-import TelemetryPanel from "@/components/layout/TelemetryPanel";
-import ChatInterface from "@/components/features/chat/ChatInterface";
-import DocumentsPage from "@/components/features/dashboard/DocumentsPage";
-import ProfilePage from "@/components/features/dashboard/ProfilePage";
-import SettingsPage from "@/components/features/dashboard/SettingsPage";
+import React from 'react';
+import { ArrowRight, Mic, ShieldCheck, Languages, MessageSquare, Globe, Cpu, Bot, Zap } from "lucide-react";
+import Link from 'next/link';
 import BackendStatus from "@/components/BackendStatus";
-import { Menu, X } from 'lucide-react';
 
-export default function Home() {
-  const [activePage, setActivePage] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const renderContent = () => {
-    switch (activePage) {
-      case 'dashboard':
-        return <ChatInterface />;
-      case 'documents':
-        return <DocumentsPage />;
-      case 'profile':
-        return <ProfilePage />;
-      case 'settings':
-        return <SettingsPage />;
-      default:
-        return <ChatInterface />;
-    }
-  };
-
+export default function LandingPage() {
   return (
-    <main className="h-screen w-full flex bg-slate-950 aurora-bg text-white overflow-hidden relative selection:bg-blue-500/30">
+    <main className="min-h-screen bg-slate-950 text-white overflow-x-hidden selection:bg-blue-500/30 font-sans">
 
-      {/* Decorative Gradient Orbs */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute top-0 left-0 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-purple-600/10 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
+      </div>
 
-      {/* 1. Sidebar Navigation - Responsive Wrapper */}
-      <div className={`
-        fixed inset-0 z-50 lg:relative lg:inset-auto lg:flex
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        transition-transform duration-300 ease-in-out
-      `}>
-        <div className="absolute inset-0 bg-black/50 lg:hidden" onClick={() => setIsSidebarOpen(false)}></div>
-        <div className="relative h-full w-64 lg:w-72 xl:w-80">
-          <Sidebar
-            activePage={activePage}
-            onPageChange={(p) => {
-              setActivePage(p);
-              setIsSidebarOpen(false);
-            }}
-            onNewChat={() => {
-              sessionStorage.removeItem('jansathi_chat');
-              if (activePage === 'dashboard') {
-                window.location.reload();
-              }
-            }}
+      {/* Navbar */}
+      <nav className="relative z-50 flex items-center justify-between px-6 py-6 md:px-12 max-w-7xl mx-auto backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <span className="font-black text-xl">JS</span>
+          </div>
+          <span className="text-2xl font-black tracking-tighter">JanSathi</span>
+        </div>
+        <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-400">
+          <a href="#features" className="hover:text-blue-400 transition-colors">Features</a>
+          <a href="#how-it-works" className="hover:text-blue-400 transition-colors">How it works</a>
+          <Link href="/dashboard" className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white transition-all">
+            Dashboard
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative z-10 pt-20 pb-32 px-6 md:px-12 max-w-7xl mx-auto flex flex-col items-center text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-widest mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <Zap className="w-3 h-3 fill-current" />
+          AI for Bharat Hackathon 2026
+        </div>
+
+        <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          Govenment Services, <br />
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-teal-400 to-purple-500">Simplified by AI.</span>
+        </h1>
+
+        <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
+          JanSathi is your voice-first AI assistant for government schemes,
+          mandi prices, and document analysis. Designed to bridge the digital gap in rural India.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 items-center animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-300">
+          <Link
+            href="/dashboard"
+            className="group px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-[2.5rem] font-black text-xl shadow-2xl shadow-blue-600/40 transition-all flex items-center gap-3 hover:scale-105 active:scale-95"
+          >
+            Start Talking <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+          <a
+            href="#features"
+            className="px-10 py-5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-[2.5rem] font-black text-xl transition-all"
+          >
+            Explore Features
+          </a>
+        </div>
+      </section>
+
+      {/* Feature Grid */}
+      <section id="features" className="relative z-10 py-32 px-6 md:px-12 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <FeatureCard
+            icon={<Mic className="w-8 h-8 text-blue-400" />}
+            title="Voice First"
+            description="Speak in Hindi, Tamil, or Kannada. Our AI understands and talks back in your native tongue."
+          />
+          <FeatureCard
+            icon={<Languages className="w-8 h-8 text-teal-400" />}
+            title="Multi-lingual"
+            description="Automatic translation for government documents and scheme descriptions into regional languages."
+          />
+          <FeatureCard
+            icon={<Bot className="w-8 h-8 text-purple-400" />}
+            title="Drishti Vision"
+            description="Upload any government notice or form. JanSathi analyzes it instantly and tells you the next steps."
           />
         </div>
-      </div>
+      </section>
 
-      {/* 2. Main Content Area */}
-      <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-500 min-w-0">
-        {/* Responsive Header */}
-        <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 bg-slate-900/50 backdrop-blur-md lg:px-8">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 -ml-2 hover:bg-white/5 rounded-lg lg:hidden"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <span className="font-black text-xl tracking-tighter text-blue-500 lg:hidden">JanSathi</span>
-            <div className="hidden lg:flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
-              <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">System Ready</span>
+      {/* Tech Stack / Telemetry Style Section */}
+      <section id="how-it-works" className="relative z-10 py-32 px-6 md:px-12 max-w-7xl mx-auto">
+        <div className="glass-panel p-12 rounded-[3rem] border border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 blur-[80px] rounded-full"></div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+              <h2 className="text-4xl md:text-5xl font-black tracking-tighter">Powered by Enterprise Grade AWS Infrastructure.</h2>
+              <div className="space-y-4">
+                <TechItem icon={<Cpu />} name="Bedrock (Claude 3)" detail="Reasoning & Intelligence" />
+                <TechItem icon={<Globe />} name="AWS Polly" detail="Natural Neural Voice Synthesis" />
+                <TechItem icon={<ShieldCheck />} name="AWS Transcribe" detail="High Accuracy Speech-to-Text" />
+                <TechItem icon={<Bot />} name="Kendra" detail="Smart Search & RAG" />
+              </div>
+            </div>
+            <div className="relative">
+              <div className="aspect-square rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center p-8">
+                <div className="relative w-full h-full border border-blue-500/20 rounded-full animate-[spin_20s_linear_infinite] flex items-center justify-center">
+                  <div className="absolute top-0 w-12 h-12 bg-blue-500 rounded-full blur-xl translate-y-[-50%]"></div>
+                  <div className="w-3/4 h-3/4 border border-teal-500/20 rounded-full flex items-center justify-center">
+                    <div className="w-1/2 h-1/2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full shadow-[0_0_50px_rgba(37,99,235,0.4)] flex items-center justify-center">
+                      <span className="font-bold text-3xl">AI</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 lg:gap-4">
-            <span className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-widest capitalize">{activePage}</span>
-            <div className="lg:hidden h-8 w-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 border border-white/10"></div>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-10 scrollbar-none scroll-smooth">
-          <div className="max-w-6xl mx-auto h-full pb-20 lg:pb-0">
-            {renderContent()}
-          </div>
         </div>
-      </div>
+      </section>
 
-      {/* 3. Tech Telemetry Panel - Desktop Only */}
-      <TelemetryPanel />
+      {/* Footer */}
+      <footer className="relative z-10 py-20 px-6 md:px-12 border-t border-white/5 text-center">
+        <p className="text-slate-500 font-bold mb-4 uppercase tracking-[0.2em] text-xs font-mono">JanSathi Professional v2.0</p>
+        <p className="text-slate-400 max-w-md mx-auto mb-8">
+          Empowering every citizen with the power of artificial intelligence.
+        </p>
+        <div className="flex justify-center gap-8 text-slate-600 font-black">
+          <a href="#" className="hover:text-blue-500">About</a>
+          <a href="#" className="hover:text-blue-500">Privacy</a>
+          <a href="#" className="hover:text-blue-500">Terms</a>
+        </div>
+      </footer>
 
       <BackendStatus />
-
     </main>
+  );
+}
+
+function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
+  return (
+    <div className="group p-10 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/[0.07] hover:border-blue-500/30 transition-all duration-500">
+      <div className="mb-8 inline-block p-5 bg-white/5 rounded-2xl shadow-inner group-hover:scale-110 transition-transform duration-500">
+        {icon}
+      </div>
+      <h3 className="text-2xl font-black mb-4 tracking-tighter">{title}</h3>
+      <p className="text-slate-400 leading-relaxed font-medium">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function TechItem({ icon, name, detail }: { icon: React.ReactNode, name: string, detail: string }) {
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 transition-colors group">
+      <div className="p-3 bg-white/5 rounded-xl group-hover:text-blue-400 transition-colors">
+        {icon}
+      </div>
+      <div>
+        <p className="font-black text-lg leading-none mb-1">{name}</p>
+        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{detail}</p>
+      </div>
+    </div>
   );
 }

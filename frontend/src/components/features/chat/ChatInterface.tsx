@@ -1,13 +1,39 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, History as HistoryIcon, Languages, Camera, Image as ImageIcon, X } from 'lucide-react';
+import { Send, History as HistoryIcon, Languages, Camera, Image as ImageIcon, X, Trash2 } from 'lucide-react';
 import VoiceInput from './VoiceInput';
 import AudioPlayer from './AudioPlayer';
 import { useUser } from '@clerk/nextjs';
 import { sendQuery, getHistory, analyzeImage } from '@/services/api';
-
 import SchemeCard from './SchemeCard';
+
+// --- Typewriter Component ---
+const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
+    const [displayedText, setDisplayedText] = useState('');
+    const index = useRef(0);
+
+    useEffect(() => {
+        index.current = 0;
+        setDisplayedText('');
+
+        const intervalId = setInterval(() => {
+            // Increment index by chunk size (e.g., 2 chars)
+            index.current += 2;
+            const currentText = text.slice(0, index.current);
+            setDisplayedText(currentText);
+
+            if (index.current >= text.length) {
+                clearInterval(intervalId);
+                if (onComplete) onComplete();
+            }
+        }, 15);
+
+        return () => clearInterval(intervalId);
+    }, [text, onComplete]);
+
+    return <div className="leading-relaxed whitespace-pre-wrap">{displayedText}</div>;
+};
 
 type Message = {
     id: string;
@@ -18,6 +44,7 @@ type Message = {
     userId?: string;
     audio?: string;
     context?: string[];
+    isTyping?: boolean;
     structured_sources?: {
         title: string;
         text: string;
@@ -34,12 +61,14 @@ const LANGUAGES = [
     { code: 'ta', name: 'தமிழ்' }
 ];
 
+const SESSIONS_KEY = 'jansathi_chat_sessions';
+
 export default function ChatInterface() {
     const clerk = useUser();
-    // Safety fallback for demo mode without valid Clerk keys
     const user = clerk?.user ?? { id: 'demo_user', firstName: 'JanSathi User' };
-    const isLoaded = clerk?.isLoaded ?? true;
+
     const [messages, setMessages] = useState<Message[]>([]);
+    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -55,66 +84,94 @@ export default function ChatInterface() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // Initialize Sessions
     useEffect(() => {
-        // Load messages from session storage
-        const saved = sessionStorage.getItem('jansathi_chat');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                const restored = parsed.map((m: any) => ({
-                    ...m,
-                    timestamp: new Date(m.timestamp)
-                }));
-                setMessages(restored);
-            } catch (e) {
-                console.error("Failed to load session:", e);
-                setMessages([{
-                    id: 'welcome',
-                    role: 'assistant',
-                    text: 'Namaste! I am JanSathi. Ask me anything about government schemes or services.',
-                    timestamp: new Date()
-                }]);
-            }
+        const handleLoadSession = (e: any) => {
+            const sid = e.detail;
+            loadSession(sid);
+        };
+        window.addEventListener('load-chat-session', handleLoadSession);
+
+        // Initial load (check if we were in a session)
+        const lastSession = sessionStorage.getItem('current_jansathi_session');
+        if (lastSession) {
+            loadSession(lastSession);
         } else {
-            setMessages([{
-                id: 'welcome',
-                role: 'assistant',
-                text: 'Namaste! I am JanSathi. Ask me anything about government schemes or services.',
-                timestamp: new Date()
-            }]);
+            resetToWelcome();
         }
+
+        return () => window.removeEventListener('load-chat-session', handleLoadSession);
     }, []);
 
+    const resetToWelcome = () => {
+        setCurrentSessionId(null);
+        setMessages([{
+            id: 'welcome',
+            role: 'assistant',
+            text: 'Namaste! I am JanSathi. Ask me anything about government schemes or services.',
+            timestamp: new Date()
+        }]);
+    };
+
+    const loadSession = (id: string) => {
+        try {
+            const stored = localStorage.getItem(SESSIONS_KEY);
+            if (stored) {
+                const sessions = JSON.parse(stored);
+                if (sessions[id]) {
+                    const restored = sessions[id].messages.map((m: any) => ({
+                        ...m,
+                        timestamp: new Date(m.timestamp),
+                        isTyping: false // Don't animate old messages
+                    }));
+                    setMessages(restored);
+                    setCurrentSessionId(id);
+                    sessionStorage.setItem('current_jansathi_session', id);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load session:", id, e);
+        }
+        resetToWelcome();
+    };
+
+    const saveSession = (msgs: Message[], id: string) => {
+        try {
+            const stored = localStorage.getItem(SESSIONS_KEY);
+            let sessions = stored ? JSON.parse(stored) : {};
+
+            // Clean messages for storage (remove typing state)
+            const cleanMsgs = msgs.map(({ isTyping, ...rest }) => ({
+                ...rest,
+                timestamp: rest.timestamp.toISOString()
+            }));
+
+            const title = msgs.find(m => m.role === 'user')?.text.substring(0, 30) || 'New Conversation';
+
+            sessions[id] = {
+                id,
+                title: title + (title.length >= 30 ? '...' : ''),
+                messages: cleanMsgs,
+                timestamp: new Date().toISOString()
+            };
+
+            localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+            window.dispatchEvent(new Event('chat-storage-update'));
+        } catch (e) {
+            console.error("Failed to save session:", e);
+        }
+    };
+
     useEffect(() => {
-        if (messages.length > 0) {
-            sessionStorage.setItem('jansathi_chat', JSON.stringify(messages));
+        if (currentSessionId && messages.length > 0) {
+            saveSession(messages, currentSessionId);
         }
 
-        // Only auto-scroll if there are real messages (not just the welcome message)
         if (messages.length > 1 || (messages.length === 1 && messages[0].id !== 'welcome')) {
             scrollToBottom();
         }
-    }, [messages]);
-
-    // Load History
-    useEffect(() => {
-        const loadHistory = async () => {
-            const history = await getHistory(20);
-            if (history && history.length > 0) {
-                const formattedHistory: Message[] = history.map((item: any) => ({
-                    id: item.id.toString(),
-                    role: 'assistant' as 'assistant', // Explicit cast to satisfy literal type
-                    text: item.answer,
-                    timestamp: new Date(item.timestamp),
-                    language: item.language,
-                })).reverse();
-                // Merge with user queries if needed, for now just show answers as blocks
-                setMessages(prev => [...prev, ...formattedHistory]);
-            }
-        };
-        // Only load if we want to show it or at start
-        // loadHistory(); 
-    }, []);
+    }, [messages, currentSessionId]);
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -130,8 +187,31 @@ export default function ChatInterface() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    const handleDeleteChat = () => {
+        if (confirm("Are you sure you want to delete this conversation?")) {
+            if (currentSessionId) {
+                const stored = localStorage.getItem(SESSIONS_KEY);
+                if (stored) {
+                    const sessions = JSON.parse(stored);
+                    delete sessions[currentSessionId];
+                    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+                    window.dispatchEvent(new Event('chat-storage-update'));
+                }
+            }
+            sessionStorage.removeItem('current_jansathi_session');
+            resetToWelcome();
+        }
+    };
+
     const handleSend = async (text: string = inputText) => {
         if ((!text.trim() && !selectedImage) || isLoading) return;
+
+        let sid = currentSessionId;
+        if (!sid) {
+            sid = Date.now().toString();
+            setCurrentSessionId(sid);
+            sessionStorage.setItem('current_jansathi_session', sid);
+        }
 
         setIsLoading(true);
         const newMessage: Message = {
@@ -139,37 +219,34 @@ export default function ChatInterface() {
             role: 'user',
             text: text || (selectedImage ? 'Analyzed this document' : ''),
             timestamp: new Date(),
-            language: language // Track language for this message
+            language: language
         };
 
-        // Optimistically add user message
-        setMessages(prev => [...prev, newMessage]);
+        const updatedMessages = [...messages.filter(m => m.id !== 'welcome'), newMessage];
+        setMessages(updatedMessages);
         setInputText('');
 
         try {
             let data;
             if (selectedImage) {
-                // Handle Image Analysis
                 data = await analyzeImage(selectedImage, language);
                 clearImage();
 
-                // Construct Vision Response
                 const visionMsg: Message = {
                     id: Date.now().toString() + '_ai',
                     role: 'assistant',
                     text: data.analysis.text,
                     audio: data.analysis.audio,
                     timestamp: new Date(),
-                    language: data.meta.language
+                    language: data.meta.language,
+                    isTyping: true
                 };
                 setMessages(prev => [...prev, visionMsg]);
-
             } else {
-                // Handle Text/Voice Query (Existing Logic)
                 data = await sendQuery({
                     text_query: text,
                     language: language,
-                    // @ts-ignore - adding metadata for backend
+                    // @ts-ignore
                     userId: user?.id
                 });
 
@@ -180,7 +257,8 @@ export default function ChatInterface() {
                     audio: data.answer.audio,
                     timestamp: new Date(),
                     language: data.meta?.language,
-                    structured_sources: data.structured_sources
+                    structured_sources: data.structured_sources,
+                    isTyping: true
                 };
                 setMessages(prev => [...prev, aiMessage]);
             }
@@ -190,7 +268,8 @@ export default function ChatInterface() {
                 id: Date.now().toString(),
                 role: 'assistant',
                 text: "Maaf kijiye, I faced a connection issue. Please try again.",
-                timestamp: new Date()
+                timestamp: new Date(),
+                isTyping: false
             }]);
         } finally {
             setIsLoading(false);
@@ -203,11 +282,14 @@ export default function ChatInterface() {
             {/* Header Controls */}
             <div className="flex justify-between items-center p-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-10">
                 <div className="flex items-center gap-2">
-                    <HistoryIcon
-                        className={`w-5 h-5 cursor-pointer ${showHistory ? 'text-blue-600' : 'text-slate-400'}`}
-                        onClick={() => setShowHistory(!showHistory)}
-                    />
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Live Chat</span>
+                    <button
+                        onClick={handleDeleteChat}
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                        title="Delete this chat"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">Live Consultation</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -227,14 +309,14 @@ export default function ChatInterface() {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
                 {messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome') ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-80">
-                        <div className="w-24 h-24 bg-blue-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                            <img src="/logo.svg" alt="JanSathi" className="w-12 h-12" onError={(e) => (e.target as HTMLImageElement).src = 'https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg'} />
+                    <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-80 animate-in fade-in duration-700">
+                        <div className="w-24 h-24 bg-blue-500/10 rounded-3xl flex items-center justify-center mb-6 border border-blue-500/20 shadow-2xl rotate-3">
+                            <BotIcon className="w-12 h-12 text-blue-500" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">
+                        <h3 className="text-2xl font-black text-white mb-2 tracking-tighter">
                             Namaste! How can I help you today?
                         </h3>
-                        <p className="text-slate-500 max-w-md mb-8">
+                        <p className="text-slate-400 max-w-md mb-12 font-medium">
                             Ask me about government schemes, farming prices, or health benefits in your language.
                         </p>
 
@@ -251,10 +333,10 @@ export default function ChatInterface() {
                                         setInputText(q);
                                         handleSend(q);
                                     }}
-                                    className="px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-left text-sm text-slate-700 dark:text-slate-300 hover:border-blue-500 hover:shadow-md transition-all flex items-center justify-between group"
+                                    className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-left text-sm text-slate-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 hover:shadow-xl hover:shadow-blue-600/20 transition-all flex items-center justify-between group"
                                 >
-                                    {q}
-                                    <span className="opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity">→</span>
+                                    <span className="font-bold">{q}</span>
+                                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
                                 </button>
                             ))}
                         </div>
@@ -264,20 +346,26 @@ export default function ChatInterface() {
                         {messages.map((msg) => (
                             <div
                                 key={msg.id}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}
                             >
                                 <div
                                     className={`
-                                        max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl shadow-sm text-sm md:text-base transition-all duration-200
+                                        max-w-[85%] sm:max-w-[75%] p-5 rounded-[1.5rem] shadow-sm text-sm md:text-base transition-all duration-200
                                         ${msg.role === 'user'
-                                            ? 'bg-blue-600 text-white rounded-br-none shadow-blue-200 dark:shadow-none'
-                                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-none border border-slate-200 dark:border-slate-700'}
+                                            ? 'bg-blue-600 text-white rounded-br-none shadow-blue-600/20'
+                                            : 'bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 rounded-bl-none border border-white/10 backdrop-blur-md'}
                                     `}
                                 >
-                                    <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                                    {msg.role === 'assistant' && msg.isTyping ? (
+                                        <Typewriter text={msg.text} onComplete={() => {
+                                            // Handle completion if needed
+                                        }} />
+                                    ) : (
+                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                                    )}
 
                                     {msg.role === 'assistant' && msg.structured_sources && msg.structured_sources.length > 0 && (
-                                        <div className="mt-4 grid grid-cols-1 gap-3 w-full">
+                                        <div className="mt-6 grid grid-cols-1 gap-4 w-full">
                                             {msg.structured_sources.map((source, idx) => (
                                                 <SchemeCard
                                                     key={idx}
@@ -291,16 +379,13 @@ export default function ChatInterface() {
                                         </div>
                                     )}
 
-                                    {/* Audio Player */}
-                                    {msg.audio && <AudioPlayer src={msg.audio} />}
-
-                                    {msg.role === 'assistant' && msg.text && (
-                                        <div className="mt-2 flex items-center gap-2 opacity-50">
-                                            <span className="text-[10px]">AI Voice Output</span>
+                                    {msg.audio && (
+                                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                                            <AudioPlayer src={msg.audio} />
                                         </div>
                                     )}
 
-                                    <span className={`text-[10px] block mt-2 text-right ${msg.role === 'user' ? 'text-blue-100' : 'text-slate-400'}`}>
+                                    <span className={`text-[10px] font-bold block mt-3 text-right ${msg.role === 'user' ? 'text-blue-100/60' : 'text-slate-500'}`}>
                                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
@@ -308,14 +393,14 @@ export default function ChatInterface() {
                         ))}
                         {isLoading && (
                             <div className="flex justify-start">
-                                <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-bl-none border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-2">
+                                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl rounded-bl-none border border-white/10 shadow-sm flex items-center gap-3">
                                     <div className="flex space-x-1">
-                                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
                                     </div>
-                                    <span className="text-xs text-slate-400 font-medium animate-pulse ml-2">
-                                        Processing with AWS Bedrock...
+                                    <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest animate-pulse">
+                                        AWS Bedrock Analyzing...
                                     </span>
                                 </div>
                             </div>
@@ -326,30 +411,34 @@ export default function ChatInterface() {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white/10 dark:bg-black/20 backdrop-blur-md border-t border-white/10 z-20">
+            <div className="p-4 bg-white/10 dark:bg-black/40 backdrop-blur-xl border-t border-white/5 z-20">
 
                 {/* Image Preview Banner */}
                 {imagePreview && (
-                    <div className="mb-2 p-2 bg-slate-100/90 dark:bg-slate-900/90 rounded-lg flex items-center justify-between animate-in slide-in-from-bottom-2 backdrop-blur-md border border-white/10">
-                        <div className="flex items-center gap-3">
-                            <img src={imagePreview} alt="Selected" className="h-12 w-12 object-cover rounded-md border border-slate-300" />
-                            <span className="text-xs text-slate-500 dark:text-slate-300 font-medium truncate max-w-[150px]">
-                                {selectedImage?.name}
-                            </span>
+                    <div className="mb-4 p-3 bg-blue-500/10 rounded-2xl flex items-center justify-between animate-in slide-in-from-bottom-4 backdrop-blur-md border border-blue-500/20">
+                        <div className="flex items-center gap-4">
+                            <div className="relative h-14 w-14 group">
+                                <img src={imagePreview} alt="Selected" className="h-full w-full object-cover rounded-xl border border-white/20" />
+                                <div className="absolute inset-0 bg-blue-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </div>
+                            <div>
+                                <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Document Selected</p>
+                                <p className="text-sm text-slate-300 font-bold truncate max-w-[200px]">{selectedImage?.name}</p>
+                            </div>
                         </div>
-                        <button onClick={clearImage} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full">
-                            <X className="w-4 h-4 text-slate-500" />
+                        <button onClick={clearImage} className="p-2 bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl transition-all">
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
                 )}
 
                 {/* Voice Input Centered */}
-                <div className="mb-4 flex justify-center">
+                <div className="mb-6 flex justify-center">
                     <VoiceInput onTranscript={handleSend} isProcessing={isLoading} />
                 </div>
 
                 {/* Text Input Row */}
-                <div className="flex gap-2 items-center bg-white/5 dark:bg-black/40 p-1.5 rounded-2xl border border-white/10 shadow-lg backdrop-blur-sm">
+                <div className="flex gap-3 items-center bg-white/5 p-2 rounded-[2rem] border border-white/10 shadow-2xl shadow-black/20 focus-within:border-blue-500/50 transition-all">
                     <input
                         type="file"
                         accept="image/*"
@@ -360,11 +449,11 @@ export default function ChatInterface() {
 
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className={`p-3 rounded-xl hover:bg-white/10 text-slate-400 hover:text-blue-400 transition-colors ${selectedImage ? 'text-blue-400 bg-blue-500/10' : ''}`}
+                        className={`p-4 rounded-[1.5rem] transition-all ${selectedImage ? 'bg-blue-600 text-white' : 'hover:bg-white/10 text-slate-400 hover:text-white'}`}
                         title="Analyze Document/Image"
                         disabled={isLoading}
                     >
-                        <Camera className="w-5 h-5" />
+                        <Camera className="w-6 h-6" />
                     </button>
 
                     <input
@@ -372,19 +461,33 @@ export default function ChatInterface() {
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend(inputText)}
-                        placeholder={selectedImage ? "Press Send to analyze this image..." : (language === 'hi' ? 'अपना प्रश्न पूछें...' : 'Type your question...')}
-                        className="flex-1 p-2 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                        placeholder={selectedImage ? "Press Send to analyze this image..." : (language === 'hi' ? 'अपना प्रश्न पूछें...' : 'Ask JanSathi...')}
+                        className="flex-1 p-3 bg-transparent text-white placeholder:text-slate-500 focus:outline-none font-medium"
                         disabled={isLoading}
                     />
                     <button
                         onClick={() => handleSend(inputText)}
                         disabled={isLoading || (!inputText.trim() && !selectedImage)}
-                        className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
+                        className="p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.5rem] shadow-xl shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 group"
                     >
-                        <Send className="w-5 h-5" />
+                        <Send className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                     </button>
                 </div>
+                <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-widest mt-4">JanSathi Professional AI • v2.0</p>
             </div>
         </div>
     );
+}
+
+function BotIcon({ className }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 8V4H8" />
+            <rect width="16" height="12" x="4" y="8" rx="2" />
+            <path d="M2 14h2" />
+            <path d="M20 14h2" />
+            <path d="M15 13v2" />
+            <path d="M9 13v2" />
+        </svg>
+    )
 }

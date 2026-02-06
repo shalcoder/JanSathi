@@ -1,16 +1,22 @@
-import boto3
+import sys
 import os
 import uuid
+import boto3
 from botocore.exceptions import NoCredentialsError
-from utils import logger, retry_aws
 
-# Language → Polly configuration
+# Add parent directory to path to resolve local modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.core.utils import logger, retry_aws
+
+# Language → Polly configuration (Optimized for Neural quality)
 VOICE_MAP = {
-    "hi": {"voice": "Aditi", "engine": "standard"},
-    "en": {"voice": "Aditi", "engine": "standard"},
-    "ta": {"voice": "Aditi", "engine": "standard"},
-    "te": {"voice": "Aditi", "engine": "standard"},
-    "bn": {"voice": "Aditi", "engine": "standard"}
+    "hi": {"voice": "Kajal", "engine": "neural"}, # Much better than standard Aditi
+    "en": {"voice": "Kajal", "engine": "neural"}, # Kajal is bilingual
+    "kn": {"voice": "Shruti", "engine": "standard"}, # Kannada support
+    "ta": {"voice": "Arathi", "engine": "standard"}, # Tamil support
+    "te": {"voice": "Arathi", "engine": "standard"}, # Placeholder for Telugu
+    "bn": {"voice": "Kajal", "engine": "neural"}    # Fallback/Placeholder
 }
 
 class PollyService:

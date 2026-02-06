@@ -1,3 +1,5 @@
+'use client';
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -12,23 +14,40 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "JanSathi - AI Civic Assistant",
-  description: "Voice-first government service assistant",
-};
+// Metadata cannot be exported from a Client Component in Next.js.
+// It should be moved to a separate file or removed if not strictly required for the demo.
+
+import { ClerkProvider } from "@clerk/nextjs";
+
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+
+const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
+  const content = (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </body>
     </html>
+  );
+
+  // Only wrap with Clerk if a key is provided and looks valid
+  if (!PUBLISHABLE_KEY || PUBLISHABLE_KEY.includes('test_example')) {
+    return content;
+  }
+
+  return (
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+      {content}
+    </ClerkProvider>
   );
 }

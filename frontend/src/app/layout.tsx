@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Voice-first government service assistant",
 };
 
+import Sidebar from "@/components/Sidebar";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,9 +27,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex bg-slate-50 dark:bg-slate-950`}
       >
-        {children}
+        <Sidebar />
+        <div className="flex-1 h-screen overflow-y-auto">
+          {children}
+        </div>
       </body>
     </html>
   );

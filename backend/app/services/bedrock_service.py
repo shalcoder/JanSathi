@@ -82,3 +82,65 @@ class BedrockService:
             except Exception as e:
                 print(f"Unknown Error: {e}")
                 return "An unexpected error occurred."
+
+    def analyze_image(self, image_bytes, prompt_text="Explain this document.", language='hi'):
+        """
+        Analyzes an image (Document/Scene) using Claude 3 Vision.
+        """
+        if not self.working:
+            return "AI Vision not connected."
+
+        import base64
+        encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+
+        vision_prompt = f"""
+        You are JanSathi. The user has uploaded an image of a government document, notice, or agricultural scene.
+        
+        USER INSTRUCTION: {prompt_text}
+        TARGET LANGUAGE: {language}
+        
+        TASK:
+        1. Identify the key purpose of the document/image.
+        2. Explain the critical details (Dates, Deadlines, Amounts, Requirements) simply.
+        3. Do NOT translate word-for-word. Summarize for a rural user.
+        4. If it's a form, tell them what documents they need to attach.
+        5. Output directly in {language}.
+        """
+
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 1000,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": encoded_image
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": vision_prompt
+                        }
+                    ]
+                }
+            ],
+            "temperature": 0.1
+        })
+
+        try:
+            response = self.bedrock_runtime.invoke_model(
+                body=body,
+                modelId="anthropic.claude-3-sonnet-20240229-v1:0", # Use Sonnet/Haiku for Vision
+                accept='application/json',
+                contentType='application/json'
+            )
+            response_body = json.loads(response.get('body').read())
+            return response_body['content'][0]['text']
+        except Exception as e:
+            print(f"Vision Error: {e}")
+            return "Could not analyze the image. Please ensure it is clear."

@@ -89,5 +89,6 @@ class PollyService:
             return self._mock_fallback()
 
     def _mock_fallback(self):
-        # Safe demo fallback
-        return "https://github.com/rafaelreis-hotmart/Audio-Sample-files/raw/master/sample.mp3"
+        # Return None to avoid playing random music
+        logger.warning("Polly unavailable. Returning no audio.")
+        return None

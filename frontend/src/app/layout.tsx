@@ -1,8 +1,9 @@
 'use client';
 
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,13 +14,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-// Metadata cannot be exported from a Client Component in Next.js.
-// It should be moved to a separate file or removed if not strictly required for the demo.
-
-import { ClerkProvider } from "@clerk/nextjs";
-
-import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 

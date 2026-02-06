@@ -7,6 +7,7 @@ import ChatInterface from "@/components/features/chat/ChatInterface";
 import DocumentsPage from "@/components/features/dashboard/DocumentsPage";
 import ProfilePage from "@/components/features/dashboard/ProfilePage";
 import SettingsPage from "@/components/features/dashboard/SettingsPage";
+import BackendStatus from "@/components/BackendStatus";
 import { Menu, X } from 'lucide-react';
 
 export default function Home() {
@@ -83,15 +84,17 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 scrollbar-none">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-10 scrollbar-none scroll-smooth">
           <div className="max-w-6xl mx-auto h-full pb-20 lg:pb-0">
             {renderContent()}
           </div>
         </div>
       </div>
 
-      {/* 3. Tech Telemetry Panel */}
+      {/* 3. Tech Telemetry Panel - Desktop Only */}
       <TelemetryPanel />
+
+      <BackendStatus />
 
     </main>
   );

@@ -2,7 +2,3 @@ flask
 flask-cors
 boto3
 python-dotenv
-sentence-transformers
-faiss-cpu
-numpy
-pydub

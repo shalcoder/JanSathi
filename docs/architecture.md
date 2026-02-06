@@ -1,22 +1,22 @@
-# JanSathi Architecture Diagram
+# JanSathi Architecture Diagram (AWS Stack)
 
 ```mermaid
 graph TD
     subgraph "Layer 1: User Interaction"
         UA[User (Rural Citizen)]
         MP[Mobile App (Flutter)]
-        WA[WhatsApp Chatbot]
-        IVR[IVR / Toll-Free]
+        WA[WhatsApp Chatbot (Cloud API)]
+        IVR[Amazon Connect (Phone)]
     end
 
-    subgraph "Layer 2: API & Orchestration"
-        APIGW[Amazon API Gateway]
-        LambdaOrch[AWS Lambda Orchestrator]
+    subgraph "Layer 2: API & Orchestration (Serverless)"
+        APIGW[AWS API Gateway]
+        Lambda[AWS Lambda (Orchestrator)]
     end
 
-    subgraph "Layer 3: AI Intelligence"
-        Transcribe[Amazon Transcribe (STT)]
-        Bedrock[Amazon Bedrock (LLM Reasoning)]
+    subgraph "Layer 3: AI Intelligence (Amazon Bedrock)"
+        Bedrock[Amazon Bedrock (Claude 3 / Llama 3)]
+        Transcribe[AWS Transcribe (STT)]
         Polly[Amazon Polly (TTS)]
         Translate[Amazon Translate]
     end
@@ -24,35 +24,44 @@ graph TD
     subgraph "Layer 4: Knowledge & Retrieval (RAG)"
         Kendra[Amazon Kendra]
         S3[Amazon S3 (Documents)]
-        ExtAPI[External APIs (Mandi/Weather)]
     end
 
     subgraph "Layer 5: Data & State"
-        Dynamo[Amazon DynamoDB (User Profile/Context)]
+        Dynamo[Amazon DynamoDB (Profiles/History)]
     end
 
     %% Flows
     UA -->|Voice/Text| MP & WA & IVR
-    MP & WA & IVR -->|HTTPS/WSS| APIGW
-    APIGW --> LambdaOrch
+    MP & WA & IVR -->|HTTPS/Webhook| APIGW
+    APIGW --> Lambda
 
     %% Orchestration Logic
-    LambdaOrch -->|1. Store Context| Dynamo
-    LambdaOrch -->|2. Audio Stream| Transcribe
-    Transcribe -->|Text| LambdaOrch
-    LambdaOrch -->|3. Intent/Translation| Translate
-    LambdaOrch -->|4. Retrieve Facts| Kendra
-    Kendra -->|Index| S3
-    Kendra -->|Live Data| ExtAPI
-    LambdaOrch -->|5. Generate Answer| Bedrock
-    Bedrock -->|Answer Text| LambdaOrch
-    LambdaOrch -->|6. Convert to Speech| Polly
-    Polly -->|Audio| LambdaOrch
-    LambdaOrch -->|Response| APIGW
-
+    Lambda -->|1. Store Context| Dynamo
+    Lambda -->|2. Voice Stream| Transcribe
+    Transcribe -->|Text| Lambda
+    Lambda -->|3. Detect/Translate| Translate
+    Lambda -->|4. Retrieve Facts| Kendra
+    Kendra -->|Query Index| S3
+    Kendra -->|Relevant Excerpts| Lambda
+    Lambda -->|5. Generate Answer| Bedrock
+    Bedrock -->|Response Text| Lambda
+    Lambda -->|6. Translate Back| Translate
+    Lambda -->|7. Convert to Speech| Polly
+    Polly -->|Audio| Lambda
+    Lambda -->|Response| APIGW
+    
     %% Styling
     classDef aws fill:#FF9900,stroke:#232F3E,color:white;
     classDef client fill:#88CC88,stroke:#333333;
-    class APIGW,LambdaOrch,Transcribe,Bedrock,Polly,Translate,Kendra,S3,Dynamo aws;
+    class APIGW,Lambda,Transcribe,Bedrock,Polly,Translate,Kendra,S3,Dynamo aws;
     class UA,MP,WA,IVR client;
 ```
+
+## Stack Decisions
+- **Frontend**: **Flutter** (Single codebase, offline support).
+- **Orchestration**: **AWS Lambda** (Serverless, scalable).
+- **LLM**: **Amazon Bedrock** (Managed, secure, multilingual).
+- **RAG**: **Amazon Kendra** (Enterprise search for government docs).
+- **Voice**: **AWS Transcribe** & **Polly** (Indian languages support).
+- **Storage**: **DynamoDB** (Fast user state) and **S3** (Document lake).
+- **Offline**: **On-Device Cache** (Flutter SQLite/Hive) for top FAQs.

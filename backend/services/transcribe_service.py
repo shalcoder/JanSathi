@@ -1,69 +1,94 @@
 import boto3
 import time
 import os
+import json
 import urllib.request
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, NoCredentialsError
+from utils import logger, retry_aws
 
 class TranscribeService:
     def __init__(self):
-        self.transcribe_client = boto3.client('transcribe', region_name=os.getenv('AWS_REGION', 'us-east-1'))
-        self.s3_client = boto3.client('s3', region_name=os.getenv('AWS_REGION', 'us-east-1'))
-        # Note: In a real prod environment, you'd upload to S3. 
-        # For this hackathon demo, we will use a public writable bucket or 
-        # assume the user has configured S3 access.
-        # Alternatively, for short audio, we can use the Transcribe Streaming API, 
-        # but that requires HTTP2/Async. 
-        # To keep it "simple" and robust, we'll try to use a pre-existing function or 
-        # just assume the file is local and we skip S3 if possible (Transcribe needs S3 URI).
+        self.region = os.getenv('AWS_REGION', 'us-east-1')
+        self.bucket_name = os.getenv('S3_BUCKET_NAME', 'jansathi-audio-demo-bucket')
         
-        # ACTUALLY: Let's use a simpler approach for the demo.
-        # If no S3 bucket is available, we might be stuck.
-        # We will assume a bucket name is provided or we create a temp one?
-        # Let's use a placeholder bucket name for now.
-        self.bucket_name = "jansathi-temp-audio" 
-
-    def transcribe_audio(self, file_path, job_name):
-        """
-        Uploads to S3 and starts a transcription job.
-        Note: This requires an S3 bucket.
-        """
-        # For a truly "runnable" local demo without S3 setup, 
-        # we might want to mock the STT part IF user doesn't have S3.
-        # But user asked for "Working". 
-        
-        # Let's try to use the 'start_transcription_job' with a public URL if we can't upload.
-        # But we can't upload to public URL.
-        
-        # FALLBACK: If authentication fails, we return a mock string so the app doesn't crash.
         try:
-            # 1. Upload file to S3
-            object_name = f"audio/{job_name}.wav"
-            self.s3_client.upload_file(file_path, self.bucket_name, object_name)
+            self.transcribe_client = boto3.client('transcribe', region_name=self.region)
+            self.s3_client = boto3.client('s3', region_name=self.region)
+            self.use_aws = True
+        except NoCredentialsError:
+            logger.warning("Transcribe Init Failed: No Credentials. Using Mock.")
+            self.use_aws = False
+        except Exception as e:
+            logger.error(f"Transcribe Init Error: {e}")
+            self.use_aws = False
+
+    @retry_aws()
+    def transcribe_audio(self, file_path=None, job_name=None, s3_uri=None):
+        """
+        Transcribes audio. 
+        - If file_path is provided: Uploads to S3 -> Transcribes.
+        - If s3_uri is provided: Directly Transcribes (Lambda flow).
+        """
+        if not self.use_aws:
+            return self._mock_fallback()
+
+        try:
+            file_uri = s3_uri
+
+            # 1. Upload file to S3 (Only if local path provided)
+            if file_path and not s3_uri:
+                object_name = f"audio/{job_name}.wav"
+                logger.info(f"Uploading {file_path} to s3://{self.bucket_name}/{object_name}")
+                self.s3_client.upload_file(file_path, self.bucket_name, object_name)
+                file_uri = f"s3://{self.bucket_name}/{object_name}"
             
-            file_uri = f"s3://{self.bucket_name}/{object_name}"
+            if not file_uri:
+                raise ValueError("Neither file_path nor s3_uri provided")
 
             # 2. Start Job
+            logger.info(f"Starting Transcribe job: {job_name}")
             self.transcribe_client.start_transcription_job(
                 TranscriptionJobName=job_name,
                 Media={'MediaFileUri': file_uri},
-                MediaFormat='wav',
-                LanguageCode='hi-IN'
+                MediaFormat='wav', # simplistic assumption for demo
+                LanguageCode='hi-IN' 
             )
 
             # 3. Poll for completion
-            while True:
+            # 3. Poll for completion (Max wait: 60 seconds)
+            max_retries = 30 
+            retries = 0
+            while retries < max_retries:
                 status = self.transcribe_client.get_transcription_job(TranscriptionJobName=job_name)
-                if status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
+                job_status = status['TranscriptionJob']['TranscriptionJobStatus']
+                
+                if job_status in ['COMPLETED', 'FAILED']:
                     break
-                time.sleep(1)
+                
+                retries += 1
+                time.sleep(2) # Wait 2 seconds before retry
+            else:
+                logger.error(f"Transcription Job {job_name} Timed Out")
+                return self._mock_fallback()
 
-            if status['TranscriptionJob']['TranscriptionJobStatus'] == 'COMPLETED':
-                response = urllib.request.urlopen(status['TranscriptionJob']['Transcript']['TranscriptFileUri'])
-                data = json.loads(response.read())
-                return data['results']['transcripts'][0]['transcript']
-            return None
+            if job_status == 'COMPLETED':
+                transcript_uri = status['TranscriptionJob']['Transcript']['TranscriptFileUri']
+                with urllib.request.urlopen(transcript_uri) as response:
+                    data = json.loads(response.read())
+                    text = data['results']['transcripts'][0]['transcript']
+                    logger.info(f"Transcription result: {text}")
+                    return text
+            else:
+                logger.error(f"Transcription Failed: {status}")
+                return self._mock_fallback()
 
+        except ClientError as e:
+            logger.error(f"AWS Transcribe/S3 Error: {e}")
+            return self._mock_fallback()
         except Exception as e:
-            print(f"Transcribe Error: {e}")
-            print("Falling back to mock transcription due to AWS/S3 access specificities.")
-            return "इस महीने गेहूँ का भाव क्या है" # Fallback for demo if S3 fails
+            logger.error(f"Unexpected Transcribe Error: {e}")
+            return self._mock_fallback()
+
+    def _mock_fallback(self):
+        logger.info("Using Mock Transcription Fallback")
+        return "मुझे प्रधान मंत्री आवास योजना के बारे में बताइए" # "Tell me about PM Housing Scheme"

@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  JanSathi - AI Civic Assistant
+  Serverless Backend using AWS Lambda, API Gateway, and Amazon Bedrock/Kendra.
+
+Globals:
+  Function:
+    Timeout: 29
+    MemorySize: 512
+    Runtime: python3.9
+    Architectures:
+      - x86_64
+
+Resources:
+  JanSathiApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'POST, GET, OPTIONS'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+
+  JanSathiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: lambda_handler.lambda_handler
+      Environment:
+        Variables:
+          BEDROCK_REGION: us-east-1
+          KENDRA_INDEX_ID: !Ref KendraIndexId
+          DYNAMODB_TABLE: !Ref JanSathiUserTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanSathiApi
+            Path: /query
+            Method: post
+        HealthEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanSathiApi
+            Path: /health
+            Method: get
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JanSathiUserTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - kendra:Query
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+                - polly:SynthesizeSpeech
+                - translate:TranslateText
+              Resource: "*"
+
+  JanSathiUserTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: JanSathiUsers
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+
+Parameters:
+  KendraIndexId:
+    Type: String
+    Description: "ID of the Amazon Kendra Index (Create manually or via separate stack)"
+    Default: "mock-index-id"
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${JanSathiApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

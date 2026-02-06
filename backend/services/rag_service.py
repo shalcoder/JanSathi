@@ -1,58 +1,68 @@
+import boto3
 import json
 import os
-import numpy as np
-# from sentence_transformers import SentenceTransformer
-# import faiss
+from botocore.exceptions import ClientError, NoCredentialsError
 
 class RagService:
     def __init__(self):
-        # We will use valid mock data for the "Working" demo if FAISS is not installed.
-        # Installing torch/transformers can be huge (GBs). 
-        # To make this "instantly working", we will use a simple Keyword-Match retrieval first.
-        # If you want real embeddings, uncomment the imports.
+        self.kendra_index_id = os.getenv('KENDRA_INDEX_ID', 'mock-index')
+        self.region = os.getenv('AWS_REGION', 'us-east-1')
         
-        self.data_path = "data/mandi_prices.json"
-        
-        # Seed some data
-        if not os.path.exists("data"):
-            os.makedirs("data")
-            
-        with open(self.data_path, 'w', encoding='utf-8') as f:
-            json.dump([
-                {"text": "Wheat price in Vidisha is 2150 INR per quintal.", "keywords": ["wheat", "gehu", "vidisha"]},
-                {"text": "Rice price in Bhopal is 3200 INR per quintal.", "keywords": ["rice", "chawal", "bhopal"]},
-                {"text": "Soybean price in Indore is 4500 INR per quintal.", "keywords": ["soybean", "indore"]},
-                {"text": "Govindpura Mandi is closed on Sundays.", "keywords": ["closed", "holiday", "govindpura"]},
-            ], f)
-            
-        with open(self.data_path, 'r', encoding='utf-8') as f:
-            self.documents = json.load(f)
+        try:
+            self.kendra_client = boto3.client('kendra', region_name=self.region)
+            self.use_aws = True
+        except NoCredentialsError:
+            print("Warning: No AWS Credentials found. Using Mock RAG.")
+            self.use_aws = False
+        except Exception as e:
+            print(f"Warning: Failed to init Kendra client: {e}. Using Mock RAG.")
+            self.use_aws = False
+
+        # Mock Data for Fallback
+        self.mock_data = [
+            {"text": "PM-KISAN: 6000 INR per year for farmers.", "keywords": ["kisan", "money", "6000"]},
+            {"text": "Mandi Prices: Wheat is 2200/quintal in Bhopal.", "keywords": ["mandi", "price", "wheat"]},
+            {"text": "Janani Suraksha Yojana: 1400 INR for rural delivery.", "keywords": ["janani", "pregnant", "delivery"]}
+        ]
 
     def retrieve(self, query):
         """
-        Simple keyword based retrieval for speed/robustness in demo.
+        Retrieves documents from Amazon Kendra. Falls back to keyword search if fails.
         """
+        print(f"Retrieving context for: {query} (Mode: {'Kendra' if self.use_aws else 'Mock'})")
+        
+        if self.use_aws and self.kendra_index_id != 'mock-index':
+            try:
+                response = self.kendra_client.retrieve(
+                    IndexId=self.kendra_index_id,
+                    QueryText=query,
+                    PageSize=3
+                )
+                
+                results = []
+                for item in response.get('ResultItems', []):
+                    content = item.get('Content', '')
+                    if content:
+                        results.append(content)
+                
+                if results:
+                    return results
+                else:
+                    return ["No relevant documents found in Kendra."]
+            
+            except Exception as e:
+                print(f"Kendra Error: {e}. Falling back to Mock.")
+                # Fallthrough to mock
+        
+        # --- Fallback / Mock Logic ---
         query_lower = query.lower()
         results = []
-        for doc in self.documents:
-            # Check if any keyword matches
-            score = 0
+        for doc in self.mock_data:
             for kw in doc['keywords']:
                 if kw in query_lower:
-                    score += 1
-            
-            if score > 0:
-                results.append(doc['text'])
+                    results.append(doc['text'])
+                    break # Avoid duplicate adds
         
         if not results:
-            return ["No specific data found for this query in the local database."]
-        
+            return ["No specific public data found locally."]
         return results
-
-    # def retrieve_semantic(self, query):
-    #     """
-    #     Real FAISS implementation (Uncomment if dependencies installed)
-    #     """
-    #     model = SentenceTransformer('all-MiniLM-L6-v2')
-    #     # ... indexing logic ...
-    #     pass

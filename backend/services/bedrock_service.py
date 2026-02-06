@@ -1,57 +1,84 @@
 import boto3
 import json
 import os
+import time
+from botocore.exceptions import ClientError, NoCredentialsError
 
 class BedrockService:
     def __init__(self):
-        self.bedrock_runtime = boto3.client(
-            service_name='bedrock-runtime', 
-            region_name=os.getenv('AWS_REGION', 'us-east-1')
-        )
-        # Using Claude 3 Sonnet (or Haiku for speed)
-        self.model_id = "anthropic.claude-3-haiku-20240307-v1:0" 
+        self.region = os.getenv('AWS_REGION', 'us-east-1')
+        self.model_id = os.getenv('BEDROCK_MODEL_ID', "anthropic.claude-3-haiku-20240307-v1:0")
+        
+        try:
+            self.bedrock_runtime = boto3.client(
+                service_name='bedrock-runtime', 
+                region_name=self.region
+            )
+            self.working = True
+        except NoCredentialsError:
+            print("Bedrock Init Failed: No Credentials.")
+            self.working = False
 
     def generate_response(self, query, context_text, language='hi'):
+        if not self.working:
+            return "AI Brain not connected (Check AWS Credentials)."
+
         prompt = f"""
-        Human: You are JanSathi, an intelligent assistant for Indian farmers.
+        Human: You are JanSathi, a helpful and empathetic government assistant for rural India.
+        Your goal is to explain government schemes, prices, and rules simply.
         
-        Here is the retrieved context (FACTS):
+        CONTEXT (Relevant Documents):
         {context_text}
         
-        User Question: {query}
+        USER QUESTION: {query}
         
-        Instructions:
-        1. Answer the question based ONLY on the context provided.
-        2. If the answer is not in the context, say "I don't have that information."
-        3. Respond in the language: {language} (Hindi if 'hi').
-        4. Keep the answer concise (under 50 words).
-        5. Be polite.
+        INSTRUCTIONS:
+        1. Answer ONLY based on the CONTEXT provided. If the answer is missing, state: "I do not have official information on this."
+        2. Keep the language simple and direct.
+        3. Reply in the requested language: {language} (or English if not specified).
+        4. If the user asks about crops/health, be supportive but factual.
+        5. Do NOT make up numbers or dates.
         
         Assistant:
         """
 
         body = json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 300,
+            "max_tokens": 400,
             "messages": [
                 {
                     "role": "user",
                     "content": prompt
                 }
-            ]
+            ],
+            "temperature": 0.1,
+            "top_p": 0.9
         })
 
-        try:
-            response = self.bedrock_runtime.invoke_model(
-                body=body, 
-                modelId=self.model_id, 
-                accept='application/json', 
-                contentType='application/json'
-            )
-            
-            response_body = json.loads(response.get('body').read())
-            return response_body['content'][0]['text']
+        retries = 2
+        for attempt in range(retries + 1):
+            try:
+                response = self.bedrock_runtime.invoke_model(
+                    body=body, 
+                    modelId=self.model_id, 
+                    accept='application/json', 
+                    contentType='application/json'
+                )
+                
+                response_body = json.loads(response.get('body').read())
+                return response_body['content'][0]['text']
 
-        except Exception as e:
-            print(f"Bedrock Error: {e}")
-            return "Unable to connect to AI Brain. (Check AWS Credentials)"
+            except ClientError as e:
+                error_code = e.response['Error']['Code']
+                if error_code == 'ThrottlingException':
+                    if attempt < retries:
+                        time.sleep(1 * (attempt + 1)) # Simple backoff
+                        continue
+                    else:
+                        return "System is busy. Please try again later."
+                else:
+                    print(f"Bedrock Error: {e}")
+                    return "Sorry, I encountered a technical issue."
+            except Exception as e:
+                print(f"Unknown Error: {e}")
+                return "An unexpected error occurred."

@@ -1,60 +1,99 @@
 import json
-import boto3
-import os
-from utils import normalize_intent, retrieve_context, generate_answer
+import uuid
+from services.bedrock_service import BedrockService
+from services.rag_service import RagService
+from services.transcribe_service import TranscribeService
+from services.polly_service import PollyService
+from utils import setup_logging, logger, normalize_query
+
+setup_logging()
+bedrock_service = BedrockService()
+rag_service = RagService()
+transcribe_service = TranscribeService()
+polly_service = PollyService()
+
+SUPPORTED_LANGUAGES = {"hi", "ta", "te", "bn", "en"}
 
 def lambda_handler(event, context):
     """
-    Main Orchestrator Lambda.
-    1. Receives Input (Text/Audio metadata)
-    2. Normalizes Intent
-    3. Retrieves Context (RAG)
-    4. Generates Answer (LLM)
-    5. Returns Response
+    JanSathi Lambda Entry Point
+    Flow:
+    Parse → [Transcribe] → Normalize → Retrieve → Generate → [Optional TTS] → Respond
     """
-    print("Received event: " + json.dumps(event, indent=2))
-    
-    # 1. Parse Input
     try:
-        body = json.loads(event.get('body', '{}'))
-        user_query = body.get('query')
-        user_id = body.get('user_id', 'anonymous')
-        language = body.get('language', 'hi') # Default to Hindi
-        
-        if not user_query:
-             return {
-                'statusCode': 400,
-                'body': json.dumps({'error': 'No query provided'})
+        body = event.get("body", event)
+        if isinstance(body, str):
+            body = json.loads(body)
+
+        input_type = body.get("input_type", "text")
+        input_content = body.get("input_content", "")
+        language = body.get("language", "hi")
+        response_mode = body.get("response_mode", "text")  # 👈 IMPORTANT
+
+        if language not in SUPPORTED_LANGUAGES:
+            language = "hi"
+
+        # STEP 1: Input handling
+        if input_type == "text":
+            user_query = input_content
+        elif input_type == "voice":
+            if not input_content.startswith("s3://"):
+                return _response(400, _public_error("Voice input requires valid S3 URI"))
+            user_query = transcribe_service.transcribe_audio(
+                s3_uri=input_content,
+                job_name=str(uuid.uuid4()),
+                language=language
+            )
+        else:
+            return _response(400, _public_error("Invalid input type"))
+
+        # STEP 2: Normalize
+        normalized_query = normalize_query(user_query)
+        if not normalized_query:
+            return _response(400, _public_error("No valid query found"))
+
+        # STEP 3: Retrieve
+        documents = rag_service.retrieve(normalized_query)
+        context_text = "\n".join(documents)
+
+        # STEP 4: Generate
+        answer_text = bedrock_service.generate_response(
+            query=normalized_query,
+            context=context_text,
+            language=language
+        )
+
+        # STEP 5: Optional TTS
+        audio_url = None
+        if response_mode == "voice":
+            audio_url = polly_service.synthesize(answer_text, language)
+
+        return _response(200, {
+            "status": "success",
+            "answer": {
+                "text": answer_text,
+                "audio": audio_url
+            },
+            "meta": {
+                "language": language,
+                "input_type": input_type,
+                "response_mode": response_mode
             }
-
-        # 2. Intent Normalization
-        intent_data = normalize_intent(user_query, language)
-        print(f"Normalized Intent: {intent_data}")
-
-        # 3. Retrieval (RAG)
-        context_docs = retrieve_context(intent_data)
-        print(f"Retrieved Context: {len(context_docs)} documents")
-
-        # 4. Generate Answer
-        answer_text = generate_answer(user_query, context_docs, language)
-        
-        # 5. Delivery (Construct Response)
-        response = {
-            'statusCode': 200,
-            'body': json.dumps({
-                'user_id': user_id,
-                'query_received': user_query,
-                'intent': intent_data,
-                'answer': answer_text,
-                'sources': [doc['source'] for doc in context_docs]
-            })
-        }
-        
-        return response
+        })
 
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'Internal Server Error'})
-        }
+        logger.error(f"Unhandled error: {e}")
+        return _response(500, _public_error())
+
+def _public_error(message=None):
+    return {"status": "error", "message": message or "Something went wrong."}
+
+def _response(status_code, body):
+    return {
+        "statusCode": status_code,
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json"
+        },
+        "body": json.dumps(body)
+    }

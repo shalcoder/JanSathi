@@ -10,8 +10,7 @@ import {
     LogOut,
     MessageCircle,
     ChevronRight,
-    Home,
-    ShoppingBag
+    Home
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -55,7 +54,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'documents', label: 'Documents', icon: FileText },
-        { id: 'market', label: 'Market Rates', icon: ShoppingBag },
+
         { id: 'profile', label: 'Profile', icon: User },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];
@@ -63,7 +62,10 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     return (
         <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-slate-900/95 lg:bg-transparent backdrop-blur-2xl lg:backdrop-blur-none border-r border-white/10 relative z-20">
 
-            <div className="space-y-8 overflow-y-auto scrollbar-none">
+            <div
+                className="space-y-8 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
                 {/* Brand */}
                 <div className="px-2 flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -78,6 +80,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                 {/* New Chat Button */}
                 <button
                     onClick={onNewChat}
+                    suppressHydrationWarning
                     className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95 group"
                 >
                     <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
@@ -91,6 +94,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                         <button
                             key={item.id}
                             onClick={() => onPageChange(item.id)}
+                            suppressHydrationWarning
                             className={`
                                 w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group
                                 ${activePage === item.id
@@ -130,6 +134,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                                         onPageChange('dashboard');
                                         window.dispatchEvent(new CustomEvent('load-chat-session', { detail: session.id }));
                                     }}
+                                    suppressHydrationWarning
                                     className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all text-left group"
                                 >
                                     <MessageCircle className="w-4 h-4 flex-shrink-0 opacity-40 group-hover:opacity-100" />
@@ -143,7 +148,10 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
 
             {/* Footer */}
             <div className="pt-6 border-t border-white/5">
-                <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-400 transition-colors group">
+                <button
+                    suppressHydrationWarning
+                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-400 transition-colors group"
+                >
                     <LogOut className="w-5 h-5" />
                     <span className="font-bold text-sm">Sign Out</span>
                 </button>

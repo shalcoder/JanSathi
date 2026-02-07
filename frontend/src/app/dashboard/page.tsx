@@ -7,7 +7,7 @@ import ChatInterface from "@/components/features/chat/ChatInterface";
 import DocumentsPage from "@/components/features/dashboard/DocumentsPage";
 import ProfilePage from "@/components/features/dashboard/ProfilePage";
 import SettingsPage from "@/components/features/dashboard/SettingsPage";
-import MarketPrices from "@/components/features/dashboard/MarketPrices";
+
 import BackendStatus from "@/components/BackendStatus";
 import { Menu, X } from 'lucide-react';
 
@@ -21,8 +21,7 @@ export default function Home() {
         return <ChatInterface />;
       case 'documents':
         return <DocumentsPage />;
-      case 'market':
-        return <MarketPrices />;
+
       case 'profile':
         return <ProfilePage />;
       case 'settings':
@@ -66,9 +65,9 @@ export default function Home() {
       </div>
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-500 min-w-0">
+      <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-500 min-w-0 overflow-hidden">
         {/* Responsive Header */}
-        <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 bg-slate-900/50 backdrop-blur-md lg:px-8">
+        <header className="px-4 py-4 flex items-center justify-between border-b border-white/5 bg-slate-900/50 backdrop-blur-md lg:px-8 shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -89,8 +88,8 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-10 scrollbar-none scroll-smooth">
-          <div className="max-w-6xl mx-auto h-full pb-20 lg:pb-0">
+        <div className={`flex-1 overflow-x-hidden ${activePage === 'dashboard' ? 'overflow-hidden p-0' : 'overflow-y-auto p-4 sm:p-6 lg:p-10'} scrollbar-none scroll-smooth`}>
+          <div className={`${activePage === 'dashboard' ? 'h-full w-full' : 'max-w-6xl mx-auto h-full pb-20 lg:pb-0'}`}>
             {renderContent()}
           </div>
         </div>

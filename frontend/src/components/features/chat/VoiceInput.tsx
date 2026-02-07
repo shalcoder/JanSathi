@@ -6,9 +6,10 @@ import { Mic, MicOff, Loader2 } from 'lucide-react';
 interface VoiceInputProps {
     onTranscript: (text: string) => void;
     isProcessing: boolean;
+    compact?: boolean;
 }
 
-export default function VoiceInput({ onTranscript, isProcessing }: VoiceInputProps) {
+export default function VoiceInput({ onTranscript, isProcessing, compact = false }: VoiceInputProps) {
     const [isListening, setIsListening] = useState(false);
     const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -62,8 +63,37 @@ export default function VoiceInput({ onTranscript, isProcessing }: VoiceInputPro
         }
     }, [isListening, recognition]);
 
-    if (error && !recognition) {
+    if (error && !recognition && !compact) {
         return <div className="text-red-500 text-xs">{error}</div>
+    }
+
+    if (compact) {
+        return (
+            <button
+                onClick={toggleListening}
+                disabled={isProcessing || !recognition}
+                className={`
+                    p-4 rounded-[1.5rem] transition-all relative overflow-hidden
+                    ${isListening
+                        ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]'
+                        : 'hover:bg-white/10 text-slate-400 hover:text-white'}
+                    ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+                title={error || (isListening ? "Stop listening" : "Start voice input")}
+            >
+                {isProcessing ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                ) : isListening ? (
+                    <MicOff className="w-6 h-6 animate-pulse" />
+                ) : (
+                    <Mic className="w-6 h-6" />
+                )}
+
+                {isListening && (
+                    <span className="absolute inset-0 bg-white/20 animate-pulse rounded-[1.5rem]"></span>
+                )}
+            </button>
+        );
     }
 
     return (

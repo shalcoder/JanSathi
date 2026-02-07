@@ -1,9 +1,27 @@
-'use client';
-
-import React from 'react';
-import { FileText, Download, Eye, Clock, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { FileText, Download, Eye, Clock, ShieldCheck, Upload, Loader2, Camera } from 'lucide-react';
+import { analyzeImage } from '@/services/api';
 
 const DocumentsPage = () => {
+    const [isUploading, setIsUploading] = useState(false);
+    const [visionResult, setVisionResult] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setIsUploading(true);
+            try {
+                const data = await analyzeImage(file, 'hi');
+                setVisionResult(data.analysis.text);
+            } catch (err) {
+                alert("Analysis failed. Please check your connection.");
+            } finally {
+                setIsUploading(false);
+            }
+        }
+    };
+
     const documents = [
         { id: 1, name: "PM-Kisan Scheme Guidelines.pdf", date: "2024-01-15", size: "1.2 MB", status: "Verified" },
         { id: 2, name: "Ration Card Application Form.pdf", date: "2024-02-01", size: "850 KB", status: "Official" },
@@ -15,16 +33,37 @@ const DocumentsPage = () => {
         <div className="h-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-end">
                 <div>
-                    <h2 className="text-3xl font-bold text-white mb-2">Government Documents</h2>
-                    <p className="text-slate-400">Official guidelines and forms for various citizen services.</p>
+                    <h2 className="text-3xl font-bold text-white mb-2 underline decoration-blue-500/30">Government Intelligence</h2>
+                    <p className="text-slate-400">Review official guidelines or use Drishti AI to analyze your own documents.</p>
                 </div>
                 <div className="flex gap-3">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-medium">
-                        <Clock className="w-4 h-4 text-blue-400" />
-                        <span>Last Updated: Today</span>
-                    </div>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50"
+                    >
+                        {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                        {isUploading ? 'Analyzing...' : 'Analyze Document'}
+                    </button>
                 </div>
             </div>
+
+            {visionResult && (
+                <div className="glass-panel p-6 rounded-3xl border border-blue-500/30 bg-blue-500/5 animate-in slide-in-from-top-4 relative group">
+                    <button onClick={() => setVisionResult(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white">×</button>
+                    <h3 className="text-blue-400 font-black uppercase tracking-widest text-[10px] mb-3">Drishti AI Analysis Result</h3>
+                    <div className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                        {visionResult}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {documents.map((doc) => (

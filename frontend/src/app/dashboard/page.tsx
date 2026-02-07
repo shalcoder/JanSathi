@@ -7,6 +7,7 @@ import ChatInterface from "@/components/features/chat/ChatInterface";
 import DocumentsPage from "@/components/features/dashboard/DocumentsPage";
 import ProfilePage from "@/components/features/dashboard/ProfilePage";
 import SettingsPage from "@/components/features/dashboard/SettingsPage";
+import MarketPrices from "@/components/features/dashboard/MarketPrices";
 import BackendStatus from "@/components/BackendStatus";
 import { Menu, X } from 'lucide-react';
 
@@ -20,6 +21,8 @@ export default function Home() {
         return <ChatInterface />;
       case 'documents':
         return <DocumentsPage />;
+      case 'market':
+        return <MarketPrices />;
       case 'profile':
         return <ProfilePage />;
       case 'settings':
@@ -30,7 +33,7 @@ export default function Home() {
   };
 
   return (
-    <main className="h-screen w-full flex bg-slate-950 aurora-bg text-white overflow-hidden relative selection:bg-blue-500/30">
+    <main className="h-screen w-full flex bg-slate-950 aurora-bg text-white overflow-hidden relative selection:bg-blue-500/30 font-sans">
 
       {/* Decorative Gradient Orbs */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>

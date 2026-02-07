@@ -7,6 +7,7 @@ import AudioPlayer from './AudioPlayer';
 import { useUser } from '@clerk/nextjs';
 import { sendQuery, getHistory, analyzeImage } from '@/services/api';
 import SchemeCard from './SchemeCard';
+import { useSettings } from '@/hooks/useSettings';
 
 // --- Typewriter Component ---
 const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
@@ -67,12 +68,23 @@ export default function ChatInterface() {
     const clerk = useUser();
     const user = clerk?.user ?? { id: 'demo_user', firstName: 'JanSathi User' };
 
+    // Global Settings
+    const { settings, updateSettings } = useSettings();
+
     const [messages, setMessages] = useState<Message[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [language, setLanguage] = useState('hi');
+
+    // Local state for language is now synced with global settings
+    const [language, setLanguage] = useState(settings.language);
+
+    // Sync local language when settings change
+    useEffect(() => {
+        setLanguage(settings.language);
+    }, [settings.language]);
+
     const [showHistory, setShowHistory] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 

@@ -1,12 +1,14 @@
-'use client';
-
-import React, { useState } from 'react';
-import { Settings, Globe, Moon, Volume2, Shield, Bell, Trash2, Save } from 'lucide-react';
+import React from 'react';
+import { Globe, Volume2, Shield, Trash2, Save } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
 
 const SettingsPage = () => {
-    const [voiceEnabled, setVoiceEnabled] = useState(true);
-    const [notifications, setNotifications] = useState(true);
-    const [autoTranslate, setAutoTranslate] = useState(true);
+    const { settings, updateSettings } = useSettings();
+
+    const handleSave = () => {
+        // Settings are saved on change in our hook, but we can show a feedback here
+        alert("Settings saved successfully!");
+    };
 
     return (
         <div className="h-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -26,7 +28,11 @@ const SettingsPage = () => {
                                 <p className="text-sm font-semibold text-slate-300">Default Query Language</p>
                                 <p className="text-xs text-slate-500">Preferred language for AI responses.</p>
                             </div>
-                            <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50">
+                            <select
+                                value={settings.language}
+                                onChange={(e) => updateSettings({ language: e.target.value })}
+                                className="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
+                            >
                                 <option value="hi">Hindi (हिन्दी)</option>
                                 <option value="en">English</option>
                                 <option value="kn">Kannada (ಕನ್ನಡ)</option>
@@ -40,10 +46,10 @@ const SettingsPage = () => {
                                 <p className="text-xs text-slate-500">Automatically translate speech to preferred language.</p>
                             </div>
                             <button
-                                onClick={() => setAutoTranslate(!autoTranslate)}
-                                className={`w-12 h-6 rounded-full transition-all relative ${autoTranslate ? 'bg-blue-600' : 'bg-slate-700'}`}
+                                onClick={() => updateSettings({ autoTranslate: !settings.autoTranslate })}
+                                className={`w-12 h-6 rounded-full transition-all relative ${settings.autoTranslate ? 'bg-blue-600' : 'bg-slate-700'}`}
                             >
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${autoTranslate ? 'left-7' : 'left-1'}`}></div>
+                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.autoTranslate ? 'left-7' : 'left-1'}`}></div>
                             </button>
                         </div>
                     </div>
@@ -63,10 +69,10 @@ const SettingsPage = () => {
                                 <p className="text-xs text-slate-500">Read AI responses aloud automatically.</p>
                             </div>
                             <button
-                                onClick={() => setVoiceEnabled(!voiceEnabled)}
-                                className={`w-12 h-6 rounded-full transition-all relative ${voiceEnabled ? 'bg-blue-600' : 'bg-slate-700'}`}
+                                onClick={() => updateSettings({ voiceEnabled: !settings.voiceEnabled })}
+                                className={`w-12 h-6 rounded-full transition-all relative ${settings.voiceEnabled ? 'bg-blue-600' : 'bg-slate-700'}`}
                             >
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${voiceEnabled ? 'left-7' : 'left-1'}`}></div>
+                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.voiceEnabled ? 'left-7' : 'left-1'}`}></div>
                             </button>
                         </div>
 
@@ -76,10 +82,10 @@ const SettingsPage = () => {
                                 <p className="text-xs text-slate-500">Alerts for new government schemes.</p>
                             </div>
                             <button
-                                onClick={() => setNotifications(!notifications)}
-                                className={`w-12 h-6 rounded-full transition-all relative ${notifications ? 'bg-blue-600' : 'bg-slate-700'}`}
+                                onClick={() => updateSettings({ notifications: !settings.notifications })}
+                                className={`w-12 h-6 rounded-full transition-all relative ${settings.notifications ? 'bg-blue-600' : 'bg-slate-700'}`}
                             >
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${notifications ? 'left-7' : 'left-1'}`}></div>
+                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.notifications ? 'left-7' : 'left-1'}`}></div>
                             </button>
                         </div>
                     </div>
@@ -101,7 +107,8 @@ const SettingsPage = () => {
                             <button
                                 onClick={() => {
                                     if (confirm('Are you sure you want to clear all history?')) {
-                                        sessionStorage.removeItem('jansathi_chat');
+                                        localStorage.removeItem('jansathi_chat_sessions');
+                                        sessionStorage.removeItem('current_jansathi_session');
                                         window.location.reload();
                                     }
                                 }}
@@ -115,7 +122,10 @@ const SettingsPage = () => {
                 </div>
 
                 <div className="flex justify-end pt-4">
-                    <button className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[2rem] font-bold shadow-xl shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95">
+                    <button
+                        onClick={handleSave}
+                        className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[2rem] font-bold shadow-xl shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95"
+                    >
                         <Save className="w-5 h-5" />
                         Save All Changes
                     </button>

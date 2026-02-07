@@ -2,20 +2,27 @@
 
 import React from 'react';
 import { User, Mail, Shield, Bell, MapPin, Calendar, Award } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
+import { useSettings } from '@/hooks/useSettings';
 
 const ProfilePage = () => {
-    const clerk = useUser();
-    // Use optional chaining and fallback for demo mode
-    const user = clerk?.user ?? {
+    const { settings } = useSettings();
+    // Demo user (no authentication required)
+    const user = {
         firstName: 'Demo',
         lastName: 'User',
         imageUrl: '',
         primaryEmailAddress: { toString: () => 'demo@jansathi.ai' }
     };
 
+    const languageMap: Record<string, string> = {
+        'hi': 'Hindi (हिन्दी)',
+        'en': 'English',
+        'kn': 'Kannada (ಕನ್ನಡ)',
+        'ta': 'Tamil (தமிழ்)'
+    };
+
     return (
-        <div className="h-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="min-h-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 font-sans">
             {/* Profile Header */}
             <div className="glass-panel p-8 rounded-[40px] border border-white/10 mb-6 bg-gradient-to-br from-blue-600/10 to-purple-600/10 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -105,7 +112,7 @@ const ProfilePage = () => {
                             </div>
                             <div>
                                 <p className="text-[10px] text-slate-500 uppercase font-bold">Preferred Language</p>
-                                <p className="text-sm text-slate-200">Hindi (हिन्दी)</p>
+                                <p className="text-sm text-slate-200">{languageMap[settings.language] || 'Hindi (हिन्दी)'}</p>
                             </div>
                         </div>
                     </div>

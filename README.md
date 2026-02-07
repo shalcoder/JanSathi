@@ -1,298 +1,550 @@
-JanSathi (जनसाथी)
-Voice-First AI Civic Assistant for India
-1. Project Overview
+# JanSathi (जनसाथी)
+## Voice-First AI Civic Assistant for India
 
-JanSathi is a voice-first, AI-powered civic assistant designed to help Indian citizens—especially rural and semi-urban users—access government schemes, certificates, and public services in simple language using voice or text.
+![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
+![Version](https://img.shields.io/badge/Version-2.0-blue)
+![Mobile](https://img.shields.io/badge/Mobile-Optimized-success)
 
-The core philosophy is:
+---
 
-Meet citizens where they are — voice first, low bandwidth, minimal UI, high reliability.
+## 🌟 Project Overview
 
-JanSathi is built to work even in:
+**JanSathi** is a voice-first, AI-powered civic assistant designed to help Indian citizens—especially rural and semi-urban users—access government schemes, certificates, and public services in simple language using voice or text.
 
-Low-bandwidth environments
+### Core Philosophy
+> **Meet citizens where they are** — voice first, low bandwidth, minimal UI, high reliability.
 
-Intermittent connectivity
+JanSathi works seamlessly in:
+- 📶 Low-bandwidth environments
+- 🔌 Intermittent connectivity
+- 👥 For users unfamiliar with complex apps
 
-Users unfamiliar with complex apps
+### Supported Features
+- 🎙️ **Voice queries** (Speech-to-Text)
+- ⌨️ **Text queries**
+- 🌐 **Web interface** (primary)
+- 📴 **Offline fallback** (cached FAQs)
+- 🌍 **Multilingual support** (Hindi, English, Kannada, Tamil)
+- 📱 **Mobile-first design**
 
-It supports:
+---
 
-🎙️ Voice queries
-
-⌨️ Text queries
-
-🌐 Web (primary)
-
-📴 Offline fallback (cached FAQs)
-
-2. Problem Statement
+## 🎯 Problem Statement
 
 Many Indian government services are:
+- **Fragmented** across multiple portals
+- **Complex** with difficult-to-understand language
+- **Inaccessible** to users without digital literacy
 
-Fragmented across portals
+Citizens struggle with:
+- ❓ How to apply for certificates (income, caste, residence)
+- ❓ Understanding eligibility for schemes
+- ❓ Knowing required documents and steps
 
-Hard to understand due to complex language
+**JanSathi solves this** by acting as a conversational layer over government knowledge.
 
-Inaccessible to users without digital literacy
+---
 
-Citizens often struggle with:
+## 🚀 Tech Stack
 
-How to apply for certificates (income, caste, residence)
+### Frontend (Website)
+- **Framework**: Next.js 16 (React, TypeScript)
+- **Styling**: Tailwind CSS with custom design system
+- **UI/UX**: Glassmorphism, Aurora gradients, Premium animations
+- **Speech**: Web Speech API (browser-based STT)
+- **Audio**: HTML5 `<audio>` for playback
+- **State Management**: React Hooks + localStorage
+- **Mobile**: Fully responsive (320px - 4K)
 
-Understanding eligibility for schemes
+### Backend
+- **Framework**: Python Flask
+- **Architecture**: Clean Architecture (API → Services → Core)
+- **Database**: SQLite with SQLAlchemy ORM
+- **Server**: Gunicorn with async workers
+- **Security**: Talisman, CORS, Rate Limiting
+- **Logging**: JSON-based structured logging
 
-Knowing required documents and steps
+### AI / Cloud Services
+- **Transcription**: AWS Transcribe (Speech-to-Text)
+- **LLM**: AWS Bedrock (Claude/Titan models)
+- **TTS**: AWS Polly (Neural voices)
+- **Search**: AWS Kendra (RAG retrieval)
+- **Fallback**: Local mock mode when AWS unavailable
 
-JanSathi solves this by acting as a conversational layer over government knowledge.
+---
 
-3. High-Level Solution
+## 📁 Repository Structure
 
-JanSathi provides:
-
-Voice/Text Interface for user queries
-
-Backend AI pipeline to:
-
-Transcribe speech
-
-Retrieve relevant context
-
-Generate clear, human-friendly answers
-
-Graceful fallback when AI services are unavailable
-
-4. Tech Stack
-Frontend (Website)
-
-Next.js (React)
-
-TypeScript
-
-Tailwind CSS
-
-Web Speech API – browser-based Speech-to-Text
-
-HTML5 <audio> – audio playback
-
-Progressive Web–friendly design (low bandwidth aware)
-
-The frontend is optimized for low-end devices, slow networks, and voice-first interaction.
-
-Backend
-
-Python (Flask)
-
-Modular service architecture
-
-AWS-ready (but not hard-dependent)
-
-AI / Cloud (Optional / Future)
-
-AWS Transcribe (Speech-to-Text)
-
-AWS Bedrock (LLM generation)
-
-AWS Polly (Text-to-Speech – optional)
-
-⚠️ The system is intentionally designed to work without AWS credentials for hackathon demos.
-
-5. Repository Structure
+```
 JanSathi/
 ├── backend/
-│   ├── main.py                  # Production entry point
-│   ├── app/                     # Clean Architecture core
-│   │   ├── api/                 # Flask Blueprints
-│   │   ├── services/            # AWS & Logic layer
-│   │   ├── models/              # SQLite/SQLAlchemy models
-│   │   └── core/                # Config, Utils, Logging
-│   ├── Dockerfile               # Production container config
+│   ├── main.py                     # Production entry point
+│   ├── app/
+│   │   ├── api/                    # Flask Blueprints (routes.py)
+│   │   ├── services/               # Business logic (AWS integrations)
+│   │   ├── models/                 # SQLAlchemy models
+│   │   └── core/                   # Config, utils, logging
+│   ├── Dockerfile                  # Production container
 │   ├── requirements.txt
-│   └── lambda_handler.py        # AWS Lambda entry
+│   └── lambda_handler.py           # AWS Lambda entry point
 │
 ├── frontend/
-│   ├── app/                     # Next.js App Router
-│   ├── components/
-│   │   ├── features/chat/       # Chat interface module
-│   │   ├── layout/              # Dashboard grid elements
-│   │   └── ui/                  # Reusable components
-│   ├── services/                # Axios API client
-│   ├── Dockerfile               # Production Next.js container
-│   └── public/                  # Static assets
+│   ├── src/
+│   │   ├── app/                    # Next.js App Router
+│   │   │   ├── page.tsx           # Landing page
+│   │   │   ├── sign-in/           # Authentication pages
+│   │   │   ├── sign-up/
+│   │   │   └── dashboard/         # Main dashboard
+│   │   ├── components/
+│   │   │   ├── features/
+│   │   │   │   ├── chat/          # Chat interface + Voice input
+│   │   │   │   └── dashboard/     # Documents, Profile, Settings
+│   │   │   ├── layout/            # Sidebar, Telemetry, Header
+│   │   │   └── ui/                # Reusable components
+│   │   ├── services/              # API client (Axios)
+│   │   ├── hooks/                 # Custom React hooks (useAuth, useSettings)
+│   │   └── styles/                # Global CSS
+│   ├── public/                     # Static assets
+│   ├── Dockerfile                  # Production Next.js container
+│   └── package.json
 │
 ├── docs/
-│   ├── architecture.md
-│   ├── failure_mode_analysis.md
-│   └── pitch_narration.md
+│   ├── AUTHENTICATION_GUIDE.md    # Auth integration guide
+│   ├── AUTH_PAGES_README.md       # Auth pages documentation
+│   └── MOBILE_FIXES_SUMMARY.md    # Mobile optimization log
 │
-└── README.md
+└── README.md                       # This file
+```
 
-6. Backend Architecture
-API Endpoints
-Endpoint	Method	Purpose
-/health	GET	Backend health check
-/query	POST	Main query endpoint (text or audio)
-/query Input Formats
+---
 
-Text (JSON):
+## 🏗️ Architecture
 
-{ "text_query": "How to apply for income certificate" }
+### Backend API Flow
 
-
-Audio (multipart/form-data):
-
-audio_file: <wav/pcm bytes>
-
-/query Output Format
-{
-  "query": "...",
-  "answer": "Human-readable response",
-  "context": []
-}
-
-7. Backend Internal Flow
-Diagram
+```mermaid
 flowchart TD
     A[Client Request] --> B[Flask /query]
     B --> C{Audio or Text?}
     C -->|Audio| D[TranscribeService]
     C -->|Text| E[Normalize Query]
     D --> E
-    E --> F[RagService]
-    F --> G[BedrockService]
-    G --> H[Response JSON]
+    E --> F[RagService - Context Retrieval]
+    F --> G[BedrockService - LLM Generation]
+    G --> H[PollyService - TTS Optional]
+    H --> I[Response JSON]
+```
 
-Design Principles
+### Frontend Architecture
 
-No infinite loops
-
-All temp files cleaned via finally
-
-Bounded polling for AWS calls
-
-Graceful mock fallback when AWS unavailable
-
-8. Frontend Architecture (Web)
-Key Screens
-
-Single Home Page (Voice-First UX)
-
-Frontend Responsibilities
-
-Handle microphone permissions via browser
-
-Capture voice using Web Speech API
-
-Send text queries to backend
-
-Play audio responses using HTML5 audio
-
-Display readable, minimal UI responses
-
-Handle offline fallback
-
-9. Frontend → Backend Interaction
-Diagram
-sequenceDiagram
-    participant User
-    participant WebApp
-    participant FlaskAPI
-
-    User->>WebApp: Speak / Type Query
-    WebApp->>FlaskAPI: POST /query
-    FlaskAPI-->>WebApp: JSON Response
-    WebApp-->>User: Display / Play Answer
-
-10. User Flow
-Diagram
+```mermaid
 flowchart LR
-    U[User] --> Q{Voice or Text?}
-    Q -->|Voice| V[Browser Mic Input]
-    Q -->|Text| T[Text Input]
-    V --> S[Send Query]
-    T --> S
-    S --> A[AI Response]
-    A --> D[Display / Audio Output]
+    U[User] --> L[Landing Page]
+    L --> S[Sign In/Sign Up]
+    S --> D[Dashboard]
+    D --> C[Chat Interface]
+    D --> DOC[Documents]
+    D --> M[Market Rates]
+    D --> P[Profile]
+    D --> SET[Settings]
+```
 
-11. Offline Mode
+---
 
-When internet is unavailable:
+## 🎨 UI/UX Features (v2.0 - Latest Updates)
 
-Web app detects offline state
+### ✅ Completed Features
 
-Searches cached FAQ keywords
+#### **Landing Page**
+- ✨ Modern hero section with animated gradients
+- ✨ Feature showcase grid (Voice AI, Document Analysis, Multilingual)
+- ✨ Tech stack section with AWS branding
+- ✨ **Mobile-optimized**: Responsive text sizing and layouts
+- ✨ **Fixed typo**: "Government" (was "Govenment")
+- ✨ Sign In/Sign Up buttons in navbar
 
-Returns best matching local answer
+#### **Authentication System (NEW!)**
+- 🔐 **Sign In Page** (`/sign-in`)
+  - Email & password login
+  - Google Sign In button (demo)
+  - Remember me checkbox
+  - Forgot password link
+  - Modern glassmorphism UI
+  - Form validation & error handling
 
-This ensures:
+- 🔐 **Sign Up Page** (`/sign-up`)
+  - Full registration form (name, email, password)
+  - Password confirmation & strength validation
+  - Terms & conditions acceptance
+  - Google Sign Up option
+  - Comprehensive client-side validation
 
-No blank screen
+- 🔐 **Authentication Features**
+  - Demo mode using localStorage (ready for production auth)
+  - Sign Out functionality
+  - useAuth hook for state management
+  - Supports Clerk, NextAuth, Firebase, Supabase integration
 
-No crashes
+#### **Chat Interface**
+- 💬 Typewriter effect for AI responses
+- 💬 Voice input with visual feedback
+- 💬 Image analysis integration
+- 💬 Government scheme cards with benefits
+- 💬 Session management
+- 💬 **Mobile-optimized**: Message bubbles adapt to screen size
+- 💬 **Improved spacing**: Better padding on mobile devices
 
-Honest UX messaging
+#### **Dashboard Pages**
+- 📄 **Documents Page**: Official guidelines + upload for AI analysis
+- 📊 **Market Rates**: Live Mandi prices (demo data)
+- 👤 **Profile Page**: User stats, badges, preferences
+- ⚙️ **Settings Page**: Language, theme, voice preferences
+- 📡 **Telemetry Panel**: AWS service status (desktop only)
 
-12. Current Project Status (🚀 PRODUCTION READY)
-Backend
-✅ **Professional Clean Architecture**: Decoupled API, Services, and Core layers.
-✅ **Modular API**: Implemented via Flask Blueprints.
-✅ **Production Web Server**: Dockerized with Gunicorn (async workers).
-✅ **Enterprise Security**: Talisman (Security Headers), CORS strict mode, and Rate Limiting.
-✅ **Structured Logging**: JSON-based logging for CloudWatch visibility.
-✅ **AWS Ready**: Bedrock, Polly, Kendra, and Transcribe integration.
+#### **Mobile Responsiveness (MAJOR UPDATE)**
+- ✅ **All pages fully responsive** (320px → 4K displays)
+- ✅ **Vertical alignment fixed** across all pages
+- ✅ **Adaptive layouts**: Grids stack on mobile
+- ✅ **Touch-friendly**: Buttons sized for mobile interaction
+- ✅ **Viewport meta tag**: Proper mobile scaling
+- ✅ **Responsive text**: Scales from sm → lg → xl
+- ✅ **Horizontal scroll**: Tables adapt on small screens
 
-Frontend (Web)
-✅ **Enterprise Dashboard UX**: Sidebar + Main Chat + Telemetry Layout.
-✅ **Premium Glassmorphic UI**: Custom Aurora gradient system with backdrop-blur.
-✅ **Multilingual Architecture**: Dynamic switching for 4+ Indian languages.
-✅ **Auto-Voice Delivery**: High-quality neural speech synthesis on response.
-✅ **Robust Error Handling**: Global React Error Boundaries for production stability.
-✅ **Production Build Pipeline**: Optimized Docker multi-stage builds.
+#### **Design System**
+- 🎨 Custom glassmorphism effects
+- 🎨 Aurora gradient background
+- 🎨 Consistent color palette (Blue, Purple, Emerald accents)
+- 🎨 Modern typography (Geist Sans font family)
+- 🎨 Smooth animations and transitions
+- 🎨 Dark mode optimized
 
-13. Known Non-Blocking Risks
-- Browser Speech API: Performance varies on non-Chromium browsers.
-- AWS Credentials: Local mock mode active if env vars are missing.
+---
 
-14. What Is Pending (Next Steps)
-AI Enhancements
-🔲 **Acoustic Fine-tuning**: Improving recognition for thick rural accents.
-🔲 **Multimodal PDF Processing**: Direct scan of multi-page documents.
+## 🔌 API Endpoints
 
-Development & DevSecOps
-🔲 **Prod-Key Migration**: Swap placeholder Clerk keys with live production keys.
-🔲 **CI/CD Pipeline**: Automate deployment to AWS App Runner or EKS.
-🔲 **Full Lint Clean-up**: Resolve remaining IDE-level TypeScript warnings.
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/health` | GET | Backend health check |
+| `/query` | POST | Main query endpoint (text or audio) |
+| `/history` | GET | Retrieve past queries (optional) |
 
-15. How to Run Locally
-Backend
+### `/query` Input Formats
+
+**Text (JSON):**
+```json
+{
+  "text_query": "How to apply for income certificate",
+  "language": "en"
+}
+```
+
+**Audio (multipart/form-data):**
+```
+audio_file: <wav/pcm bytes>
+```
+
+### `/query` Output Format
+
+```json
+{
+  "query": "User query text",
+  "answer": "Human-readable response",
+  "audio_url": "https://...",
+  "context": ["source1", "source2"],
+  "structured_sources": [...]
+}
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js** 18+ (for frontend)
+- **Python** 3.9+ (for backend)
+- **npm** or **pnpm** (package manager)
+
+### Quick Start
+
+#### 1. Backend Setup
+```bash
 cd backend
 pip install -r requirements.txt
 python main.py
+```
+Backend runs on `http://localhost:5000`
 
-Frontend (Web)
+#### 2. Frontend Setup
+```bash
 cd frontend
 npm install
 npm run dev
+```
+Frontend runs on `http://localhost:3000`
 
-16. Project Vision
+#### 3. Environment Variables
 
-JanSathi is not just a hackathon demo.
-It is designed as a foundational civic AI layer that can:
+**Frontend (`.env.local`):**
+```bash
+# Backend API
+NEXT_PUBLIC_API_URL=http://localhost:5000
 
-Scale across states
+# Authentication (Optional - currently in demo mode)
+# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+# CLERK_SECRET_KEY=sk_test_...
+```
 
-Support multiple dialects
+**Backend (`.env` or environment):**
+```bash
+# AWS Credentials (Optional - has mock fallback)
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_REGION=ap-south-1
 
-Integrate with official data sources
+# Flask Config
+FLASK_ENV=development
+```
 
-Goal: Make government services understandable, accessible, and human.
+---
 
-17. Authors & Contributors
+## 📱 Mobile Optimization Highlights
 
-Poornachandran (Primary Developer)
+### Responsive Breakpoints
+- **Mobile**: `< 640px` (base styles)
+- **Tablet**: `sm: >= 640px`
+- **Laptop**: `md: >= 768px`
+- **Desktop**: `lg: >= 1024px`
+- **Large**: `xl: >= 1280px`
 
-Team JanSathi
+### Key Improvements
+1. **Landing Page**: Hero text scales from `text-4xl` → `text-8xl`
+2. **Chat Interface**: Message bubbles use 95% width on mobile
+3. **Documents Grid**: 1 column mobile → 3 columns desktop
+4. **Input Controls**: Touch-friendly button sizes
+5. **Tables**: Horizontal scroll on mobile
+6. **Navigation**: Hamburger menu for mobile sidebar
 
-18. License
+---
 
-To be decided (Hackathon / Open Source).
+## 🔐 Authentication & Security
+
+### Current Implementation (Demo Mode)
+- Uses **localStorage** for demo purposes
+- No backend authentication required
+- Perfect for testing and prototyping
+
+### Production Ready Options
+Refer to `AUTHENTICATION_GUIDE.md` for detailed integration guides:
+- **Clerk** (Recommended - easiest setup)
+- **NextAuth.js** (Free, open-source)
+- **Firebase Auth** (Google's solution)
+- **Supabase Auth** (Open-source alternative)
+
+### Sign Out Flow
+1. User clicks "Sign Out" in sidebar
+2. localStorage cleared
+3. Redirect to `/sign-in`
+4. All sessions terminated
+
+---
+
+## 🎯 User Flow
+
+```mermaid
+flowchart LR
+    START[Visit Website] --> LANDING[Landing Page]
+    LANDING --> AUTH{Authenticated?}
+    AUTH -->|No| SIGNIN[Sign In/Sign Up]
+    AUTH -->|Yes| DASH[Dashboard]
+    SIGNIN --> DASH
+    DASH --> CHAT[Chat with AI]
+    DASH --> DOCS[View Documents]
+    DASH --> MARKET[Check Market Rates]
+    DASH --> PROFILE[View Profile]
+    DASH --> SETTINGS[Adjust Settings]
+    CHAT --> VOICE[Voice Input]
+    CHAT --> TEXT[Text Input]
+    CHAT --> IMAGE[Image Analysis]
+```
+
+---
+
+## ✅ Production Readiness Checklist
+
+### Backend
+- ✅ Clean Architecture (API, Services, Core layers)
+- ✅ Modular Flask Blueprints
+- ✅ Docker containerization (Gunicorn + async workers)
+- ✅ Enterprise security (Talisman, CORS, Rate Limiting)
+- ✅ Structured JSON logging (CloudWatch ready)
+- ✅ AWS integration with graceful fallbacks
+- ✅ Health check endpoints
+
+### Frontend
+- ✅ Next.js 16 with App Router
+- ✅ TypeScript for type safety
+- ✅ Responsive design (mobile-first)
+- ✅ Error boundaries for stability
+- ✅ Authentication system (demo + integration ready)
+- ✅ Optimized production build
+- ✅ Docker multi-stage builds
+- ✅ SEO-friendly meta tags
+- ✅ Accessibility considerations
+
+### UI/UX
+- ✅ Premium glassmorphism design
+- ✅ Multilingual support (4+ languages)
+- ✅ Voice input/output
+- ✅ Session management
+- ✅ Loading states and animations
+- ✅ Error handling with user-friendly messages
+- ✅ Mobile-optimized layouts
+- ✅ Touch-friendly interactions
+
+---
+
+## 🔄 Recent Updates (v2.0)
+
+### Latest Changes (Feb 2026)
+1. ✨ **Authentication System**
+   - Created professional sign-in and sign-up pages
+   - Added Google OAuth buttons (demo)
+   - Implemented sign-out functionality
+   - Created useAuth hook for state management
+
+2. ✨ **Mobile Responsiveness**
+   - Fixed vertical alignment across all pages
+   - Responsive text sizing (mobile → desktop)
+   - Adaptive grid layouts
+   - Touch-friendly button sizing
+   - Horizontal scroll for tables on mobile
+
+3. ✨ **UI Improvements**
+   - Fixed "Government" typo on landing page
+   - Updated navbar with Sign In/Sign Up buttons
+   - Improved chat message bubble widths
+   - Better spacing on mobile devices
+   - Enhanced welcome screen
+
+4. ✨ **Code Quality**
+   - Removed Clerk dependencies (shifted to demo mode)
+   - Cleaned up imports and unused code
+   - Added comprehensive documentation
+   - Created authentication integration guide
+
+---
+
+## 📚 Documentation
+
+- **`AUTHENTICATION_GUIDE.md`** - How to integrate real authentication providers
+- **`AUTH_PAGES_README.md`** - Quick reference for auth pages and features
+- **`MOBILE_FIXES_SUMMARY.md`** - Summary of mobile optimization work
+- **`HACKATHON_SUBMISSION.md`** - Hackathon-ready project overview
+
+---
+
+## 🎬 Demo Scenarios
+
+### Scenario 1: Applying for Income Certificate
+```
+User: "मुझे आय प्रमाण पत्र कैसे मिलेगा?"
+(How do I get an income certificate?)
+
+JanSathi: Provides step-by-step guidance in Hindi, 
+including required documents, online portal link, 
+and expected processing time.
+```
+
+### Scenario 2: Checking Mandi Rates
+```
+User: "What are today's wheat prices?"
+
+JanSathi: Returns live/demo mandi rates for wheat
+across different markets with comparative analysis.
+```
+
+### Scenario 3: Document Analysis
+```
+User: Uploads ration card image
+
+JanSathi: Analyzes document using Vision AI,
+extracts key information, and suggests relevant
+schemes based on family composition.
+```
+
+---
+
+## 🐛 Known Issues & Limitations
+
+### Non-Blocking
+- ⚠️ Browser Speech API performance varies on non-Chromium browsers
+- ⚠️ AWS services require credentials (has mock fallback)
+- ⚠️ Demo authentication uses localStorage (not for production)
+
+### Future Enhancements
+- 🔲 Password reset functionality
+- 🔲 Email verification flow
+- 🔲 Real-time mandi price updates
+- 🔲 PDF export for scheme details
+- 🔲 Push notifications for scheme updates
+- 🔲 Offline PWA support
+
+---
+
+## 🚧 Next Steps
+
+### Immediate
+1. Integrate production authentication provider
+2. Connect to real government data APIs
+3. Add unit and integration tests
+4. Set up CI/CD pipeline
+
+### Short-term
+1. Implement acoustic fine-tuning for rural accents
+2. Add multimodal PDF processing
+3. Expand language support (10+ languages)
+4. Mobile app (React Native/Flutter)
+
+### Long-term
+1. WhatsApp bot integration
+2. SMS fallback for feature phones
+3. State-specific customization
+4. Integration with official government portals
+
+---
+
+## 👥 Authors & Contributors
+
+- **Poornachandran** - Primary Developer
+- **Team JanSathi** - Contributors
+
+---
+
+## 📄 License
+
+MIT License (Open Source)
+
+---
+
+## 🙏 Acknowledgments
+
+- Government of India's Digital India initiative
+- AWS for cloud infrastructure
+- Open-source community for tools and libraries
+
+---
+
+## 📞 Support
+
+For questions or support:
+- 📧 Email: support@jansathi.ai (placeholder)
+- 💬 WhatsApp: +91-1234567890 (demo)
+- 🌐 Website: https://jansathi.ai (coming soon)
+
+---
+
+**Built with ❤️ for Digital India**
+
+![India](https://img.shields.io/badge/Made%20in-India-orange)
+![Open Source](https://img.shields.io/badge/Open-Source-green)
+![AI Powered](https://img.shields.io/badge/AI-Powered-blue)

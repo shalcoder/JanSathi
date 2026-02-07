@@ -1,10 +1,16 @@
 import json
 import uuid
-from services.bedrock_service import BedrockService
-from services.rag_service import RagService
-from services.transcribe_service import TranscribeService
-from services.polly_service import PollyService
-from utils import setup_logging, logger, normalize_query
+import os
+import sys
+
+# Add current directory to path for local module resolution
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from app.services.bedrock_service import BedrockService
+from app.services.rag_service import RagService
+from app.services.transcribe_service import TranscribeService
+from app.services.polly_service import PollyService
+from app.core.utils import setup_logging, logger, normalize_query
 
 setup_logging()
 bedrock_service = BedrockService()

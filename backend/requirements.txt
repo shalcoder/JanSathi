@@ -2,3 +2,7 @@ flask
 flask-cors
 boto3
 python-dotenv
+flask-limiter
+Flask-SQLAlchemy
+gunicorn
+flask-talisman

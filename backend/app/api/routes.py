@@ -161,6 +161,7 @@ def get_history():
 
 @bp.route('/analyze', methods=['POST'])
 def analyze():
+    # ... (existing analyze code)
     try:
         if 'image' not in request.files:
             return jsonify({"error": "No image file provided"}), 400
@@ -189,4 +190,20 @@ def analyze():
 
     except Exception as e:
         logger.error(f"Analysis Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/market-rates', methods=['GET'])
+def get_market_rates():
+    """
+    Mock endpoint for agricultural commodity prices.
+    """
+    try:
+        rates = [
+            {"crop": "Wheat (Gehun)", "market": "Lucknow", "price": "2450", "unit": "quintal", "change": "+12", "trend": "up"},
+            {"crop": "Rice (Chawal)", "market": "Patna", "price": "3100", "unit": "quintal", "change": "-5", "trend": "down"},
+            {"crop": "Potato (Aloo)", "market": "Agra", "price": "1200", "unit": "quintal", "change": "+45", "trend": "up"},
+            {"crop": "Onion (Pyaz)", "market": "Nasik", "price": "2800", "unit": "quintal", "change": "+110", "trend": "up"}
+        ]
+        return jsonify(rates)
+    except Exception as e:
         return jsonify({"error": str(e)}), 500

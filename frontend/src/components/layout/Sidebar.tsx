@@ -10,7 +10,8 @@ import {
     LogOut,
     MessageCircle,
     ChevronRight,
-    Home
+    Home,
+    ShoppingBag
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -54,6 +55,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'documents', label: 'Documents', icon: FileText },
+        { id: 'market', label: 'Market Rates', icon: ShoppingBag },
         { id: 'profile', label: 'Profile', icon: User },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];

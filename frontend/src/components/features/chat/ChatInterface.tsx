@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, History as HistoryIcon, Languages, Camera, Image as ImageIcon, X, Trash2 } from 'lucide-react';
 import VoiceInput from './VoiceInput';
 import AudioPlayer from './AudioPlayer';
-import { useUser } from '@clerk/nextjs';
 import { sendQuery, getHistory, analyzeImage } from '@/services/api';
 import SchemeCard from './SchemeCard';
 import { useSettings } from '@/hooks/useSettings';
@@ -65,8 +64,8 @@ const LANGUAGES = [
 const SESSIONS_KEY = 'jansathi_chat_sessions';
 
 export default function ChatInterface() {
-    const clerk = useUser();
-    const user = clerk?.user ?? { id: 'demo_user', firstName: 'JanSathi User' };
+    // Use a fallback user object instead of Clerk
+    const user = { id: 'demo_user', firstName: 'JanSathi User' };
 
     // Global Settings
     const { settings, updateSettings } = useSettings();
@@ -258,7 +257,6 @@ export default function ChatInterface() {
                 data = await sendQuery({
                     text_query: text,
                     language: language,
-                    // @ts-ignore
                     userId: user?.id
                 });
 

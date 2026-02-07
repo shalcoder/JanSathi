@@ -94,9 +94,21 @@ export default function VoiceInput({ onTranscript, isProcessing }: VoiceInputPro
                 )}
             </button>
 
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {isListening ? 'Listening...' : error ? error : 'Tap to Speak'}
-            </p>
+            <div className="h-6 flex items-center justify-center gap-1">
+                {isListening ? (
+                    <>
+                        <div className="w-1 h-3 bg-red-400 rounded-full animate-[bounce_1s_infinite_100ms]"></div>
+                        <div className="w-1 h-5 bg-red-500 rounded-full animate-[bounce_1s_infinite_200ms]"></div>
+                        <div className="w-1 h-4 bg-red-400 rounded-full animate-[bounce_1s_infinite_300ms]"></div>
+                        <div className="w-1 h-6 bg-red-500 rounded-full animate-[bounce_1s_infinite_150ms]"></div>
+                        <div className="w-1 h-3 bg-red-400 rounded-full animate-[bounce_1s_infinite_250ms]"></div>
+                    </>
+                ) : (
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                        {error ? error : 'Tap to Speak'}
+                    </p>
+                )}
+            </div>
         </div>
     );
 }

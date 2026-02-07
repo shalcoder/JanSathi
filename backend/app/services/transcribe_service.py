@@ -4,7 +4,7 @@ import os
 import json
 import urllib.request
 from botocore.exceptions import ClientError, NoCredentialsError
-from utils import logger, retry_aws
+from app.core.utils import logger, retry_aws
 
 class TranscribeService:
     def __init__(self):

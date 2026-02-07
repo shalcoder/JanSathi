@@ -90,7 +90,7 @@ export default function Home() {
         </header>
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-10 scrollbar-none scroll-smooth">
-          <div className="max-w-6xl mx-auto h-full pb-20 lg:pb-0">
+          <div className="max-w-6xl mx-auto min-h-full pb-20 lg:pb-0">
             {renderContent()}
           </div>
         </div>

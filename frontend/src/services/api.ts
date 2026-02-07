@@ -81,3 +81,12 @@ export const analyzeImage = async (imageFile: File, language: string = 'hi'): Pr
         throw error;
     }
 };
+export const getMarketRates = async (): Promise<any[]> => {
+    try {
+        const response = await apiClient.get('/market-rates');
+        return response.data;
+    } catch (error) {
+        console.error('Market Rates API Error:', error);
+        return [];
+    }
+};

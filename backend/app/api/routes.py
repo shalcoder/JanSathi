@@ -8,6 +8,7 @@ from app.core.utils import logger, normalize_query
 import uuid
 import os
 import json
+import time
 
 bp = Blueprint('api', __name__)
 
@@ -26,9 +27,73 @@ except Exception as e:
 @bp.route('/', methods=['GET'])
 def index():
     return jsonify({
-        "message": "Welcome to JanSathi AI API (Enterprise Edition)",
-        "docs": "/health, /query, /history, /analyze"
+        "message": "JanSathi AI Backend Running",
+        "docs": "/health, /query, /analyze, /documents"
     })
+
+# --- Document Management ---
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@bp.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    
+    if file:
+        filename = file.filename
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+        
+        # Return success with file info
+        return jsonify({
+            "message": "File uploaded successfully",
+            "document": {
+                "id": str(uuid.uuid4()),
+                "name": filename,
+                "date": time.strftime('%Y-%m-%d'),
+                "size": f"{os.path.getsize(filepath) / 1024:.1f} KB",
+                "status": "Uploaded"
+            }
+        })
+
+@bp.route('/documents', methods=['GET'])
+def list_documents():
+    files = []
+    if os.path.exists(UPLOAD_FOLDER):
+        for filename in os.listdir(UPLOAD_FOLDER):
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            if os.path.isfile(filepath):
+                files.append({
+                    "id": filename, 
+                    "name": filename,
+                    "date": time.strftime('%Y-%m-%d', time.localtime(os.path.getmtime(filepath))),
+                    "size": f"{os.path.getsize(filepath) / 1024:.1f} KB",
+                    "status": "Stored"
+                })
+    return jsonify(files)
+
+@bp.route('/documents/<filename>', methods=['GET'])
+def serve_document(filename):
+    from flask import send_from_directory
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+@bp.route('/documents/<filename>', methods=['DELETE'])
+def delete_document(filename):
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    if os.path.exists(filepath):
+        try:
+            os.remove(filepath)
+            return jsonify({"message": "File deleted"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    return jsonify({"error": "File not found"}), 404
+
+
+
 
 @bp.route('/health', methods=['GET'])
 def health():
@@ -203,18 +268,4 @@ def analyze():
         logger.error(f"Analysis Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@bp.route('/market-rates', methods=['GET'])
-def get_market_rates():
-    """
-    Mock endpoint for agricultural commodity prices.
-    """
-    try:
-        rates = [
-            {"crop": "Wheat (Gehun)", "market": "Lucknow", "price": "2450", "unit": "quintal", "change": "+12", "trend": "up"},
-            {"crop": "Rice (Chawal)", "market": "Patna", "price": "3100", "unit": "quintal", "change": "-5", "trend": "down"},
-            {"crop": "Potato (Aloo)", "market": "Agra", "price": "1200", "unit": "quintal", "change": "+45", "trend": "up"},
-            {"crop": "Onion (Pyaz)", "market": "Nasik", "price": "2800", "unit": "quintal", "change": "+110", "trend": "up"}
-        ]
-        return jsonify(rates)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+

@@ -12,25 +12,31 @@ import { useSettings } from '@/hooks/useSettings';
 const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
     const [displayedText, setDisplayedText] = useState('');
     const index = useRef(0);
+    const onCompleteRef = useRef(onComplete);
+
+    // Keep the callback ref updated
+    useEffect(() => {
+        onCompleteRef.current = onComplete;
+    }, [onComplete]);
 
     useEffect(() => {
         index.current = 0;
         setDisplayedText('');
 
         const intervalId = setInterval(() => {
-            // Increment index by chunk size (e.g., 2 chars)
-            index.current += 2;
-            const currentText = text.slice(0, index.current);
-            setDisplayedText(currentText);
+            index.current += 2; // Speed up slightly
+            if (index.current > text.length) index.current = text.length;
+
+            setDisplayedText(text.slice(0, index.current));
 
             if (index.current >= text.length) {
                 clearInterval(intervalId);
-                if (onComplete) onComplete();
+                if (onCompleteRef.current) onCompleteRef.current();
             }
-        }, 15);
+        }, 10); // Faster Interval
 
         return () => clearInterval(intervalId);
-    }, [text, onComplete]);
+    }, [text]); // Only re-run if TEXT changes, not onComplete
 
     return <div className="leading-relaxed whitespace-pre-wrap">{displayedText}</div>;
 };
@@ -85,14 +91,20 @@ export default function ChatInterface() {
     }, [settings.language]);
 
     const [showHistory, setShowHistory] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (scrollContainerRef.current) {
+            const { scrollHeight, clientHeight } = scrollContainerRef.current;
+            scrollContainerRef.current.scrollTo({
+                top: scrollHeight - clientHeight,
+                behavior: 'smooth'
+            });
+        }
     };
 
     // Initialize Sessions
@@ -287,37 +299,15 @@ export default function ChatInterface() {
     };
 
     return (
-        <div className="flex flex-col h-full w-full glass-panel rounded-3xl overflow-hidden shadow-2xl relative border border-white/10 bg-black/20 backdrop-blur-xl transition-all duration-500">
-
-            {/* Header Controls */}
-            <div className="flex justify-between items-center p-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-10">
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleDeleteChat}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete this chat"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">Live Consultation</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Languages className="w-4 h-4 text-slate-400" />
-                    <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        className="text-xs bg-slate-100 dark:bg-slate-800 border-none rounded-lg px-2 py-1 outline-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-blue-500"
-                    >
-                        {LANGUAGES.map(lang => (
-                            <option key={lang.code} value={lang.code}>{lang.name}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
+        <div className="flex flex-col h-full w-full relative bg-transparent">
+            {/* Header Controls Removed for Full Screen Mode */}
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+            <div
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent [&::-webkit-scrollbar]:hidden scrollbar-none"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
                 {messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome') ? (
                     <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-80 animate-in fade-in duration-700">
                         <div className="w-24 h-24 bg-blue-500/10 rounded-3xl flex items-center justify-center mb-6 border border-blue-500/20 shadow-2xl rotate-3">
@@ -343,6 +333,7 @@ export default function ChatInterface() {
                                         setInputText(q);
                                         handleSend(q);
                                     }}
+                                    suppressHydrationWarning
                                     className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-left text-sm text-slate-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 hover:shadow-xl hover:shadow-blue-600/20 transition-all flex items-center justify-between group"
                                 >
                                     <span className="font-bold">{q}</span>
@@ -367,9 +358,15 @@ export default function ChatInterface() {
                                     `}
                                 >
                                     {msg.role === 'assistant' && msg.isTyping ? (
-                                        <Typewriter text={msg.text} onComplete={() => {
-                                            // Handle completion if needed
-                                        }} />
+                                        <Typewriter
+                                            text={msg.text}
+                                            onComplete={() => {
+                                                // Mark message as done typing locally to switch to static render
+                                                setMessages(prev => prev.map(m =>
+                                                    m.id === msg.id ? { ...m, isTyping: false } : m
+                                                ));
+                                            }}
+                                        />
                                     ) : (
                                         <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                                     )}
@@ -417,7 +414,6 @@ export default function ChatInterface() {
                         )}
                     </>
                 )}
-                <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
@@ -442,11 +438,6 @@ export default function ChatInterface() {
                     </div>
                 )}
 
-                {/* Voice Input Centered */}
-                <div className="mb-6 flex justify-center">
-                    <VoiceInput onTranscript={handleSend} isProcessing={isLoading} />
-                </div>
-
                 {/* Text Input Row */}
                 <div className="flex gap-3 items-center bg-white/5 p-2 rounded-[2rem] border border-white/10 shadow-2xl shadow-black/20 focus-within:border-blue-500/50 transition-all">
                     <input
@@ -459,6 +450,7 @@ export default function ChatInterface() {
 
                     <button
                         onClick={() => fileInputRef.current?.click()}
+                        suppressHydrationWarning
                         className={`p-4 rounded-[1.5rem] transition-all ${selectedImage ? 'bg-blue-600 text-white' : 'hover:bg-white/10 text-slate-400 hover:text-white'}`}
                         title="Analyze Document/Image"
                         disabled={isLoading}
@@ -466,7 +458,10 @@ export default function ChatInterface() {
                         <Camera className="w-6 h-6" />
                     </button>
 
+                    <VoiceInput onTranscript={handleSend} isProcessing={isLoading} compact={true} />
+
                     <input
+                        suppressHydrationWarning
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}

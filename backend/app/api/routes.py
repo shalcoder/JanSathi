@@ -149,15 +149,26 @@ def get_history():
         user_id = request.args.get('userId')
         limit = request.args.get('limit', 10, type=int)
         
-        query = Conversation.query
-        if user_id:
-            query = query.filter_by(user_id=user_id)
+        # Simple approach - get all conversations and filter in Python if needed
+        try:
+            all_conversations = db.session.query(Conversation).order_by(Conversation.timestamp.desc()).limit(limit).all()
             
-        history = query.order_by(Conversation.timestamp.desc()).limit(limit).all()
-        return jsonify([conv.to_dict() for conv in history])
+            # Filter by user_id if provided
+            if user_id:
+                filtered_conversations = [conv for conv in all_conversations if conv.user_id == user_id]
+                return jsonify([conv.to_dict() for conv in filtered_conversations[:limit]])
+            else:
+                return jsonify([conv.to_dict() for conv in all_conversations])
+                
+        except Exception as db_error:
+            logger.error(f"Database query error: {db_error}")
+            # Return empty history if database issues
+            return jsonify([])
+            
     except Exception as e:
         logger.error(f"History Error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        # Return empty array instead of error for better UX
+        return jsonify([])
 
 @bp.route('/analyze', methods=['POST'])
 def analyze():

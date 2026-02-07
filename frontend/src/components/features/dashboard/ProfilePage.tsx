@@ -2,12 +2,10 @@
 
 import React from 'react';
 import { User, Mail, Shield, Bell, MapPin, Calendar, Award } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
 
 const ProfilePage = () => {
-    const clerk = useUser();
-    // Use optional chaining and fallback for demo mode
-    const user = clerk?.user ?? {
+    // Use a fallback user object instead of Clerk
+    const user = {
         firstName: 'Demo',
         lastName: 'User',
         imageUrl: '',

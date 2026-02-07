@@ -21,56 +21,63 @@ class BedrockService:
 
     def generate_response(self, query, context_text, language='hi'):
         if not self.working:
-            return self._get_demo_response()
+            return self._get_context_based_response(query, context_text, language)
+
+        # Check if we have actual context about the query
+        if not context_text or "I do not have specific public data" in context_text:
+            return f"I don't have specific information about '{query}'. Please check official government portals like india.gov.in for accurate details."
 
         prompt = f"""
-        Human: You are JanSathi, a helpful and empathetic government assistant for rural India.
-        Your goal is to explain government schemes, prices, and rules simply.
+        Human: You are JanSathi, a helpful government assistant for rural India.
         
-        CONTEXT (Relevant Documents):
+        CONTEXT (Official Government Information):
         {context_text}
         
         USER QUESTION: {query}
+        LANGUAGE: {language}
         
-        INSTRUCTIONS:
-        1. Answer ONLY based on the CONTEXT provided. If the answer is missing, state: "I do not have official information on this."
-        2. Keep the language simple and direct.
-        3. Reply in the requested language: {language} (or English if not specified).
-        4. STRUCTURE YOUR ANSWER EXACTLY LIKE THIS:
-           
-           ✅ **What this is**: [Brief summary]
-           
-           📋 **Eligibility**:
-           • [Point 1]
-           • [Point 2]
-           
-           🧾 **Required Documents**:
-           • [Doc 1]
-           • [Doc 2]
-           
-           🪜 **Steps to Apply**:
-           1. [Step 1]
-           2. [Step 2]
-           
-           🌐 **Where to Apply**: [Website or Office Name]
-
-        5. Do NOT make up numbers or dates.
+        CRITICAL INSTRUCTIONS:
+        1. Answer ONLY using the CONTEXT provided above. Do NOT make up information.
+        2. If the context contains information about the user's question, use it to provide a helpful answer.
+        3. Structure your response clearly with the scheme/service name and key details.
+        4. Keep language simple and practical.
+        5. Reply in {language} if possible, otherwise English.
+        
+        Format your answer like this:
+        ✅ **What this is**: [Brief explanation based on context]
+        
+        📋 **Key Details**:
+        • [Detail 1 from context]
+        • [Detail 2 from context]
+        
+        🌐 **More Information**: [Website from context if available]
         
         Assistant:
         """
 
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 400,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
+        # Check if using Titan or Claude
+        if "titan" in self.model_id.lower():
+            body = json.dumps({
+                "inputText": prompt,
+                "textGenerationConfig": {
+                    "maxTokenCount": 400,
+                    "temperature": 0.1,
+                    "topP": 0.9
                 }
-            ],
-            "temperature": 0.1,
-            "top_p": 0.9
-        })
+            })
+        else:
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 400,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.1,
+                "top_p": 0.9
+            })
 
         retries = 2
         for attempt in range(retries + 1):
@@ -83,22 +90,31 @@ class BedrockService:
                 )
                 
                 response_body = json.loads(response.get('body').read())
-                return response_body['content'][0]['text']
+                
+                # Parse response based on model type
+                if "titan" in self.model_id.lower():
+                    return response_body['results'][0]['outputText']
+                else:
+                    return response_body['content'][0]['text']
 
             except ClientError as e:
                 error_code = e.response['Error']['Code']
+                print(f"Bedrock ClientError: {error_code} - {e}")
                 if error_code == 'ThrottlingException':
                     if attempt < retries:
                         time.sleep(1 * (attempt + 1)) # Simple backoff
                         continue
                     else:
                         return "System is busy. Please try again later."
+                elif error_code == 'AccessDeniedException':
+                    print("Access denied - using context-based response")
+                    return self._get_context_based_response(query, context_text, language)
                 else:
                     print(f"Bedrock Error: {e}")
-                    return self._get_demo_response()
+                    return self._get_context_based_response(query, context_text, language)
             except Exception as e:
-                print(f"Unknown Error: {e}")
-                return self._get_demo_response()
+                print(f"Unknown Bedrock Error: {e}")
+                return self._get_context_based_response(query, context_text, language)
 
     def analyze_image(self, image_bytes, prompt_text="Explain this document.", language='hi'):
         """
@@ -161,6 +177,51 @@ class BedrockService:
         except Exception as e:
             print(f"Vision Error: {e}")
             return "Could not analyze the image. Please ensure it is clear."
+
+    def _get_context_based_response(self, query, context_text, language='hi'):
+        """Generate a response based on the RAG context when Bedrock is not available"""
+        if not context_text or "I do not have specific public data" in context_text:
+            return f"I don't have specific information about '{query}'. Please check official government portals like india.gov.in for accurate details."
+        
+        # Extract key information from context
+        lines = context_text.split('\n')
+        scheme_info = []
+        website = ""
+        
+        for line in lines:
+            if line.strip():
+                if "https://" in line:
+                    # Extract website
+                    import re
+                    urls = re.findall(r'https://[^\s\]]+', line)
+                    if urls:
+                        website = urls[0]
+                
+                # Clean up the line
+                clean_line = line.replace('[Source:', '').replace(']', '').strip()
+                if clean_line and not clean_line.startswith('http'):
+                    scheme_info.append(clean_line)
+        
+        # Generate structured response
+        if scheme_info:
+            main_info = scheme_info[0] if scheme_info else "Government scheme information"
+            
+            response = f"✅ **What this is**: {main_info}\n\n"
+            
+            if len(scheme_info) > 1:
+                response += "📋 **Key Details**:\n"
+                for info in scheme_info[1:3]:  # Limit to 2 additional details
+                    response += f"• {info}\n"
+                response += "\n"
+            
+            if website:
+                response += f"🌐 **More Information**: {website}\n\n"
+            
+            response += "💡 **Note**: This information is from official government sources. For the latest updates and application procedures, please visit the official website."
+            
+            return response
+        
+        return self._get_demo_response()
 
     def _get_demo_response(self):
         return """✅ **What this is**: (Demo Mode) The Income Certificate is an official statement provided to the citizen by the state government confirming their annual income.

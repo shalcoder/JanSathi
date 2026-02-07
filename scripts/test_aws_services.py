@@ -11,7 +11,10 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
 from dotenv import load_dotenv
-load_dotenv('backend/.env')
+# Load .env from backend directory
+backend_dir = os.path.join(os.path.dirname(__file__), '..', 'backend')
+env_path = os.path.join(backend_dir, '.env')
+load_dotenv(env_path)
 
 print("🧪 JanSathi AWS Services Test")
 print("=" * 50)

@@ -11,14 +11,14 @@ interface SchemeCardProps {
 
 const SchemeCard: React.FC<SchemeCardProps> = ({ title, description, link, benefit, logo }) => {
     return (
-        <div className="flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl transition-shadow duration-300">
-            <div className="flex flex-row p-4 gap-4 items-start">
+        <div className="flex flex-col bg-slate-900 rounded-[2rem] shadow-premium hover:shadow-premium-hover border border-white/5 overflow-hidden transition-all duration-500 group">
+            <div className="flex flex-row p-6 gap-5 items-start">
                 {/* Logo Section */}
-                <div className="flex-shrink-0 w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-lg flex items-center justify-center p-2 border border-slate-100 dark:border-slate-700">
+                <div className="flex-shrink-0 w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center p-3 border border-white/10 shadow-inner overflow-hidden">
                     <img
                         src={logo || "/globe.svg"}
                         alt={`${title} Logo`}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                         onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg'; // Fallback to Indian Emblem
                         }}
@@ -27,34 +27,39 @@ const SchemeCard: React.FC<SchemeCardProps> = ({ title, description, link, benef
 
                 {/* Content Section */}
                 <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100 leading-tight mb-1">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-black text-xl text-white leading-tight tracking-tight transition-colors">
                             {title}
                         </h3>
                     </div>
 
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 mb-2">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        {benefit}
-                    </span>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <CheckCircle className="w-3 h-3 mr-1.5" />
+                            {benefit}
+                        </span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            Verified
+                        </span>
+                    </div>
 
-                    <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-3">
+                    <p className="text-sm text-slate-400 font-semibold leading-relaxed line-clamp-2 transition-colors">
                         {description}
                     </p>
                 </div>
             </div>
 
             {/* Action Footer */}
-            <div className="bg-slate-50 dark:bg-slate-900 p-3 px-4 flex justify-between items-center border-t border-slate-200 dark:border-slate-700">
-                <span className="text-xs text-slate-500 font-medium">Official Gov Scheme</span>
+            <div className="bg-white/[0.02] p-4 px-6 flex justify-between items-center border-t border-white/5 transition-colors">
+                <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Official Government Scheme</span>
                 <a
                     href={link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-colors shadow-sm gap-2 group"
+                    className="inline-flex items-center justify-center px-6 py-2 text-sm font-black text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-xl shadow-blue-600/20 gap-2 group/btn active:scale-95"
                 >
                     Apply Now
-                    <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    <ExternalLink className="w-4 h-4 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
                 </a>
             </div>
         </div>

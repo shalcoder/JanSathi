@@ -60,7 +60,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     ];
 
     return (
-        <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-slate-900/95 lg:bg-transparent backdrop-blur-2xl lg:backdrop-blur-none border-r border-white/10 relative z-20">
+        <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-slate-900 lg:bg-transparent backdrop-blur-2xl lg:backdrop-blur-none border-r border-white/5 relative z-20 transition-all duration-500">
 
             <div
                 className="space-y-8 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden"
@@ -68,12 +68,12 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
             >
                 {/* Brand */}
                 <div className="px-2 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <span className="font-black text-xs">JS</span>
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-600/30">
+                        <span className="font-black text-sm text-white">JS</span>
                     </div>
                     <div>
-                        <h1 className="font-black text-xl tracking-tighter text-white">JanSathi</h1>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Enterprise AI</p>
+                        <h1 className="font-black text-2xl tracking-tighter text-white transition-colors leading-none">JanSathi</h1>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Enterprise AI</p>
                     </div>
                 </div>
 
@@ -81,10 +81,11 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                 <button
                     onClick={onNewChat}
                     suppressHydrationWarning
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95 group"
+                    className="w-full flex items-center justify-center gap-3 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-blue-600/30 active:scale-95 group relative overflow-hidden"
                 >
-                    <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                    <span>New Consultation</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]"></div>
+                    <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500 relative z-10" />
+                    <span className="relative z-10">New Consultation</span>
                 </button>
 
                 {/* Main Nav */}
@@ -96,15 +97,15 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                             onClick={() => onPageChange(item.id)}
                             suppressHydrationWarning
                             className={`
-                                w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group
+                                w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group
                                 ${activePage === item.id
-                                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 border border-blue-500'
                                     : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'}
                             `}
                         >
-                            <item.icon className={`w-5 h-5 ${activePage === item.id ? 'text-blue-400' : 'group-hover:text-white'}`} />
-                            <span className="font-bold text-sm">{item.label}</span>
-                            {activePage === item.id && <ChevronRight className="w-4 h-4 ml-auto opacity-50" />}
+                            <item.icon className={`w-5 h-5 ${activePage === item.id ? 'text-white' : 'group-hover:text-white transition-colors'}`} />
+                            <span className="font-black text-sm tracking-tight">{item.label}</span>
+                            {activePage === item.id && <ChevronRight className="w-4 h-4 ml-auto opacity-70" />}
                         </button>
                     ))}
 
@@ -130,15 +131,14 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                                 <button
                                     key={session.id}
                                     onClick={() => {
-                                        // Logic to switch to dashboard and load this session
                                         onPageChange('dashboard');
                                         window.dispatchEvent(new CustomEvent('load-chat-session', { detail: session.id }));
                                     }}
                                     suppressHydrationWarning
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all text-left group"
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all text-left group"
                                 >
-                                    <MessageCircle className="w-4 h-4 flex-shrink-0 opacity-40 group-hover:opacity-100" />
-                                    <span className="truncate text-xs font-medium">{session.title}</span>
+                                    <MessageCircle className="w-4 h-4 flex-shrink-0 text-slate-400 group-hover:text-blue-400 transition-colors" />
+                                    <span className="truncate text-xs font-bold">{session.title}</span>
                                 </button>
                             ))
                         )}
@@ -150,10 +150,10 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
             <div className="pt-6 border-t border-white/5">
                 <button
                     suppressHydrationWarning
-                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-400 transition-colors group"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-500 transition-all group font-black text-sm"
                 >
-                    <LogOut className="w-5 h-5" />
-                    <span className="font-bold text-sm">Sign Out</span>
+                    <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                    <span>Sign Out</span>
                 </button>
             </div>
         </div>

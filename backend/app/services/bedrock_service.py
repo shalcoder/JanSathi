@@ -107,7 +107,10 @@ class BedrockService:
                     else:
                         return "System is busy. Please try again later."
                 elif error_code == 'AccessDeniedException':
-                    print("Access denied - using context-based response")
+                    if "INVALID_PAYMENT_INSTRUMENT" in str(e):
+                        print("Bedrock Notice: Payment instrument invalid. Using Context-based response.")
+                    else:
+                        print(f"Bedrock Access Denied: {e}")
                     return self._get_context_based_response(query, context_text, language)
                 else:
                     print(f"Bedrock Error: {e}")

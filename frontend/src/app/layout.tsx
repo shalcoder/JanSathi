@@ -34,8 +34,8 @@ export default function RootLayout({
     </html>
   );
 
-  // Only wrap with Clerk if a key is provided and looks valid
-  if (!PUBLISHABLE_KEY || PUBLISHABLE_KEY.includes('test_example')) {
+  // Wrap with Clerk if a key is provided
+  if (!PUBLISHABLE_KEY) {
     return content;
   }
 

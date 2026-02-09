@@ -6,8 +6,8 @@ load_dotenv()
 class Config:
     """Production configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-123')
-    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///jansathi.db')
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///jansathi.db')
+    DATABASE_URL = SQLALCHEMY_DATABASE_URI
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
     ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')

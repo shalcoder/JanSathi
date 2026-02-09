@@ -7,7 +7,7 @@ import BackendStatus from "@/components/BackendStatus";
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-slate-950 text-white overflow-x-hidden selection:bg-blue-500/30 font-sans">
+    <main className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-blue-500/30 font-sans transition-colors duration-500">
 
       {/* Dynamic Background */}
       <div className="fixed inset-0 z-0">
@@ -19,15 +19,15 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="relative z-50 flex items-center justify-between px-6 py-6 md:px-12 max-w-7xl mx-auto backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <span className="font-black text-xl">JS</span>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <span className="font-black text-xl text-white">JS</span>
           </div>
-          <span className="text-2xl font-black tracking-tighter">JanSathi</span>
+          <span className="text-2xl font-black tracking-tighter text-white transition-colors">JanSathi</span>
         </div>
-        <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-400">
+        <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-400 transition-colors">
           <a href="#features" className="hover:text-blue-400 transition-colors">Features</a>
           <a href="#how-it-works" className="hover:text-blue-400 transition-colors">How it works</a>
-          <Link href="/dashboard" className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white transition-all">
+          <Link href="/dashboard" className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white transition-all shadow-sm">
             Dashboard
           </Link>
         </div>
@@ -40,12 +40,12 @@ export default function LandingPage() {
           AI for Bharat Hackathon 2026
         </div>
 
-        <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          Govenment Services, <br />
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-teal-400 to-purple-500">Simplified by AI.</span>
+        <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] text-white transition-colors animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          Government Services, <br />
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-teal-500 to-purple-600">Simplified by AI.</span>
         </h1>
 
-        <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
+        <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mb-12 leading-relaxed transition-colors animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
           JanSathi is your voice-first AI assistant for government schemes,
           mandi prices, and document analysis. Designed to bridge the digital gap in rural India.
         </p>
@@ -59,7 +59,7 @@ export default function LandingPage() {
           </Link>
           <a
             href="#features"
-            className="px-10 py-5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-[2.5rem] font-black text-xl transition-all"
+            className="px-10 py-5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-[2.5rem] font-black text-xl transition-all shadow-xl shadow-black/5"
           >
             Explore Features
           </a>
@@ -119,15 +119,15 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 py-20 px-6 md:px-12 border-t border-white/5 text-center">
+      <footer className="relative z-10 py-20 px-6 md:px-12 border-t border-white/5 text-center transition-colors">
         <p className="text-slate-500 font-bold mb-4 uppercase tracking-[0.2em] text-xs font-mono">JanSathi Professional v2.0</p>
-        <p className="text-slate-400 max-w-md mx-auto mb-8">
+        <p className="text-slate-400 max-w-md mx-auto mb-8 font-medium">
           Empowering every citizen with the power of artificial intelligence.
         </p>
-        <div className="flex justify-center gap-8 text-slate-600 font-black">
-          <a href="#" className="hover:text-blue-500">About</a>
-          <a href="#" className="hover:text-blue-500">Privacy</a>
-          <a href="#" className="hover:text-blue-500">Terms</a>
+        <div className="flex justify-center gap-8 text-slate-600 font-black transition-colors">
+          <a href="#" className="hover:text-blue-500 transition-colors">About</a>
+          <a href="#" className="hover:text-blue-500 transition-colors">Privacy</a>
+          <a href="#" className="hover:text-blue-500 transition-colors">Terms</a>
         </div>
       </footer>
 
@@ -138,12 +138,12 @@ export default function LandingPage() {
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
   return (
-    <div className="group p-10 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/[0.07] hover:border-blue-500/30 transition-all duration-500">
+    <div className="group p-10 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/[0.07] hover:border-blue-500/30 transition-all duration-500 shadow-xl shadow-black/5">
       <div className="mb-8 inline-block p-5 bg-white/5 rounded-2xl shadow-inner group-hover:scale-110 transition-transform duration-500">
         {icon}
       </div>
-      <h3 className="text-2xl font-black mb-4 tracking-tighter">{title}</h3>
-      <p className="text-slate-400 leading-relaxed font-medium">
+      <h3 className="text-2xl font-black mb-4 tracking-tighter text-white transition-colors">{title}</h3>
+      <p className="text-slate-400 leading-relaxed font-semibold transition-colors">
         {description}
       </p>
     </div>
@@ -157,8 +157,8 @@ function TechItem({ icon, name, detail }: { icon: React.ReactNode, name: string,
         {icon}
       </div>
       <div>
-        <p className="font-black text-lg leading-none mb-1">{name}</p>
-        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{detail}</p>
+        <p className="font-black text-lg leading-none mb-1 text-white transition-colors">{name}</p>
+        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">{detail}</p>
       </div>
     </div>
   );

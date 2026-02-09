@@ -1,12 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc; /* Slate 50 */
-  --foreground: #0f172a; /* Slate 900 */
-  --primary: #2563eb;    /* Blue 600 */
+  --background: #020617;
+  /* Slate 950 */
+  --foreground: #f8fafc;
+  /* Slate 50 */
+  --primary: #3b82f6;
+  /* Blue 500 */
   --primary-foreground: #ffffff;
-  --secondary: #e2e8f0;  /* Slate 200 */
-  --accent: #0d9488;     /* Teal 600 */
+  --secondary: #1e293b;
+  /* Slate 800 */
+  --accent: #38bdf8;
+  /* Sky 400 */
+  --card: #0f172a;
+  /* Slate 900 */
+  --card-foreground: #f8fafc;
+  --border: #1e293b;
+  /* Slate 800 - subtle */
+
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-surface: rgba(15, 23, 42, 0.9);
+  --glass-blur: 12px;
 }
 
 @theme inline {
@@ -16,61 +30,65 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
-  
-  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --background: #ffffff;
-  --foreground: #171717;
-  
-  /* Glassmorphism Variables */
-  --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-surface: rgba(255, 255, 255, 0.1);
-  --glass-blur: 12px;
-}
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
 
-[data-theme='dark'] {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-surface: rgba(0, 0, 0, 0.3);
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-premium-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', sans-serif;
-  overflow: hidden; /* Prevent body scroll for dashboard layout */
-}
-
-/* Aurora Background Animation */
-@keyframes aurora {
-  0% { background-position: 50% 50%, 50% 50%; }
-  100% { background-position: 350% 50%, 350% 50%; }
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
 }
 
 .aurora-bg {
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-  background-size: 100% 100%;
-  animation: aurora 60s linear infinite;
+  background-image:
+    radial-gradient(at 0% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(217, 33%, 20%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(230, 25%, 30%, 1) 0, transparent 50%);
+  background-size: 200% 200%;
+  animation: aurora 30s linear infinite;
 }
 
-.dark .aurora-bg {
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225,39%,20%,1) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(339,49%,20%,1) 0, transparent 50%);
-}
-
-/* Glass Panel Utility */
 .glass-panel {
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--glass-surface);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dark .glass-panel {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.premium-card {
+  @apply bg-card text-card-foreground rounded-[2rem] border border-border transition-all duration-300;
+  box-shadow: var(--shadow-premium);
+}
+
+.premium-card:hover {
+  box-shadow: var(--shadow-premium-hover);
+  @apply border-primary/20;
+}
+
+/* Hide scrollbar utility & Global override */
+.scrollbar-none,
+* {
+  -ms-overflow-style: none !important;
+  /* IE and Edge */
+  scrollbar-width: none !important;
+  /* Firefox */
+}
+
+.scrollbar-none::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  /* Chrome, Safari and Opera */
+  width: 0 !important;
+  height: 0 !important;
 }

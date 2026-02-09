@@ -62,11 +62,11 @@ const DocumentsPage = () => {
     };
 
     return (
-        <div className="h-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-end">
+        <div className="min-h-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
-                    <h2 className="text-3xl font-bold text-white mb-2 underline decoration-blue-500/30">Government Intelligence</h2>
-                    <p className="text-slate-400">Review official guidelines or upload your own documents for analysis.</p>
+                    <h2 className="text-4xl font-black text-white mb-3 transition-colors tracking-tighter">Government Intelligence</h2>
+                    <p className="text-slate-400 font-bold transition-colors">Review official guidelines or upload your own documents for analysis.</p>
                 </div>
                 <div className="flex gap-3">
                     <input
@@ -79,10 +79,11 @@ const DocumentsPage = () => {
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50"
+                        className="flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.8rem] font-black transition-all shadow-xl shadow-blue-600/30 active:scale-95 disabled:opacity-50 group relative overflow-hidden"
                     >
-                        {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                        {isUploading ? 'Uploading...' : 'Upload Document'}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]"></div>
+                        {isUploading ? <Loader2 className="w-5 h-5 animate-spin relative z-10" /> : <Upload className="w-5 h-5 relative z-10" />}
+                        <span className="relative z-10">{isUploading ? 'Uploading Intelligence...' : 'Upload Document'}</span>
                     </button>
                 </div>
             </div>
@@ -100,44 +101,47 @@ const DocumentsPage = () => {
             {documents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 glass-panel rounded-3xl border border-dashed border-white/10 text-slate-500">
                     <Upload className="w-12 h-12 mb-4 opacity-50" />
-                    <p>No documents found. Upload one to get started.</p>
+                    <p className="font-bold">No documents found. Upload one to get started.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-10">
                     {documents.map((doc) => (
-                        <div key={doc.id} className="glass-panel p-5 rounded-3xl border border-white/5 group hover:border-blue-500/30 transition-all relative">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                                    <FileText className="w-6 h-6 text-blue-500" />
+                        <div key={doc.id} className="glass-panel p-8 rounded-[3rem] group hover:border-blue-500/30 transition-all duration-500 relative shadow-premium hover:shadow-premium-hover bg-slate-900 border border-white/5">
+                            <div className="flex items-start justify-between mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner group-hover:scale-110 transition-transform">
+                                    <FileText className="w-7 h-7 text-blue-500" />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                        <ShieldCheck className="w-3 h-3 text-emerald-500" />
-                                        <span className="text-[10px] font-bold text-emerald-500 uppercase">{doc.status}</span>
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-sm">
+                                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{doc.status}</span>
                                     </div>
                                     <button
                                         onClick={() => handleDelete(doc.id)}
-                                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
                                         title="Delete Document"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
-                            <h3 className="font-bold text-slate-100 mb-1 truncate" title={doc.name}>{doc.name}</h3>
-                            <p className="text-xs text-slate-500 mb-6">{doc.date} • {doc.size}</p>
+                            <h3 className="font-black text-xl text-white mb-2 truncate transition-colors tracking-tight" title={doc.name}>{doc.name}</h3>
+                            <div className="flex items-center gap-2 mb-8">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{doc.date} • {doc.size}</p>
+                            </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-3">
                                 <button
                                     onClick={() => handleView(doc)}
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-semibold transition-all"
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-black text-white transition-all shadow-sm active:scale-95"
                                 >
                                     <Eye className="w-4 h-4" />
                                     View
                                 </button>
                                 <button
                                     onClick={() => handleDownload(doc)}
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-semibold transition-all shadow-lg shadow-blue-500/20"
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-black text-white transition-all shadow-xl shadow-blue-500/20 active:scale-95"
                                 >
                                     <Download className="w-4 h-4" />
                                     Download
@@ -150,32 +154,36 @@ const DocumentsPage = () => {
 
             {/* Drishti Vision Records */}
             <div className="mt-8">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2 transition-colors">
                     <Clock className="w-5 h-5 text-blue-400" />
                     Drishti Vision History
                 </h2>
-                <div className="glass-panel rounded-3xl overflow-hidden border border-white/5">
+                <div className="glass-panel rounded-[2.5rem] overflow-hidden shadow-premium border border-white/5 bg-slate-900">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-white/5 text-slate-400 font-medium">
+                        <thead className="bg-white/5 text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] border-b border-white/5">
                             <tr>
-                                <th className="px-6 py-4">Image Analysis</th>
-                                <th className="px-6 py-4">Language</th>
-                                <th className="px-6 py-4">Result Summary</th>
-                                <th className="px-6 py-4 text-right">Date</th>
+                                <th className="px-8 py-5">Image Analysis</th>
+                                <th className="px-8 py-5">Language</th>
+                                <th className="px-8 py-5">Result Summary</th>
+                                <th className="px-8 py-5 text-right">Date</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {[1, 2].map((i) => (
-                                <tr key={i} className="hover:bg-white/5 transition-colors cursor-pointer group">
-                                    <td className="px-6 py-4 flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-slate-800 border border-white/10 overflow-hidden">
+                                <tr key={i} className="hover:bg-white/[0.02] transition-colors cursor-pointer group text-slate-200">
+                                    <td className="px-8 py-5 flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
                                             <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20"></div>
                                         </div>
-                                        <span className="font-medium text-slate-300">Document Scan #{i}</span>
+                                        <span className="font-black tracking-tight text-base">Document Scan #{i}</span>
                                     </td>
-                                    <td className="px-6 py-4 text-slate-400 capitalize">{i === 1 ? 'Hindi' : 'English'}</td>
-                                    <td className="px-6 py-4 text-slate-400 truncate max-w-[200px]">Summary of government notice regarding...</td>
-                                    <td className="px-6 py-4 text-slate-500 text-right">2 hours ago</td>
+                                    <td className="px-8 py-5">
+                                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                            {i === 1 ? 'Hindi' : 'English'}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-5 truncate max-w-[200px] font-bold text-slate-400">Summary of government notice regarding...</td>
+                                    <td className="px-8 py-5 text-slate-500 text-right font-black text-xs uppercase tracking-widest">2 hours ago</td>
                                 </tr>
                             ))}
                         </tbody>

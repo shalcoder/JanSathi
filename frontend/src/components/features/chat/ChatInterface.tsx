@@ -309,18 +309,18 @@ export default function ChatInterface() {
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome') ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-80 animate-in fade-in duration-700">
-                        <div className="w-24 h-24 bg-blue-500/10 rounded-3xl flex items-center justify-center mb-6 border border-blue-500/20 shadow-2xl rotate-3">
-                            <BotIcon className="w-12 h-12 text-blue-500" />
+                    <div className="flex flex-col items-center justify-center min-h-full text-center p-8 opacity-80 animate-in fade-in duration-700">
+                        <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl shadow-blue-600/40 rotate-3 transition-transform hover:rotate-0 duration-500 group">
+                            <BotIcon className="w-10 h-10 text-white group-hover:scale-110 transition-transform" />
                         </div>
-                        <h3 className="text-2xl font-black text-white mb-2 tracking-tighter">
-                            Namaste! How can I help you today?
+                        <h3 className="text-3xl font-black text-white mb-2 tracking-tighter transition-colors">
+                            Namaste! How can I help <br /> you today?
                         </h3>
-                        <p className="text-slate-400 max-w-md mb-12 font-medium">
+                        <p className="text-base text-slate-400 max-w-md mb-8 font-bold transition-colors">
                             Ask me about government schemes, farming prices, or health benefits in your language.
                         </p>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl">
                             {[
                                 "PM Kisan Samman Nidhi details",
                                 "Ayushman Bharat eligibility",
@@ -334,10 +334,10 @@ export default function ChatInterface() {
                                         handleSend(q);
                                     }}
                                     suppressHydrationWarning
-                                    className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-left text-sm text-slate-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 hover:shadow-xl hover:shadow-blue-600/20 transition-all flex items-center justify-between group"
+                                    className="px-5 py-4 bg-slate-900/50 border border-white/5 rounded-2xl text-left text-sm text-slate-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 shadow-sm hover:shadow-2xl hover:shadow-blue-600/30 transition-all flex items-center justify-between group"
                                 >
-                                    <span className="font-bold">{q}</span>
-                                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                                    <span className="font-black tracking-tight">{q}</span>
+                                    <span className="opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">→</span>
                                 </button>
                             ))}
                         </div>
@@ -351,24 +351,25 @@ export default function ChatInterface() {
                             >
                                 <div
                                     className={`
-                                        max-w-[85%] sm:max-w-[75%] p-5 rounded-[1.5rem] shadow-sm text-sm md:text-base transition-all duration-200
+                                        max-w-[85%] sm:max-w-[75%] p-6 rounded-[2rem] shadow-premium text-sm md:text-base transition-all duration-300
                                         ${msg.role === 'user'
                                             ? 'bg-blue-600 text-white rounded-br-none shadow-blue-600/20'
-                                            : 'bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 rounded-bl-none border border-white/10 backdrop-blur-md'}
+                                            : 'bg-slate-900 text-slate-100 rounded-bl-none border border-white/5 backdrop-blur-md shadow-premium'}
                                     `}
                                 >
                                     {msg.role === 'assistant' && msg.isTyping ? (
-                                        <Typewriter
-                                            text={msg.text}
-                                            onComplete={() => {
-                                                // Mark message as done typing locally to switch to static render
-                                                setMessages(prev => prev.map(m =>
-                                                    m.id === msg.id ? { ...m, isTyping: false } : m
-                                                ));
-                                            }}
-                                        />
+                                        <div className="font-semibold leading-relaxed">
+                                            <Typewriter
+                                                text={msg.text}
+                                                onComplete={() => {
+                                                    setMessages(prev => prev.map(m =>
+                                                        m.id === msg.id ? { ...m, isTyping: false } : m
+                                                    ));
+                                                }}
+                                            />
+                                        </div>
                                     ) : (
-                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                                        <p className="whitespace-pre-wrap leading-relaxed font-semibold">{msg.text}</p>
                                     )}
 
                                     {msg.role === 'assistant' && msg.structured_sources && msg.structured_sources.length > 0 && (
@@ -387,7 +388,7 @@ export default function ChatInterface() {
                                     )}
 
                                     {msg.audio && (
-                                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                                        <div className="mt-4 pt-4 border-t border-white/5">
                                             <AudioPlayer src={msg.audio} />
                                         </div>
                                     )}
@@ -400,14 +401,14 @@ export default function ChatInterface() {
                         ))}
                         {isLoading && (
                             <div className="flex justify-start">
-                                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl rounded-bl-none border border-white/10 shadow-sm flex items-center gap-3">
-                                    <div className="flex space-x-1">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                                <div className="bg-slate-900 border border-white/5 p-4 py-3 rounded-2xl rounded-bl-none shadow-premium flex items-center gap-3 animate-pulse">
+                                    <div className="flex space-x-1.5">
+                                        <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                        <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                        <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div>
                                     </div>
-                                    <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest animate-pulse">
-                                        AWS Bedrock Analyzing...
+                                    <span className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em]">
+                                        JanSathi Processing...
                                     </span>
                                 </div>
                             </div>
@@ -417,7 +418,7 @@ export default function ChatInterface() {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white/10 dark:bg-black/40 backdrop-blur-xl border-t border-white/5 z-20">
+            <div className="p-4 bg-black/40 backdrop-blur-xl border-t border-white/5 z-20 transition-colors">
 
                 {/* Image Preview Banner */}
                 {imagePreview && (
@@ -439,7 +440,7 @@ export default function ChatInterface() {
                 )}
 
                 {/* Text Input Row */}
-                <div className="flex gap-3 items-center bg-white/5 p-2 rounded-[2rem] border border-white/10 shadow-2xl shadow-black/20 focus-within:border-blue-500/50 transition-all">
+                <div className="flex gap-2 items-center bg-slate-900 p-2 rounded-[2.5rem] border border-white/5 shadow-premium focus-within:border-blue-500/50 focus-within:shadow-blue-500/10 transition-all duration-300">
                     <input
                         type="file"
                         accept="image/*"
@@ -451,7 +452,7 @@ export default function ChatInterface() {
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         suppressHydrationWarning
-                        className={`p-4 rounded-[1.5rem] transition-all ${selectedImage ? 'bg-blue-600 text-white' : 'hover:bg-white/10 text-slate-400 hover:text-white'}`}
+                        className={`p-4 rounded-[1.8rem] transition-all ${selectedImage ? 'bg-blue-600 text-white shadow-xl' : 'hover:bg-white/5 text-slate-500 hover:text-white'}`}
                         title="Analyze Document/Image"
                         disabled={isLoading}
                     >
@@ -466,14 +467,14 @@ export default function ChatInterface() {
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend(inputText)}
-                        placeholder={selectedImage ? "Press Send to analyze this image..." : (language === 'hi' ? 'अपना प्रश्न पूछें...' : 'Ask JanSathi...')}
-                        className="flex-1 p-3 bg-transparent text-white placeholder:text-slate-500 focus:outline-none font-medium"
+                        placeholder={selectedImage ? "Press Send to analyze image..." : (language === 'hi' ? 'अपना प्रश्न पूछें...' : 'Ask JanSathi anything...')}
+                        className="flex-1 p-3 bg-transparent text-white placeholder:text-slate-600 focus:outline-none font-bold transition-colors"
                         disabled={isLoading}
                     />
                     <button
                         onClick={() => handleSend(inputText)}
                         disabled={isLoading || (!inputText.trim() && !selectedImage)}
-                        className="p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.5rem] shadow-xl shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 group"
+                        className="p-5 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.8rem] shadow-xl shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 group"
                     >
                         <Send className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                     </button>

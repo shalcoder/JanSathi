@@ -1,37 +1,41 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
     LayoutDashboard,
     FileText,
     User,
     Settings,
     PlusCircle,
-    LogOut,
-    MessageCircle,
+    Sparkles,
     ChevronRight,
-    Home
+    Home,
+    LogOut,
+    Shield
 } from 'lucide-react';
 import Link from 'next/link';
 
-type SidebarProps = {
-    activePage: string;
-    onPageChange: (page: string) => void;
-    onNewChat?: () => void;
-};
-
-type ChatSession = {
+interface ChatSession {
     id: string;
     title: string;
     timestamp: string;
-};
+}
+
+interface SidebarProps {
+    activePage: string;
+    onPageChange: (page: string) => void;
+    onNewChat?: () => void;
+}
+
+const SESSIONS_KEY = 'jansathi_chat_sessions';
 
 export default function Sidebar({ activePage, onPageChange, onNewChat }: SidebarProps) {
     const [sessions, setSessions] = useState<ChatSession[]>([]);
 
     const loadSessions = () => {
         try {
-            const stored = localStorage.getItem('jansathi_chat_sessions');
+            const stored = localStorage.getItem(SESSIONS_KEY);
             if (stored) {
                 const parsed = JSON.parse(stored);
                 const sorted = Object.values(parsed).sort((a: any, b: any) =>
@@ -52,79 +56,77 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     }, []);
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'documents', label: 'Documents', icon: FileText },
-
-        { id: 'profile', label: 'Profile', icon: User },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'dashboard', label: 'Assistant', icon: LayoutDashboard, color: 'text-primary' },
+        { id: 'documents', label: 'Documents', icon: FileText, color: 'text-blue-600' },
+        { id: 'profile', label: 'Profile', icon: User, color: 'text-emerald-500' },
+        { id: 'settings', label: 'Settings', icon: Settings, color: 'text-slate-500' },
     ];
 
     return (
-        <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-slate-900 lg:bg-transparent backdrop-blur-2xl lg:backdrop-blur-none border-r border-white/5 relative z-20 transition-all duration-500">
+        <div className="h-full w-full flex flex-col justify-between py-10 px-6 bg-background lg:bg-transparent border-r border-border/30 relative z-20 transition-all duration-500">
 
-            <div
-                className="space-y-8 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-                {/* Brand */}
-                <div className="px-2 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-600/30">
-                        <span className="font-black text-sm text-white">JS</span>
+            <div className="space-y-10 overflow-y-auto scrollbar-none pb-8">
+                {/* Brand Logo */}
+                <div className="px-2 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+                        <Sparkles className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="font-black text-2xl tracking-tighter text-white transition-colors leading-none">JanSathi</h1>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Enterprise AI</p>
+                        <h1 className="font-bold text-2xl tracking-tight text-foreground leading-none">JanSathi</h1>
+                        <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-wider opacity-40 mt-1">Bharat AI Helper</p>
                     </div>
                 </div>
 
                 {/* New Chat Button */}
                 <button
                     onClick={onNewChat}
-                    suppressHydrationWarning
-                    className="w-full flex items-center justify-center gap-3 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-blue-600/30 active:scale-95 group relative overflow-hidden"
+                    className="w-full flex items-center justify-center gap-3 py-5 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 shadow-sm"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]"></div>
-                    <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500 relative z-10" />
-                    <span className="relative z-10">New Consultation</span>
+                    <PlusCircle className="w-5 h-5" />
+                    <span>New Chat</span>
                 </button>
 
-                {/* Main Nav */}
-                <nav className="space-y-1">
-                    <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Platform</p>
+                {/* Main Navigation */}
+                <nav className="space-y-2">
+                    <p className="px-4 text-[10px] font-bold text-secondary-foreground uppercase tracking-wider mb-4 opacity-30">Menu</p>
                     {navItems.map((item) => (
                         <button
                             key={item.id}
                             onClick={() => onPageChange(item.id)}
-                            suppressHydrationWarning
                             className={`
-                                w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group
+                                w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-colors group relative
                                 ${activePage === item.id
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 border border-blue-500'
-                                    : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'}
+                                    ? 'bg-primary/10 text-primary border border-primary/20'
+                                    : 'text-secondary-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent'}
                             `}
                         >
-                            <item.icon className={`w-5 h-5 ${activePage === item.id ? 'text-white' : 'group-hover:text-white transition-colors'}`} />
-                            <span className="font-black text-sm tracking-tight">{item.label}</span>
-                            {activePage === item.id && <ChevronRight className="w-4 h-4 ml-auto opacity-70" />}
+                            <item.icon className={`w-5 h-5 ${activePage === item.id ? item.color : 'opacity-40'}`} />
+                            <span className="text-[14px] font-bold tracking-tight">{item.label}</span>
+                            {activePage === item.id && (
+                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                            )}
                         </button>
                     ))}
 
                     <Link
                         href="/"
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-white/5 hover:text-white"
+                        className="w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-colors text-secondary-foreground hover:bg-secondary/50 hover:text-foreground mt-6"
                     >
-                        <Home className="w-5 h-5" />
-                        <span className="font-bold text-sm">Landing Page</span>
+                        <Home className="w-5 h-5 opacity-40" />
+                        <span className="text-[14px] font-bold tracking-tight">Go to Home</span>
                     </Link>
                 </nav>
 
-                {/* Recent Consultations (Poornachandran's Addition) */}
-                <div className="space-y-1">
-                    <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Recent Conversations</p>
-                    <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-none px-1">
+                {/* Recent Chats */}
+                <div className="space-y-4 pt-6">
+                    <div className="flex items-center justify-between px-4">
+                        <p className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider opacity-30">Recent Chats</p>
+                        <button className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider">Clear</button>
+                    </div>
+                    <div className="space-y-1 max-h-56 overflow-y-auto px-1 scrollbar-none">
                         {sessions.length === 0 ? (
-                            <div className="px-4 py-3 rounded-xl bg-white/5 border border-dashed border-white/10 text-center">
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">No history yet</p>
+                            <div className="px-4 py-8 rounded-xl bg-secondary/20 border border-border/50 text-center opacity-40">
+                                <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-wider">No history yet</p>
                             </div>
                         ) : (
                             sessions.map((session) => (
@@ -134,11 +136,13 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                                         onPageChange('dashboard');
                                         window.dispatchEvent(new CustomEvent('load-chat-session', { detail: session.id }));
                                     }}
-                                    suppressHydrationWarning
-                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-all text-left group"
+                                    className="w-full text-left px-4 py-3 rounded-lg hover:bg-secondary/50 transition-colors group flex items-center gap-3"
                                 >
-                                    <MessageCircle className="w-4 h-4 flex-shrink-0 text-slate-400 group-hover:text-blue-400 transition-colors" />
-                                    <span className="truncate text-xs font-bold">{session.title}</span>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[13px] font-bold text-foreground truncate group-hover:text-primary transition-colors tracking-tight">{session.title}</p>
+                                        <p className="text-[10px] text-secondary-foreground font-medium opacity-40 uppercase tracking-tighter mt-1">{new Date(session.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                                    </div>
                                 </button>
                             ))
                         )}
@@ -146,16 +150,29 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                 </div>
             </div>
 
-            {/* Footer */}
-            <div className="pt-6 border-t border-white/5">
-                <button
-                    suppressHydrationWarning
-                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-500 transition-all group font-black text-sm"
+            {/* Profile Footer - Better Spacing */}
+            <div className="pt-8 border-t border-border/50 mt-auto">
+                <div
+                    className="p-4 rounded-xl bg-secondary/20 border border-border/50 flex items-center gap-4 group cursor-pointer hover:bg-secondary/40 transition-colors"
                 >
-                    <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                    <span>Sign Out</span>
-                </button>
+                    <div className="w-11 h-11 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+                        <span className="text-sm font-bold text-foreground/40 text-center">RK</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate tracking-tight">Rajesh Kumar</p>
+                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-2 mt-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Verified
+                        </p>
+                    </div>
+                </div>
+
+                <p className="text-center text-[9px] font-bold text-secondary-foreground uppercase tracking-widest mt-6 opacity-20">
+                    JanSathi v2.5.0
+                </p>
             </div>
         </div>
     );
 }
+
+// End of Sidebar Component

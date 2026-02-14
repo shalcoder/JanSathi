@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from "@/components/layout/Sidebar";
 import TelemetryPanel from "@/components/layout/TelemetryPanel";
 import ChatInterface from "@/components/features/chat/ChatInterface";
@@ -9,11 +10,90 @@ import ProfilePage from "@/components/features/dashboard/ProfilePage";
 import SettingsPage from "@/components/features/dashboard/SettingsPage";
 
 import BackendStatus from "@/components/BackendStatus";
-import { Menu, X } from 'lucide-react';
+import { Menu, Sun, Moon, Search, Bell, Activity } from 'lucide-react';
 
 export default function Home() {
   const [activePage, setActivePage] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Semantic notification types
+  const [notifications, setNotifications] = useState([
+    { title: "PM-Kisan Installment", time: "2m ago", desc: "Your 16th installment has been processed.", type: "success" },
+    { title: "Weather Alert", time: "1h ago", desc: "Heavy rain forecast for your district.", type: "warning" },
+    { title: "System Update", time: "5h ago", desc: "JanSathi v2.5 features live now.", type: "info" }
+  ]);
+  const [unreadCount, setUnreadCount] = useState(3);
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'success': return 'bg-emerald-500';
+      case 'warning': return 'bg-amber-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-blue-500'; // info
+    }
+  };
+
+  const handleMarkAllRead = () => {
+    setUnreadCount(0);
+  };
+
+  const handleViewAllActivity = () => {
+    // For now, redirect to notifications or show a toast
+    alert("Redirecting to full activity log...");
+  };
+
+  // Simulate real-time notification
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const newNotification = {
+        title: "New Scheme Matched",
+        time: "Just now",
+        desc: "You are eligible for PM-Vishwakarma based on your profile.",
+        type: "success"
+      };
+      setNotifications(prev => [newNotification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    }, 5000); // 5 seconds delay
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Initialize theme and user from storage
+  const [userInitials, setUserInitials] = useState('JD');
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const initialColorValue = localStorage.getItem('jansathi-theme') || 'dark';
+
+    if (initialColorValue === 'dark') {
+      root.classList.add('dark');
+      setIsDarkMode(true);
+    } else {
+      root.classList.remove('dark');
+      setIsDarkMode(false);
+    }
+
+    // Get user name for initials
+    const userName = localStorage.getItem('jansathi_user_name');
+    if (userName) {
+      setUserInitials(userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2));
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const root = window.document.documentElement;
+    if (isDarkMode) {
+      root.classList.remove('dark');
+      localStorage.setItem('jansathi-theme', 'light');
+      setIsDarkMode(false);
+    } else {
+      root.classList.add('dark');
+      localStorage.setItem('jansathi-theme', 'dark');
+      setIsDarkMode(true);
+    }
+  };
 
   const renderContent = () => {
     switch (activePage) {
@@ -21,7 +101,6 @@ export default function Home() {
         return <ChatInterface />;
       case 'documents':
         return <DocumentsPage />;
-
       case 'profile':
         return <ProfilePage />;
       case 'settings':
@@ -32,20 +111,20 @@ export default function Home() {
   };
 
   return (
-    <main className="h-screen w-full flex bg-background aurora-bg text-foreground overflow-hidden relative selection:bg-blue-500/30 font-sans transition-colors duration-500">
+    <main className="h-screen w-full flex bg-background text-foreground overflow-hidden relative selection:bg-primary/20 transition-colors">
 
-      {/* Decorative Gradient Orbs */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+      {/* Simplified Background */}
+      <div className="fixed inset-0 z-[-1] bg-background"></div>
+      <div className="mesh-bg opacity-30"></div>
 
-      {/* 1. Sidebar Navigation - Responsive Wrapper */}
+      {/* 1. Sidebar Navigation */}
       <div className={`
         fixed inset-0 z-50 lg:relative lg:inset-auto lg:flex
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         transition-transform duration-300 ease-in-out
       `}>
-        <div className="absolute inset-0 bg-black/50 lg:hidden" onClick={() => setIsSidebarOpen(false)}></div>
-        <div className="relative h-full w-64 lg:w-72 xl:w-80">
+        <div className="absolute inset-0 bg-black/20 lg:hidden" onClick={() => setIsSidebarOpen(false)}></div>
+        <div className="relative h-full w-72 flex-shrink-0">
           <Sidebar
             activePage={activePage}
             onPageChange={(p) => {
@@ -65,47 +144,129 @@ export default function Home() {
       </div>
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-500 min-w-0 overflow-hidden">
-        {/* Responsive Header */}
-        <header className="px-6 py-5 flex items-center justify-between border-b border-white/5 bg-slate-900/80 backdrop-blur-xl lg:px-10 shrink-0 transition-all duration-500 z-20">
-          <div className="flex items-center gap-5">
+      <div className="flex-1 flex flex-col h-full relative z-10 transition-all min-w-0 overflow-hidden">
+
+        {/* Clean Header */}
+        <header className="px-6 py-4 flex items-center justify-between bg-card border-b border-border lg:px-10 shrink-0 z-20">
+          <div className="flex items-center gap-6">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="p-2.5 -ml-2 hover:bg-white/5 rounded-xl lg:hidden transition-all active:scale-95 shadow-sm"
+              className="p-2 hover:bg-secondary rounded-lg lg:hidden transition-colors"
             >
-              <Menu className="w-6 h-6 text-white" />
+              <Menu className="w-6 h-6 text-foreground" />
             </button>
-            <span className="font-black text-2xl tracking-tighter text-blue-500 lg:hidden transition-colors">JanSathi</span>
-            <div className="hidden lg:flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/5 border border-white/10 shadow-inner">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-              <span className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 transition-colors">Core Intelligence Active</span>
+
+            {/* Status Pill - More responsive */}
+            <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-secondary/50 border border-border group cursor-default">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full"></div>
+              <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-foreground opacity-60">Online</span>
+            </div>
+
+            {/* Search Bar - Responsive width */}
+            <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-secondary/30 border border-border/50 rounded-xl transition-all">
+              <Search className="w-4 h-4 text-secondary-foreground opacity-40" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="bg-transparent border-none text-[13px] font-medium text-foreground placeholder:opacity-40 focus:outline-none w-24 md:w-44"
+              />
             </div>
           </div>
 
-          <div className="flex items-center gap-4 lg:gap-8">
-            <div className="flex flex-col items-end hidden sm:flex">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-0.5">Application Context</span>
-              <span className="text-xs font-black text-white uppercase tracking-widest transition-colors">{activePage}</span>
+          <div className="flex items-center gap-4 lg:gap-6">
+            {/* Theme Toggle */}
+            <button onClick={toggleTheme} className="p-2.5 bg-secondary/50 hover:bg-secondary rounded-xl transition-colors border border-border/50">
+              {isDarkMode ?
+                <Sun className="w-5 h-5 text-amber-500" /> :
+                <Moon className="w-5 h-5 text-indigo-500" />
+              }
+            </button>
+
+            {/* Notification Bell & Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2.5 bg-secondary/50 hover:bg-secondary rounded-xl transition-colors border border-border/50 relative active:scale-95"
+              >
+                <Bell className="w-5 h-5 text-secondary-foreground" />
+                {unreadCount > 0 && (
+                  <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background animate-pulse"></div>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full right-0 mt-3 w-80 bg-card border border-border/50 rounded-2xl shadow-xl z-50 overflow-hidden backdrop-blur-xl"
+                  >
+                    <div className="p-4 border-b border-border/50 flex justify-between items-center bg-card">
+                      <span className="text-xs font-bold uppercase tracking-widest text-foreground">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllRead}
+                          className="text-[10px] font-bold text-primary hover:text-primary/80 transition-colors"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto scrollbar-thin bg-card">
+                      {notifications.map((item, i) => (
+                        <div key={i} className="p-4 hover:bg-secondary/20 transition-colors cursor-pointer border-b border-border/30 last:border-none flex gap-3">
+                          <div className={`w-2 h-2 mt-1.5 shrink-0 rounded-full ${getNotificationColor(item.type)} ${unreadCount === 0 ? 'opacity-50' : ''}`}></div>
+                          <div className={unreadCount === 0 ? 'opacity-60' : ''}>
+                            <p className="text-sm font-bold text-foreground leading-none mb-1">{item.title}</p>
+                            <p className="text-xs text-secondary-foreground opacity-80 leading-snug mb-1.5">{item.desc}</p>
+                            <p className="text-[9px] font-bold text-secondary-foreground opacity-40 uppercase tracking-widest">{item.time}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-3 bg-card text-center border-t border-border/50">
+                      <button
+                        onClick={handleViewAllActivity}
+                        className="text-[10px] font-bold text-foreground opacity-60 hover:opacity-100 uppercase tracking-widest transition-opacity"
+                      >
+                        View All Activity
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-2xl bg-slate-800 border-2 border-blue-500/30 shadow-premium p-0.5 group cursor-pointer hover:scale-105 transition-all">
-              <div className="w-full h-full rounded-[0.9rem] bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm lg:text-base shadow-inner group-hover:rotate-3 transition-transform">
-                JD
+
+            {/* User Identity - Simplified */}
+            <div className="hidden sm:block">
+              <div className="h-10 w-10 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                {userInitials}
               </div>
             </div>
           </div>
         </header>
 
-        <div className={`flex-1 overflow-x-hidden ${activePage === 'dashboard' ? 'overflow-hidden p-0' : 'overflow-y-auto p-4 sm:p-6 lg:p-10'} scrollbar-none scroll-smooth`}>
-          <div className={`${activePage === 'dashboard' ? 'h-full w-full' : 'max-w-6xl mx-auto min-h-full pb-32 lg:pb-20'}`}>
-            {renderContent()}
+        {/* Dynamic Page Rendering */}
+        <div className={`flex-1 overflow-x-hidden ${activePage === 'dashboard' ? 'p-0' : 'overflow-y-auto p-4 sm:p-8 lg:p-12'} scrollbar-none`}>
+          <div className={`${activePage === 'dashboard' ? 'h-full w-full' : 'max-w-6xl mx-auto min-h-full pb-20'}`}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activePage}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="h-full"
+              >
+                {renderContent()}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
 
-      {/* 3. Tech Telemetry Panel - Desktop Only */}
       <TelemetryPanel />
-
-      <BackendStatus />
 
     </main>
   );

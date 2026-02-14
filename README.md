@@ -513,13 +513,6 @@ schemes based on family composition.
 
 ---
 
-## 👥 Authors & Contributors
-
-- **Poornachandran** - Primary Developer
-- **Team JanSathi** - Contributors
-
----
-
 ## 📄 License
 
 MIT License (Open Source)

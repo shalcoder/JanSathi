@@ -364,11 +364,14 @@ def query():
 
         # Save to History
         try:
+            confidence = 0.95 if not cache_hit else 1.0 # Mock confidence for now
             new_conv = Conversation(
                 query=user_query,
                 answer=answer_text,
                 language=language,
-                user_id=user_id
+                user_id=user_id,
+                provenance=provenance if not cache_hit else {"source": "cache"},
+                confidence=confidence
             )
             db.session.add(new_conv)
             db.session.commit()
@@ -417,15 +420,15 @@ def get_history():
         limit = request.args.get('limit', 10, type=int)
         
         try:
-            all_conversations = db.session.query(Conversation).order_by(
+            query = db.session.query(Conversation)
+            if user_id:
+                query = query.filter(Conversation.user_id == user_id)
+            
+            all_conversations = query.order_by(
                 Conversation.timestamp.desc()
             ).limit(limit).all()
             
-            if user_id:
-                filtered = [c for c in all_conversations if c.user_id == user_id]
-                return jsonify([c.to_dict() for c in filtered[:limit]])
-            else:
-                return jsonify([c.to_dict() for c in all_conversations])
+            return jsonify([c.to_dict() for c in all_conversations])
                 
         except Exception as db_error:
             logger.error(f"Database query error: {db_error}")

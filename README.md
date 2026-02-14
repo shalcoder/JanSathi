@@ -19,13 +19,81 @@ JanSathi works seamlessly in:
 - 🔌 Intermittent connectivity
 - 👥 For users unfamiliar with complex apps
 
-### Supported Features
+### Scenario Highlights
 - 🎙️ **Voice queries** (Speech-to-Text)
-- ⌨️ **Text queries**
-- 🌐 **Web interface** (primary)
-- 📴 **Offline fallback** (cached FAQs)
-- 🌍 **Multilingual support** (Hindi, English, Kannada, Tamil)
-- 📱 **Mobile-first design**
+- 🖥️ **Vision AI** (Extract Scheme info from Ration/Caste cards)
+
+---
+
+## 📐 System Design & Diagrams
+
+### 🏗️ Architecture diagram of the proposed solution:
+```mermaid
+graph TD
+    User((Citizen)) -- "Voice/Text Query" --> Frontend[Next.js 15 UI]
+    
+    subgraph "Access Layer"
+        Frontend -- "API Req" --> Flask[Flask Backend]
+        Flask -- "Auth" --> Clerk[Clerk Security]
+    end
+
+    subgraph "Intelligence Engine"
+        Flask -- "Search" --> Kendra[AWS Kendra RAG]
+        Flask -- "STT/TTS" --> AI_Voice[Polly & Transcribe]
+        Flask -- "Reasoning" --> Bedrock[Claude 3.5 Sonnet]
+    end
+
+    subgraph "Persistence"
+        Flask -- "Save" --> DB[(PostgreSQL / SQLite)]
+        DB -- "History" --> Flask
+    end
+
+    Bedrock -- "Advice" --> Flask
+    Flask -- "Response" --> Frontend
+    Frontend -- "Voice" --> User
+```
+
+### � Process flow diagram or Use-case diagram:
+```mermaid
+graph LR
+    Citizen((Citizen User))
+    Admin((Govt admin))
+
+    subgraph "JanSathi Use Cases"
+        Citizen --> UC1(Voice-Based Search)
+        Citizen --> UC2(Scheme Eligibility Check)
+        Citizen --> UC3(Document Vision Analysis)
+        Admin --> UC4(View Livelihood Analytics)
+        Admin --> UC5(Audit AI Responses)
+    end
+
+    UC1 -.-> UC6(Multilingual STT)
+    UC2 -.-> UC7(Policy Database RAG)
+    UC3 -.-> UC8(Vision Claude Engine)
+```
+
+### 🛠️ Technologies to be used in the solution:
+```mermaid
+graph LR
+    subgraph "Frontend"
+        NextJS[Next.js 15]
+        Tailwind[Tailwind CSS]
+        TypeScript[TypeScript]
+    end
+    
+    subgraph "Backend & AI"
+        Flask[Python Flask]
+        Bedrock[AWS Bedrock]
+        Kendra[Amazon Kendra]
+        Polly[Amazon Polly]
+    end
+    
+    subgraph "Infrastructure"
+        Docker[Docker]
+        Lambda[AWS Lambda]
+        SQS[AWS SQS]
+    end
+```
 
 ---
 
@@ -65,12 +133,10 @@ Citizens struggle with:
 - **Logging**: JSON-based structured logging
 
 ### AI / Cloud Services
-- **Transcription**: AWS Transcribe (Speech-to-Text)
-- **LLM**: AWS Bedrock (Claude/Titan models)
-- **TTS**: AWS Polly (Neural voices)
-- **Search**: AWS Kendra (RAG retrieval)
-- **Observability**: AWS X-Ray (Tracing), CloudWatch (Metrics/Logs), Model Monitor (AI Quality)
-- **Fallback**: Local mock mode when AWS unavailable
+- **AWS Services**: Bedrock (Claude 3.5 Haiku/Sonnet), Kendra (RAG), Polly (TTS), Transcribe (STT)
+- **Security**: Prompt Injection Guards, PII Anonymization (HMAC), Content Moderation
+- **Observability**: Request Tracing, AI Quality Monitoring, Structured JSON Logging
+- **Fallback**: Intelligent Hybrid RAG with Local Edge Caching
 
 ---
 
@@ -109,12 +175,17 @@ JanSathi/
 │   ├── Dockerfile                  # Production Next.js container
 │   └── package.json
 │
-├── docs/
+├── docs/                           # Consolidated Documentation & Guides
 │   ├── AUTHENTICATION_GUIDE.md    # Auth integration guide
-│   ├── AUTH_PAGES_README.md       # Auth pages documentation
-│   └── MOBILE_FIXES_SUMMARY.md    # Mobile optimization log
+│   ├── HACKATHON_SUBMISSION.md    # Hackathon-ready project overview
+│   ├── AWS_SETUP_GUIDE.md         # AWS infrastructure setup guide
+│   ├── KENDRA_SETUP_GUIDE.md      # Detailed Kendra RAG integration
+│   ├── design.md                  # Detailed system design & schemas
+│   └── requirements.md            # Business & technical requirements
 │
-└── README.md                       # This file
+├── infrastructure/                 # Infrastructure-as-Code (AWS CDK)
+├── scripts/                        # Setup, Monitoring & Testing utilities
+└── README.md                       # Main Entry Point
 ```
 
 ---
@@ -181,6 +252,7 @@ flowchart TD
 ```
 
 ### Technical Infrastructure Details
+> **Implementation Note**: The following diagrams represent the transition towards the full [AWS Production Architecture](docs/AWS_PRODUCTION_ARCHITECTURE.md) implemented in v2.5.
 
 #### **Backend Production Pipeline**
 ```mermaid
@@ -438,7 +510,7 @@ FLASK_ENV=development
 - Perfect for testing and prototyping
 
 ### Production Ready Options
-Refer to `AUTHENTICATION_GUIDE.md` for detailed integration guides:
+Refer to `docs/AUTHENTICATION_GUIDE.md` for detailed integration guides:
 - **Clerk** (Recommended - easiest setup)
 - **NextAuth.js** (Free, open-source)
 - **Firebase Auth** (Google's solution)
@@ -489,43 +561,34 @@ Refer to `AUTHENTICATION_GUIDE.md` for detailed integration guides:
 
 ---
 
-## 🔄 Recent Updates (v2.0)
-
-### Latest Changes (Feb 2026)
-1. ✨ **Authentication System**
-   - Created professional sign-in and sign-up pages
-   - Added Google OAuth buttons (demo)
-   - Implemented sign-out functionality
-   - Created useAuth hook for state management
-
-2. ✨ **Mobile Responsiveness**
-   - Fixed vertical alignment across all pages
-   - Responsive text sizing (mobile → desktop)
-   - Adaptive grid layouts
-   - Touch-friendly button sizing
-   - Horizontal scroll for tables on mobile
-
-3. ✨ **UI Improvements**
-   - Fixed "Government" typo on landing page
-   - Updated navbar with Sign In/Sign Up buttons
-   - Improved chat message bubble widths
-   - Better spacing on mobile devices
-   - Enhanced welcome screen
-
-4. ✨ **Code Quality**
-   - Removed Clerk dependencies (shifted to demo mode)
-   - Cleaned up imports and unused code
-   - Added comprehensive documentation
-   - Created authentication integration guide
+### v2.5 - Production Hardening (Current)
+1. 🛡️ **Advanced Security Suite**
+   - **Shield**: Multi-layer Prompt Injection defense patterns
+   - **Privacy**: Automated PII masking & HMAC anonymization for Aadhaar/Phone
+   - **Safety**: Content moderation logic for government service compliance
+2. 📡 **Enterprise Observability**
+   - **Tracing**: End-to-end request lifecycle visibility
+   - **Quality**: AI confidence scoring and human-in-the-loop flagging
+   - **Audit**: Local auditing system for AI explainability
+3. 📊 **JanSathi Pulse (Stakeholder Layer)**
+   - **Analytics**: Benefit Gap analysis for government admins
+   - **Outreach**: Simulated IVR and WhatsApp citizen engagement flows
+   - **Moderation**: Dedicated dashboard for auditing flagged AI responses
+4. 🎨 **Premium Aesthetic Polish**
+   - **Design**: High-fidelity glassmorphism and aurora gradient refactor
+   - **Visuals**: High-density Mermaid ecosystem workflows
+   - **UX**: Dynamic initials-based profile loading and zero-state optimizations
 
 ---
 
 ## 📚 Documentation
 
-- **`AUTHENTICATION_GUIDE.md`** - How to integrate real authentication providers
-- **`AUTH_PAGES_README.md`** - Quick reference for auth pages and features
-- **`MOBILE_FIXES_SUMMARY.md`** - Summary of mobile optimization work
-- **`HACKATHON_SUBMISSION.md`** - Hackathon-ready project overview
+- **`docs/AUTHENTICATION_GUIDE.md`** - How to integrate real authentication providers
+- **`docs/HACKATHON_SUBMISSION.md`** - Hackathon-ready project overview
+- **`docs/AWS_SETUP_GUIDE.md`** - AWS infrastructure setup guide
+- **`docs/KENDRA_SETUP_GUIDE.md`** - Detailed Kendra RAG integration
+- **`docs/COST_OPTIMIZATION.md`** - Strategy for $0/mo development
+- **`docs/failure_mode_analysis.md`** - Resilience and error handling strategy
 
 ---
 

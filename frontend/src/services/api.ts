@@ -5,6 +5,12 @@ export interface QueryResponse {
     answer: {
         text: string;
         audio: string;
+        provenance?: string;
+        explainability?: {
+            confidence: number;
+            matching_criteria: string[];
+            privacy_protocol: string;
+        };
     };
     context: string[];
     structured_sources?: {
@@ -22,6 +28,7 @@ export interface QueryResponse {
 export interface QueryRequest {
     text_query: string;
     language?: string;
+    userId?: string;
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';

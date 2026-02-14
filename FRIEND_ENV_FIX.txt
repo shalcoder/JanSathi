@@ -1,0 +1,27 @@
+# Complete .env file for your friend (no AWS payment issues)
+# Replace the entire content of backend/.env with this:
+
+# Mock Mode Configuration - No Payment Required
+AWS_ACCESS_KEY_ID=mock_access_key
+AWS_SECRET_ACCESS_KEY=mock_secret_key
+AWS_REGION=us-east-1
+
+# S3 Bucket (Mock)
+S3_BUCKET_NAME=mock-audio-bucket
+
+# Bedrock Configuration (Mock Mode)
+BEDROCK_MODEL_ID=mock
+
+# Kendra (Mock)
+KENDRA_INDEX_ID=mock-index
+
+# Flask Configuration
+SECRET_KEY=87e0ecaf-c1dd-4c81-9564-069d8a24865b
+NODE_ENV=development
+ALLOWED_ORIGINS=http://localhost:3000
+
+# Database
+DATABASE_URL=sqlite:///jansathi.db
+
+# Port
+PORT=5000

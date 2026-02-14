@@ -27,14 +27,20 @@ class BedrockService:
         if not self.working:
             return self._get_context_based_response(query, context_text, language)
 
-        # Check if we have actual context about the query
-        if not context_text or "I do not have specific public data" in context_text:
-            return f"I don't have specific information about '{query}'. Please check official government portals like india.gov.in for accurate details."
+        # Handle general questions even without specific scheme context
+        has_scheme_context = context_text and context_text.strip() and "I do not have specific public data" not in context_text
+        
+        if not has_scheme_context:
+            # For general questions, provide helpful response without requiring specific scheme data
+            context_text = f"General inquiry about: {query}. Provide helpful information based on general knowledge of Indian government services and schemes."
 
         # ============================================================
         # CLAUDE 3.5 SONNET OPTIMIZED PROMPT (Sovereign Expert)
         # ============================================================
-        prompt = f"""
+        
+        if has_scheme_context:
+            # Specific scheme information available
+            prompt = f"""
 System: You are JanSathi, the premier AI Citizen Assistant for India. Your goal is to provide accurate, verified information about government schemes and market resources with empathy and clarity.
 
 CONTEXT (Verified Knowledge Base):
@@ -67,6 +73,32 @@ RESPONSE TEMPLATE:
 🛡️ **Sentinel Security**: [Privacy/Verification Status]
 
 🌐 **Official Source**: [URL from context]
+
+Reply directly in {language}.
+"""
+        else:
+            # General question without specific scheme context
+            prompt = f"""
+System: You are JanSathi, the premier AI Citizen Assistant for India. You help citizens with government services, schemes, and general civic information.
+
+USER QUERY: {query}
+PRIMARY LANGUAGE: {language}
+USER INTENT: {intent}
+
+INSTRUCTIONS:
+1. Provide helpful, accurate information based on your knowledge of Indian government services
+2. If the question is about a specific government scheme, explain what you know and suggest checking official portals
+3. For general civic questions, provide practical guidance
+4. Use simple, clear language that citizens can understand
+5. Always suggest official government websites for the most current information
+6. Be empathetic and supportive in your tone
+
+RESPONSE GUIDELINES:
+- Start with a clear, direct answer
+- Provide actionable steps when possible
+- Mention relevant government portals (india.gov.in, myscheme.gov.in)
+- Use professional but friendly tone
+- Structure information clearly with bullet points or steps
 
 Reply directly in {language}.
 """
@@ -211,12 +243,33 @@ Reply directly in {language}.
             return "Could not analyze the image. Please ensure it is clear."
 
     def _get_context_based_response(self, query, context_text, language='hi'):
-        """Fallback response based on RAG context when Bedrock is offline."""
-        if not context_text or "I do not have specific public data" in context_text:
-            return f"I don't have specific information about '{query}'. Please visit india.gov.in."
+        """Fallback response when Bedrock is offline - now handles general questions."""
         
-        # Simpler structured fallback
-        lines = context_text.split('\n')
-        primary_info = lines[0] if lines else "Scheme information"
+        # Check if we have specific scheme context
+        has_scheme_context = context_text and context_text.strip() and "I do not have specific public data" not in context_text
         
-        return f"✅ **Verified Info**: {primary_info}\n\n📋 **Next Steps**: Please check the official government portal for application details and requirements."
+        if has_scheme_context:
+            # Specific scheme information available
+            lines = context_text.split('\n')
+            primary_info = lines[0] if lines else "Scheme information"
+            return f"✅ **Verified Info**: {primary_info}\n\n📋 **Next Steps**: Please check the official government portal for application details and requirements."
+        else:
+            # General question - provide helpful fallback
+            if language == 'hi':
+                return f"""मैं आपके प्रश्न '{query}' के बारे में विस्तृत जानकारी नहीं दे सकता, लेकिन मैं आपकी सहायता करने की कोशिश कर सकता हूं।
+
+📋 **सुझाव**:
+• सरकारी योजनाओं की जानकारी के लिए myscheme.gov.in देखें
+• आधिकारिक जानकारी के लिए india.gov.in पर जाएं
+• स्थानीय सरकारी कार्यालय से संपर्क करें
+
+🌐 **आधिकारिक स्रोत**: https://india.gov.in"""
+            else:
+                return f"""I don't have specific detailed information about '{query}', but I can try to help you.
+
+📋 **Suggestions**:
+• Check myscheme.gov.in for government scheme information
+• Visit india.gov.in for official information
+• Contact your local government office
+
+🌐 **Official Source**: https://india.gov.in"""

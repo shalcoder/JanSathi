@@ -40,7 +40,7 @@ graph TD
 
     User((👤 Citizen)):::user -- "🎙️ Voice/Text Query" --> Frontend[💻 Next.js 15 UI]:::fe
     
-    subgraph "🔐 Privacy & Edge (FL)"
+    subgraph "🔐 Privacy & Edge (Fedarated Learning)"
         Frontend -- "🧩 Model Updates" --> FL[🌸 Federated Learning - Flower]:::ai
     end
 

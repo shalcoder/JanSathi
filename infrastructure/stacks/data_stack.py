@@ -1,5 +1,5 @@
 """
-JanSathi Data Stack — DynamoDB Tables + S3 Buckets
+JanSathi Data Stack — DynamoDB Tables + S3 Buckets + Kendra Index
 From AWS_PRODUCTION_ARCHITECTURE.md Section 2: Data Layer
 """
 import aws_cdk as cdk
@@ -9,6 +9,8 @@ from aws_cdk import (
     Duration,
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
+    aws_kendra as kendra,
+    aws_iam as iam,
 )
 from constructs import Construct
 
@@ -20,6 +22,7 @@ class DataStack(Stack):
     - DynamoDB: CacheEntries table (QueryHash HASH, TTL for cache expiry)
     - S3: Audio bucket (lifecycle: 30d → Glacier → 90d delete)
     - S3: Uploads bucket (document storage)
+    - Kendra: Search index for government schemes and documents
     """
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -121,6 +124,58 @@ class DataStack(Stack):
         )
 
         # ============================================================
+        # Kendra: Search Index for Government Schemes
+        # ============================================================
+        
+        # IAM role for Kendra
+        kendra_role = iam.Role(
+            self, "KendraRole",
+            assumed_by=iam.ServicePrincipal("kendra.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("CloudWatchLogsFullAccess")
+            ]
+        )
+        
+        # Grant Kendra access to S3 uploads bucket
+        self.uploads_bucket.grant_read(kendra_role)
+        
+        # Kendra Index
+        self.kendra_index = kendra.CfnIndex(
+            self, "KendraIndex",
+            name="JanSathi-GovernmentSchemes",
+            description="Search index for Indian government schemes and documents",
+            edition="DEVELOPER_EDITION",  # Free tier: 750 hours/month
+            role_arn=kendra_role.role_arn,
+            server_side_encryption_configuration=kendra.CfnIndex.ServerSideEncryptionConfigurationProperty(
+                kms_key_id="alias/aws/kendra"
+            ),
+            user_context_policy="USER_TOKEN",
+            user_group_resolution_configuration=kendra.CfnIndex.UserGroupResolutionConfigurationProperty(
+                user_group_resolution_mode="AWS_SSO"
+            )
+        )
+        
+        # S3 Data Source for uploaded documents
+        s3_data_source = kendra.CfnDataSource(
+            self, "S3DataSource",
+            index_id=self.kendra_index.attr_id,
+            name="UploadedDocuments",
+            type="S3",
+            description="User uploaded government documents",
+            role_arn=kendra_role.role_arn,
+            data_source_configuration=kendra.CfnDataSource.DataSourceConfigurationProperty(
+                s3_configuration=kendra.CfnDataSource.S3DataSourceConfigurationProperty(
+                    bucket_name=self.uploads_bucket.bucket_name,
+                    inclusion_prefixes=["documents/"],
+                    documents_metadata_configuration=kendra.CfnDataSource.DocumentsMetadataConfigurationProperty(
+                        s3_prefix="metadata/"
+                    )
+                )
+            ),
+            schedule="rate(1 day)"  # Sync daily
+        )
+
+        # ============================================================
         # Outputs
         # ============================================================
         cdk.CfnOutput(self, "ConversationsTableName",
@@ -135,3 +190,6 @@ class DataStack(Stack):
         cdk.CfnOutput(self, "UploadsBucketName",
                        value=self.uploads_bucket.bucket_name,
                        description="S3 Uploads bucket name")
+        cdk.CfnOutput(self, "KendraIndexId",
+                       value=self.kendra_index.attr_id,
+                       description="Kendra search index ID")

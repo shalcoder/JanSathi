@@ -132,13 +132,19 @@ def delete_document(filename):
 def health():
     cache_stats = response_cache.stats() if 'response_cache' in dir() else {}
     
+    # Check Kendra status
+    kendra_status = "disabled"
+    if hasattr(rag_service, 'use_kendra') and rag_service.use_kendra:
+        kendra_status = f"enabled (Index: {rag_service.kendra_index_id})"
+    
     return jsonify({
         "status": "healthy",
         "service": "JanSathi Enterprise Backend",
         "version": "2.0.0",
         "components": {
             "bedrock": "connected" if bedrock_service.working else "demo_mode",
-            "rag": f"{len(rag_service.mock_data)} schemes loaded",
+            "rag": f"{len(getattr(rag_service, 'schemes', [])) if not getattr(rag_service, 'use_kendra', False) else 'kendra'} schemes loaded",
+            "kendra": kendra_status,
             "cache": cache_stats,
             "database": "connected"
         },

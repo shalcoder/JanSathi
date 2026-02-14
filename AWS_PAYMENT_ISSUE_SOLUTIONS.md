@@ -14,12 +14,12 @@ Add this to your friend's `backend/.env` file:
 BEDROCK_MODEL_ID=mock
 
 # Keep all other settings the same
-AWS_ACCESS_KEY_ID=AKIARODGW73MZFXZGXGY
-AWS_SECRET_ACCESS_KEY=tOKkdh2Db+Aqnd5d3K5MPRHKjS4lskD7L121H1q8
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=jansathi-audio-bucket-1770462916
-KENDRA_INDEX_ID=mock-index
-SECRET_KEY=87e0ecaf-c1dd-4c81-9564-069d8a24865b
+    AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
+    AWS_REGION=us-east-1
+    S3_BUCKET_NAME=your-bucket-name
+    KENDRA_INDEX_ID=your-index-id
+    SECRET_KEY=YOUR_FLASK_SECRET_KEY
 NODE_ENV=development
 ALLOWED_ORIGINS=http://localhost:3000
 DATABASE_URL=sqlite:///jansathi.db
@@ -109,12 +109,12 @@ ENABLE_FALLBACK=true
 MOCK_ON_ERROR=true
 
 # All other settings remain the same
-AWS_ACCESS_KEY_ID=AKIARODGW73MZFXZGXGY
-AWS_SECRET_ACCESS_KEY=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
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=jansathi-audio-bucket-1770462916
-KENDRA_INDEX_ID=mock-index
-SECRET_KEY=87e0ecaf-c1dd-4c81-9564-069d8a24865b
+    AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
+    AWS_REGION=us-east-1
+    S3_BUCKET_NAME=your-bucket-name
+    KENDRA_INDEX_ID=your-index-id
+    SECRET_KEY=YOUR_FLASK_SECRET_KEY
 NODE_ENV=development
 ALLOWED_ORIGINS=http://localhost:3000
 DATABASE_URL=sqlite:///jansathi.db

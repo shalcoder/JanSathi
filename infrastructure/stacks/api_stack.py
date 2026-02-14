@@ -14,6 +14,7 @@ from aws_cdk import (
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
     aws_wafv2 as wafv2,
+    aws_kendra as kendra,
     aws_cloudwatch as cloudwatch,
     aws_cloudwatch_actions as cw_actions,
 )
@@ -38,6 +39,7 @@ class ApiStack(Stack):
         cache_table: dynamodb.Table,
         audio_bucket: s3.Bucket,
         uploads_bucket: s3.Bucket,
+        kendra_index: kendra.CfnIndex,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -74,8 +76,9 @@ class ApiStack(Stack):
                 "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "UPLOADS_BUCKET": uploads_bucket.bucket_name,
                 "AWS_REGION_NAME": kwargs.get("env", cdk.Environment()).region or "us-east-1",
-                "BEDROCK_MODEL_ID": "anthropic.claude-3-haiku-20240307-v1:0",
-                "BEDROCK_MAX_TOKENS": "300",
+                "BEDROCK_MODEL_ID": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "BEDROCK_MAX_TOKENS": "1000",
+                "KENDRA_INDEX_ID": kendra_index.attr_id,
                 "NODE_ENV": "production",
                 "USE_DYNAMODB": "true",  # Flag to switch from SQLite
             },

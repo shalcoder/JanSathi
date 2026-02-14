@@ -76,9 +76,15 @@ export default function Home() {
     }
 
     // Get user name for initials
-    const userName = localStorage.getItem('jansathi_user_name');
-    if (userName) {
-      setUserInitials(userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2));
+    const userStr = localStorage.getItem('jansathi_user');
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        const userName = userData.name || userData.email?.split('@')[0] || 'User';
+        setUserInitials(userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
+      } catch (e) {
+        console.error("Failed to parse user data", e);
+      }
     }
   }, []);
 
@@ -247,11 +253,6 @@ export default function Home() {
           </div>
         </header>
 
-<<<<<<< HEAD
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-10 scrollbar-none scroll-smooth">
-          <div className="max-w-6xl mx-auto min-h-full pb-20 lg:pb-0">
-            {renderContent()}
-=======
         {/* Dynamic Page Rendering */}
         <div className={`flex-1 overflow-x-hidden ${activePage === 'dashboard' ? 'p-0' : 'overflow-y-auto p-4 sm:p-8 lg:p-12'} scrollbar-none`}>
           <div className={`${activePage === 'dashboard' ? 'h-full w-full' : 'max-w-6xl mx-auto min-h-full pb-20'}`}>
@@ -267,7 +268,6 @@ export default function Home() {
                 {renderContent()}
               </motion.div>
             </AnimatePresence>
->>>>>>> poornachandran
           </div>
         </div>
       </div>

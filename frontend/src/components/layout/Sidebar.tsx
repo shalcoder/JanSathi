@@ -150,37 +150,6 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                 </div>
             </div>
 
-<<<<<<< HEAD
-            {/* WhatsApp Support (Phase 3 Integration) */}
-            <div className="mb-4">
-                <a
-                    href="https://wa.me/911234567890?text=I%20need%20help%20with%20JanSathi"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-xl transition-all group"
-                >
-                    <div className="w-5 h-5 flex items-center justify-center bg-emerald-500 rounded-full">
-                        <MessageCircle className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="font-bold text-sm">WhatsApp Helper</span>
-                    <span className="ml-auto text-[8px] font-black uppercase tracking-widest bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">Beta</span>
-                </a>
-            </div>
-
-            {/* Footer */}
-            <div className="pt-6 border-t border-white/5">
-                <button
-                    onClick={() => {
-                        localStorage.removeItem('jansathi_user');
-                        localStorage.removeItem('jansathi_chat_sessions');
-                        window.location.href = '/sign-in';
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-400 hover:bg-red-500/5 rounded-xl transition-all group"
-                >
-                    <LogOut className="w-5 h-5" />
-                    <span className="font-bold text-sm">Sign Out</span>
-                </button>
-=======
             {/* Profile Footer - Better Spacing */}
             <div className="pt-8 border-t border-border/50 mt-auto">
                 <div
@@ -201,7 +170,6 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                 <p className="text-center text-[9px] font-bold text-secondary-foreground uppercase tracking-widest mt-6 opacity-20">
                     JanSathi v2.5.0
                 </p>
->>>>>>> poornachandran
             </div>
         </div>
     );

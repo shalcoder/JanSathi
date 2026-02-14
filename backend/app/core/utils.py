@@ -1,12 +1,10 @@
-"""
-Structured Logging & Utility Functions.
-CloudWatch-compatible JSON logging with latency tracking.
-"""
-
 import logging
 import time
 import functools
 import json
+import hashlib
+import typing
+from uuid import uuid4
 from datetime import datetime
 
 # ============================================================
@@ -55,23 +53,9 @@ def setup_logging():
         root.addHandler(handler)
 
 
-def log_event(event_type: str, details: dict = None):
+def log_event(event_type: str, details: typing.Optional[typing.Dict[str, typing.Any]] = None):
     """
     Log a structured event for CloudWatch Logs Insights.
-    
-    Usage:
-        log_event('bedrock_query', {
-            'user_id': 'user123',
-            'query': 'PM Kisan scheme',
-            'latency_ms': 450,
-            'cache_hit': False,
-            'tokens_used': 1200
-        })
-    
-    CloudWatch Insights query:
-        fields @timestamp, event, details.latency_ms
-        | filter event = 'bedrock_query'
-        | stats avg(details.latency_ms) as avg_latency by details.cache_hit
     """
     entry = {
         'event': event_type,
@@ -107,14 +91,6 @@ def normalize_query(query: str) -> str:
 def timed(func):
     """
     Decorator to measure and log function execution time.
-    
-    Usage:
-        @timed
-        def my_endpoint():
-            ...
-    
-    Logs:
-        {"event": "function_timing", "function": "my_endpoint", "latency_ms": 123.45}
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -124,7 +100,7 @@ def timed(func):
             elapsed_ms = (time.perf_counter() - start) * 1000
             log_event('function_timing', {
                 'function': func.__name__,
-                'latency_ms': round(elapsed_ms, 2),
+                'latency_ms': float(f"{elapsed_ms:.2f}"),
                 'status': 'success'
             })
             return result
@@ -132,7 +108,7 @@ def timed(func):
             elapsed_ms = (time.perf_counter() - start) * 1000
             log_event('function_timing', {
                 'function': func.__name__,
-                'latency_ms': round(elapsed_ms, 2),
+                'latency_ms': float(f"{elapsed_ms:.2f}"),
                 'status': 'error',
                 'error': str(e)
             })
@@ -174,3 +150,72 @@ def retry_aws(max_retries=3, backoff_factor=1):
             return func(*args, **kwargs)  # Last attempt
         return wrapper
     return decorator
+
+# ============================================================
+# AWS X-RAY SIMULATION (Distributed Tracing)
+# ============================================================
+
+def xray_traced(segment_name: str):
+    """
+    Decorator to simulate AWS X-Ray subsegments for distributed tracing.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            t_obj = uuid4()
+            hex_id = str(t_obj.hex)
+            trace_id = f"1-{hex(int(time.time()))[2:]}-{hex_id[:24]}"
+            start = time.perf_counter()
+            log_event('xray_segment_start', {
+                'trace_id': trace_id,
+                'segment': segment_name,
+                'function': func.__name__
+            })
+            try:
+                result = func(*args, **kwargs)
+                elapsed = (time.perf_counter() - start) * 1000
+                log_event('xray_segment_end', {
+                    'trace_id': trace_id,
+                    'segment': segment_name,
+                    'latency_ms': float(f"{elapsed:.2f}"),
+                    'status': 'OK'
+                })
+                return result
+            except Exception as e:
+                elapsed = (time.perf_counter() - start) * 1000
+                log_event('xray_segment_end', {
+                    'trace_id': trace_id,
+                    'segment': segment_name,
+                    'latency_ms': float(f"{elapsed:.2f}"),
+                    'status': 'Fault',
+                    'error': str(e)
+                })
+                raise
+        return wrapper
+    return decorator
+
+
+# ============================================================
+# AI QUALITY & DRIFT MONITORING
+# ============================================================
+
+class QualityMonitor:
+    """
+    Tracks AI response quality and flags drift from performance baselines.
+    Baseline Accuracy Target: 90%
+    """
+    
+    @staticmethod
+    def log_prediction(query: str, confidence: float, provenance: str):
+        """Log metadata for SageMaker Model Monitor and QuickSight."""
+        log_event('ai_quality_metric', {
+            'query_hash': hashlib.md5(query.encode()).hexdigest(),
+            'confidence': confidence,
+            'provenance': provenance,
+            'is_low_confidence': confidence < 0.6,
+            'baseline_drift': confidence < 0.9
+        })
+        
+        if confidence < 0.6:
+            logger.warning(f"Low confidence AI response detected [{confidence}]. Flagging for human audit.")
+

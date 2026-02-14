@@ -23,6 +23,18 @@ class RagService:
         self.kendra_index_id = os.getenv('KENDRA_INDEX_ID', 'mock-index')
         self.region = os.getenv('AWS_REGION', 'us-east-1')
         
+        # Initialize AWS Kendra Client
+        import boto3
+        try:
+            self.kendra = boto3.client('kendra', region_name=self.region)
+        except Exception:
+            self.kendra = None
+        
+        # Initialize attributes to avoid lint errors
+        self.vectorizer = None
+        self.vector_matrix = None
+        self.corpus = []
+        
         # 1. Base Knowledge (Schemes)
         self.schemes = [
             {
@@ -148,77 +160,215 @@ class RagService:
             }
         ]
 
-        # 2. Vector Indexing (Local)
+        # 3. Load Uploaded Docs (Local RAG for Citizen Docs)
+        self.upload_dir = os.path.join(os.getcwd(), 'uploads')
+        if not os.path.exists(self.upload_dir):
+            os.makedirs(self.upload_dir)
+        self._load_uploaded_docs()
+
+        # 4. Initialize Vector Indexing
+        if HAS_SKLEARN:
+            self.refresh_vector_index()
+    
+        # Mocking AWS parts
+        self.use_aws = False
+
+    def _load_uploaded_docs(self):
+        """Read .txt files from uploads/ and add them to the knowledge base."""
+        try:
+            for filename in os.listdir(self.upload_dir):
+                if filename.endswith('.txt'):
+                    filepath = os.path.join(self.upload_dir, filename)
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        text = f.read()
+                        # Add as a scheme-like object for unified search
+                        self.schemes.append({
+                            "id": f"upload_{filename}",
+                            "title": f"Uploaded Doc: {filename}",
+                            "text": text,
+                            "keywords": filename.lower().split('.') + ["document", "upload", "my file"],
+                            "link": f"/documents/{filename}",
+                            "benefit": "Citizen Uploaded Knowledge",
+                            "ministry": "User Uploaded",
+                            "category": "user_doc",
+                            "related": []
+                        })
+        except Exception as e:
+            print(f"Error loading uploaded docs: {e}")
+
+    def refresh_vector_index(self):
+        """Update the TF-IDF matrix with current schemes + uploads."""
         if HAS_SKLEARN:
             self.vectorizer = TfidfVectorizer(stop_words='english')
             self.corpus = [f"{s['title']} {s['text']} {' '.join(s['keywords'])}" for s in self.schemes]
             self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
-    
-        # Mocking AWS parts
-        self.use_aws = False
+
+    def index_uploaded_document(self, filename, text):
+        """Programmatically add a new document to the RAG memory."""
+        self.schemes.append({
+            "id": f"upload_{filename}",
+            "title": f"Document: {filename}",
+            "text": text,
+            "keywords": filename.lower().split('.') + ["document", "upload"],
+            "link": f"/documents/{filename}",
+            "benefit": "Citizen Uploaded Knowledge",
+            "ministry": "User Uploaded",
+            "category": "user_doc",
+            "related": []
+        })
+        self.refresh_vector_index()
+        return True
 
     # ============================================================
     # HYBRID SEARCH (Vector + Graph)
     # ============================================================
 
     def retrieve(self, query):
-        """Standard retrieval interface."""
+        """Standard retrieval interface — Hybrid: Kendra (Global) + Local (Citizen Docs)."""
+        all_matches = []
+        
+        # 1. Kendra Search (Production Global schemes)
+        if self.kendra and self.kendra_index_id != 'mock-index':
+            kendra_results = self._kendra_search(query)
+            all_matches.extend(kendra_results)
+            
+        # 2. Local Hybrid Search (Mock Schemes + Citizen Uploads)
         scored_docs = self._hybrid_search(query)
-        return [f"{doc['text']} [Source: {doc['link']}]" for doc, _ in scored_docs]
+        for doc, _ in scored_docs:
+            all_matches.append(f"{doc['text']} [Source: {doc['link']}]")
+            
+        return all_matches if all_matches else ["I do not have specific public data on this yet. Please visit india.gov.in for official details."]
 
-    def get_structured_sources(self, query):
-        """Detailed data for UI scheme cards."""
-        scored_docs = self._hybrid_search(query)
+    def _kendra_search_raw(self, query):
+        """Perform real AWS Kendra search and return raw items."""
+        if not self.kendra or self.kendra_index_id == 'mock-index':
+            return []
+        try:
+            response = self.kendra.retrieve(
+                IndexId=self.kendra_index_id,
+                QueryText=query,
+                PageSize=3
+            )
+            return response.get('ResultItems', [])
+        except Exception as e:
+            print(f"Kendra Error: {e}")
+            return []
+
+    def _kendra_search(self, query):
+        """Standard Kendra string retrieval."""
+        raw_items = self._kendra_search_raw(query)
         results = []
-        for doc, score in scored_docs[:3]:
-            # Add Graph recommendations
-            related_schemes = [self._get_by_id(rid) for rid in doc.get('related', [])]
-            doc['graph_recommendations'] = [r['title'] for r in related_schemes if r]
-            results.append(doc)
+        for item in raw_items:
+            text = item.get('Content', '')
+            source = item.get('DocumentId', 'Ref')
+            results.append(f"{text} [Source: Kendra {source}]")
         return results
 
-    def _hybrid_search(self, query, top_k=5):
-        """Combines TF-IDF Semantic similarity with Keyword overlap."""
+    def get_structured_sources(self, query):
+        """Detailed data for UI scheme cards — Merges Local + Kendra."""
+        final_results = []
+        
+        # 1. Local Hybrid Search
+        local_docs = self._hybrid_search(query)
+        for i in range(len(local_docs)):
+            if i >= 3: break
+            doc, _ = local_docs[i]
+            # Create a card from the doc item
+            card = {
+                "id": str(doc.get('id', '')),
+                "title": str(doc.get('title', '')),
+                "text": str(doc.get('text', '')),
+                "link": str(doc.get('link', '')),
+                "benefit": str(doc.get('benefit', '')),
+                "logo": str(doc.get('logo', 'https://img.icons8.com/color/96/gov-india.png')),
+                "graph_recommendations": []
+            }
+            related = doc.get('related', [])
+            rec_titles = []
+            for rid in related:
+                scheme = self._get_by_id(rid)
+                if scheme:
+                    rec_titles.append(str(scheme.get('title', '')))
+            card['graph_recommendations'] = rec_titles
+            final_results.append(card)
+
+        # 2. Kendra Results (as cards)
+        kendra_items = self._kendra_search_raw(query)
+        for i in range(len(kendra_items)):
+            item = kendra_items[i]
+            final_results.append({
+                "id": f"kendra-{i}",
+                "title": "Official Document (Kendra)",
+                "text": str(item.get('Content', ''))[:300] + "...",
+                "link": str(item.get('DocumentURI', 'https://india.gov.in')),
+                "benefit": "Verified Policy Info",
+                "logo": "https://img.icons8.com/color/96/gov-india.png"
+            })
+            
+        return final_results
+
+    def _hybrid_search(self, query, top_k=5, threshold=0.45):
+        """
+        Combines TF-IDF Semantic similarity with Keyword overlap.
+        Uses a threshold to filter out weak matches (false positives).
+        """
         if not query: return []
         
-        query_lower = query.lower()
+        query_lower = str(query).lower()
         results_map = {} # id -> (doc, score)
 
         # 1. Vector Search (Semantic)
-        if HAS_SKLEARN:
+        if HAS_SKLEARN and self.vectorizer is not None and self.vector_matrix is not None:
             try:
                 query_vec = self.vectorizer.transform([query_lower])
                 cos_sim = cosine_similarity(query_vec, self.vector_matrix).flatten()
                 for idx, score in enumerate(cos_sim):
                     if score > 0.05:
                         did = self.schemes[idx]['id']
-                        results_map[did] = (self.schemes[idx], score * 1.5) # Weight semantic higher
+                        results_map[did] = (self.schemes[idx], float(score) * 2.0)
             except Exception:
                 pass
 
-        # 2. Keyword/Keyword Overlap (Manual)
+        # 2. Keyword Overlap (Manual)
         for doc in self.schemes:
-            k_score = 0
+            k_score = 0.0
             # Check exact keyword matches
-            for kw in doc['keywords']:
-                if kw in query_lower:
-                    k_score += 0.3
+            keywords = doc.get('keywords', [])
+            for kw in keywords:
+                kw_str = str(kw)
+                if f" {kw_str} " in f" {query_lower} ": # Full word match
+                    k_score += 0.4
+                elif kw_str in query_lower: # Substring match (weaker)
+                    k_score += 0.1
             
             # Boost if query contains title
-            if doc['title'].lower() in query_lower:
-                k_score += 0.5
+            title = str(doc.get('title', '')).lower()
+            if title in query_lower:
+                k_score += 0.7
 
             if k_score > 0:
                 did = doc['id']
                 if did in results_map:
-                    results_map[did] = (results_map[did][0], results_map[did][1] + k_score)
+                    results_map[did] = (results_map[did][0], float(results_map[did][1]) + k_score)
                 else:
                     results_map[did] = (doc, k_score)
 
-        # Convert map to list and sort
-        final_results = list(results_map.values())
+        # Convert map to list and filter by threshold
+        final_results = []
+        for d, s in results_map.values():
+            if float(s) >= threshold:
+                final_results.append((d, float(s)))
+        
+        # Sort and return
         final_results.sort(key=lambda x: x[1], reverse=True)
-        return final_results[:top_k]
+        
+        # Log if we are falling back to search
+        if not final_results:
+            print(f"DEBUG: [Search] No RAG matches above {threshold}. Falling back to search-based answer.")
+            
+        # Return slice safely
+        limit = min(len(final_results), top_k)
+        return final_results[:limit]
 
     def _get_by_id(self, sid):
         return next((s for s in self.schemes if s['id'] == sid), None)

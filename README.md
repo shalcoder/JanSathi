@@ -29,6 +29,7 @@ JanSathi works seamlessly in:
 
 ### 🏗️ Architecture diagram of the proposed solution:
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#ffffff', 'mainBkg': '#ffffff', 'clusterBkg': '#ffffff', 'nodeBorder': '#000000', 'clusterBorder': '#000000', 'lineColor': '#000000'}}}%%
 graph TD
     %% Styling
     classDef user fill:#f97316,stroke:#fff,stroke-width:2px,color:#fff
@@ -38,62 +39,97 @@ graph TD
     classDef trust fill:#ef4444,stroke:#fff,stroke-width:2px,color:#fff
     classDef db fill:#f59e0b,stroke:#fff,stroke-width:2px,color:#fff
 
-    User((👤 Citizen)):::user -- "🎙️ Voice/Text Query" --> Frontend[💻 Next.js 15 UI]:::fe
+    User((fa:fa-user Citizen)):::user -- "fa:fa-microphone Voice/Text Query" --> Frontend[fa:fa-laptop Next.js 15 UI]:::fe
     
     subgraph "🔐 Privacy & Edge (FL)"
-        Frontend -- "🧩 Model Updates" --> FL[🌸 Federated Learning - Flower]:::ai
+        Frontend -- "fa:fa-puzzle-piece Model Updates" --> FL[fa:fa-project-diagram Federated Learning - Flower]:::ai
     end
 
     subgraph "🌐 Access Layer"
-        Frontend -- "📡 API Req" --> Flask[🐍 Flask Backend]:::be
-        Flask -- "🔒 Auth" --> Clerk[🛡️ Clerk Security]:::be
+        Frontend -- "fa:fa-wifi API Req" --> Flask[fa:fa-server Flask Backend]:::be
+        Flask -- "fa:fa-key Auth" --> Clerk[fa:fa-lock Clerk Security]:::be
     end
 
     subgraph "🤖 Multi-Agent Orchestration"
-        Flask -- "🔄 Step Functions" --> Agents[🎭 Bedrock Agents / LangGraph]:::ai
-        Agents -- "🔍 RAG" --> Kendra[📚 AWS Kendra]:::ai
-        Agents -- "🧠 Reasoning" --> Bedrock[☁️ Claude 3.5 Sonnet]:::ai
+        Flask -- "fa:fa-cogs Step Functions" --> Agents[fa:fa-robot Bedrock Agents / LangGraph]:::ai
+        Agents -- "fa:fa-search RAG" --> Kendra[fa:fa-book AWS Kendra]:::ai
+        Agents -- "fa:fa-brain Reasoning" --> Bedrock[fa:fa-cloud Claude 3.5 Sonnet]:::ai
     end
 
     subgraph "🛡️ Explainable AI (XAI)"
-        Bedrock -- "🔍 Provenance" --> XAI[⚖️ SageMaker Clarify / Audit]:::trust
-        XAI -- "📄 Cite" --> Flask
+        Bedrock -- "fa:fa-search-plus Provenance" --> XAI[fa:fa-balance-scale SageMaker Clarify / Audit]:::trust
+        XAI -- "fa:fa-file-alt Cite" --> Flask
     end
 
     subgraph "💾 Persistence"
-        Flask -- "📝 Save" --> DB[(🗄️ PostgreSQL / SQLite)]:::db
-        DB -- "📜 History" --> Flask
+        Flask -- "fa:fa-save Save" --> DB[(fa:fa-database PostgreSQL / SQLite)]:::db
+        DB -- "fa:fa-history History" --> Flask
     end
 
-    Flask -- "📩 Response" --> Frontend
-    Frontend -- "🔊 Voice" --> User
+    Flask -- "fa:fa-envelope Response" --> Frontend
+    Frontend -- "fa:fa-volume-up Voice" --> User
 ```
 
 ### 🔄 Process flow diagram or Use-case diagram:
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#ffffff', 'mainBkg': '#ffffff', 'clusterBkg': '#ffffff', 'nodeBorder': '#333333', 'clusterBorder': '#333333', 'lineColor': '#333333', 'fontFamily': 'arial', 'fontSize': '14px'}}}%%
 graph LR
-    %% Styling
-    classDef actor fill:#475569,stroke:#fff,stroke-width:2px,color:#fff
-    classDef usecase fill:#e2e8f0,stroke:#64748b,stroke-width:1px,color:#1e293b
+    %% Styles
+    classDef start fill:#dcfce7,stroke:#166534,stroke-width:2px,color:#000
+    classDef process fill:#dbeafe,stroke:#1e40af,stroke-width:2px,color:#000
+    classDef decision fill:#ffedd5,stroke:#c2410c,stroke-width:2px,color:#000,shape:rhombus
+    classDef ai fill:#f3e8ff,stroke:#6b21a8,stroke-width:2px,color:#000
+    classDef storage fill:#fef9c3,stroke:#a16207,stroke-width:2px,color:#000
+    classDef endnode fill:#fee2e2,stroke:#b91c1c,stroke-width:2px,color:#000
 
-    Citizen((👤 Citizen User)):::actor
-    Admin((👮 Govt Admin)):::actor
+    %% Nodes
+    A[👤 Citizen Login / Dashboard]:::start
+    B[🎙️ Voice Query / Upload]:::start
+    C[🌐 Speech-to-Text]:::process
+    D{Intent Analysis?}:::decision
+    
+    %% Semantic Search Flow
+    E[📚 Kendra Retrieval]:::ai
+    F[🧠 Bedrock LLM Reasoner]:::ai
+    G[🔊 Polly TTS]:::process
+    
+    %% Eligibility Flow
+    H[📄 Vision OCR]:::ai
+    I{Document Valid?}:::decision
+    J[🧮 Criteria Matching]:::process
+    K[🌸 Federated Learning Update]:::ai
+    L[⚖️ XAI Explanation]:::process
 
-    subgraph "✨ Advanced AI Workflows"
-        Citizen --> UC1(🎙️ Voice Search):::usecase
-        Citizen --> UC2(🎭 Multi-Agent Eligibility):::usecase
-        Citizen --> UC3(⚖️ Explainable AI - Provenance):::usecase
-        Admin --> UC4(🌸 Federated Learning - Sync):::usecase
-        Admin --> UC5(🛡️ Human-in-the-loop Audit):::usecase
-    end
-
-    UC1 -.-> UC6(🌐 STT Engine):::usecase
-    UC2 -.-> UC7(🔄 Orchestration Layer):::usecase
-    UC3 -.-> UC8(📜 Citation Engine):::usecase
+    %% Database
+    DB[(�️ User History)]:::storage
+    
+    %% Connections
+    A --> B
+    B --> C
+    C --> D
+    
+    %% Branch 1: Search
+    D -- "General Query" --> E
+    E --> F
+    F --> G
+    
+    %% Branch 2: Eligibility Check
+    D -- "Check Eligibility" --> H
+    H --> I
+    I -- "Yes" --> J
+    I -- "No" --> B
+    J --> K
+    J --> L
+    L --> F
+    
+    %% Final Output
+    G --> End[📱 App Response]:::endnode
+    F --> DB
 ```
 
 ### 🛠️ Advanced Tech Stack Taxonomy:
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#ffffff', 'mainBkg': '#ffffff', 'clusterBkg': '#ffffff', 'nodeBorder': '#000000', 'clusterBorder': '#000000', 'lineColor': '#000000'}}}%%
 graph TB
     %% Styling
     classDef fe fill:#000,stroke:#3b82f6,stroke-width:2px,color:#fff

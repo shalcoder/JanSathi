@@ -1,6 +1,7 @@
 # JanSathi Architecture Diagram (AWS Stack)
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#ffffff', 'mainBkg': '#ffffff', 'clusterBkg': '#ffffff', 'nodeBorder': '#000000', 'clusterBorder': '#000000', 'lineColor': '#000000'}}}%%
 graph TD
     subgraph "Layer 1: User Interaction"
         UA[User (Rural Citizen)]

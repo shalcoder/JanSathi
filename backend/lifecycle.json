@@ -1,0 +1,20 @@
+{
+  "Rules": [
+    {
+      "ID": "DeleteOldAudioFiles",
+      "Status": "Enabled",
+      "Prefix": "audio/",
+      "Expiration": {
+        "Days": 1
+      }
+    },
+    {
+      "ID": "DeleteOldTTSFiles",
+      "Status": "Enabled",
+      "Prefix": "tts/",
+      "Expiration": {
+        "Days": 1
+      }
+    }
+  ]
+}

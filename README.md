@@ -69,6 +69,7 @@ Citizens struggle with:
 - **LLM**: AWS Bedrock (Claude/Titan models)
 - **TTS**: AWS Polly (Neural voices)
 - **Search**: AWS Kendra (RAG retrieval)
+- **Observability**: AWS X-Ray (Tracing), CloudWatch (Metrics/Logs), Model Monitor (AI Quality)
 - **Fallback**: Local mock mode when AWS unavailable
 
 ---
@@ -118,35 +119,122 @@ JanSathi/
 
 ---
 
-## 🏗️ Architecture
-
-### Backend API Flow
+### 🏗️ JanSathi Ecosystem & Technical Flow
 
 ```mermaid
 flowchart TD
-    A[Client Request] --> B[Flask /query]
-    B --> C{Audio or Text?}
-    C -->|Audio| D[TranscribeService]
-    C -->|Text| E[Normalize Query]
-    D --> E
-    E --> F[RagService - Context Retrieval]
-    F --> G[BedrockService - LLM Generation]
-    G --> H[PollyService - TTS Optional]
-    H --> I[Response JSON]
+    %% Node Definitions
+    START([<b>Citizen Access</b><br/>Login / Voice ID])
+    DASH[<b>JanSathi Pulse</b><br/>Main Dashboard]
+    
+    subgraph Discovery ["<b>Knowledge Discovery Loop</b>"]
+        direction TB
+        BROWSE[Browse Benefit Universe]
+        ONLINE[Online Inquiry<br/>RAG Enabled]
+        OFFLINE[Offline Fallback<br/>Edge Cached]
+        COMP[Query Composition]
+    end
+
+    subgraph AI_Core ["<b>Intelligence Layer (AWS Bedrock)</b>"]
+        direction TB
+        SUBMIT{Submit Query}
+        VISION[<b>Bedrock Vision</b><br/>OCR & Analysis]
+        TEXT[<b>Bedrock NLP</b><br/>Semantic Q&A]
+        SAN[Response Sanitizer<br/>PII Masking]
+    end
+
+    subgraph Stakeholder ["<b>Stakeholder Management</b>"]
+        direction TB
+        GOVT[<b>JanSathi Pulse</b><br/>Admin View]
+        MON[Benefit Gap<br/>Analytics]
+        OUT[Outreach Engine<br/>IVR / WhatsApp]
+    end
+
+    %% Connections
+    START --> DASH
+    DASH --> BROWSE
+    BROWSE --> ONLINE & OFFLINE
+    ONLINE & OFFLINE --> COMP
+    COMP --> SUBMIT
+    
+    SUBMIT -- "Document Upload" --> VISION
+    SUBMIT -- "Voice / Text" --> TEXT
+    
+    VISION & TEXT --> SAN
+    SAN --> FEEDBACK[Personalized Benefit Guide]
+    
+    FEEDBACK --> PROFILE[Citizen Record<br/>DynamoDB]
+    PROFILE --> MON
+    MON --> GOVT
+    GOVT --> OUT
+    OUT -->|Closing the loop| START
+
+    %% Styling (Premium Aesthetics)
+    style START fill:#f97316,stroke:#fff,stroke-width:2px,color:#fff
+    style DASH fill:#4f46e5,stroke:#fff,stroke-width:2px,color:#fff
+    style SUBMIT fill:#0ea5e9,stroke:#fff,stroke-width:4px,color:#fff
+    style FEEDBACK fill:#10b981,stroke:#fff,stroke-width:2px,color:#fff
+    style GOVT fill:#6366f1,stroke:#fff,stroke-width:2px,color:#fff
+    
+    classDef layer fill:#f8fafc,stroke:#e2e8f0,stroke-width:1px,color:#64748b,stroke-dasharray: 5 5
+    class Discovery,AI_Core,Stakeholder layer
 ```
 
-### Frontend Architecture
+### Technical Infrastructure Details
 
+#### **Backend Production Pipeline**
 ```mermaid
-flowchart LR
-    U[User] --> L[Landing Page]
-    L --> S[Sign In/Sign Up]
-    S --> D[Dashboard]
-    D --> C[Chat Interface]
-    D --> DOC[Documents]
-    D --> M[Market Rates]
-    D --> P[Profile]
-    D --> SET[Settings]
+flowchart TD
+    A[Client Request] --> B[API Gateway / Flask]
+    B --> SEC[Security Layer: Prompt Injection & PII Filter]
+    SEC --> C{Query Type?}
+    C -->|Audio| D[AWS Transcribe]
+    C -->|Text| E[Query Normalization]
+    D --> E
+    E --> F[RAG Service - Kendra Retrieval]
+    F --> G[Bedrock Service - Claude 3.5 Haiku]
+    G --> MON[Observability: X-Ray & Quality Monitor]
+    MON --> SAN[Response Sanitizer]
+    SAN --> H[AWS Polly - TTS Optional]
+    H --> I[Response JSON + Provenance]
+```
+
+#### **AWS Cloud Stack**
+```mermaid
+flowchart TB
+    subgraph Edge ["Edge & Security"]
+        CF[CloudFront CDN]
+        WAF[AWS WAF / Rate Limiter]
+    end
+
+    subgraph App ["Compute Layer"]
+        API[API Gateway / Flask]
+        VAL[Validators & Security]
+    end
+
+    subgraph AI ["Intelligence Layer"]
+        BED[AWS Bedrock]
+        KEN[AWS Kendra RAG]
+        TRA[AWS Transcribe]
+        POL[AWS Polly]
+    end
+
+    subgraph Data ["Persistence"]
+        DB[(DynamoDB)]
+        S3[(S3 Assets)]
+    end
+
+    subgraph Obs ["Observability"]
+        XR(AWS X-Ray Tracing)
+        CW(CloudWatch Metrics)
+        QM(AI Quality Monitor)
+    end
+
+    CF --> WAF --> API
+    API --> VAL
+    VAL --> AI
+    AI <--> Data
+    AI --> Obs
 ```
 
 ---
@@ -200,6 +288,22 @@ flowchart LR
 - 👤 **Profile Page**: User stats, badges, preferences
 - ⚙️ **Settings Page**: Language, theme, voice preferences
 - 📡 **Telemetry Panel**: AWS service status (desktop only)
+
+#### **Production Security (NEW!)**
+- 🛡️ **Prompt Injection Defense**: Multi-pattern regex & length validation to block jailbreaks.
+- 🛡️ **PII Anonymization**: Automatic HMAC-SHA256 hashing for Aadhaar and masking for phone/email.
+- 🛡️ **Content Moderation**: Simulated keyword safety checks (ready for AWS Comprehend).
+- 🛡️ **Response Sanitization**: Automated removal of internal PII and system markers from AI output.
+
+#### **Observability & Ops**
+- 📡 **X-Ray Tracing**: Full request lifecycle visibility with simulated distributed tracing.
+- 📡 **AI Quality Monitor**: Drift detection and confidence-based human-audit flagging.
+- 📡 **Structured Logging**: CloudWatch-ready JSON logging for all system events.
+
+#### **Stakeholder Differentiators**
+- 📞 **Voice-First IVR**: Simulated citizen outreach via phone channels (AWS Connect flow).
+- 💬 **WhatsApp Outreach**: Citizen engagement simulator for high-accessibility channels.
+- 👥 **Community Moderation**: Human-in-the-loop interface for auditing flagged AI responses.
 
 #### **Mobile Responsiveness (MAJOR UPDATE)**
 - ✅ **All pages fully responsive** (320px → 4K displays)
@@ -348,24 +452,6 @@ Refer to `AUTHENTICATION_GUIDE.md` for detailed integration guides:
 
 ---
 
-## 🎯 User Flow
-
-```mermaid
-flowchart LR
-    START[Visit Website] --> LANDING[Landing Page]
-    LANDING --> AUTH{Authenticated?}
-    AUTH -->|No| SIGNIN[Sign In/Sign Up]
-    AUTH -->|Yes| DASH[Dashboard]
-    SIGNIN --> DASH
-    DASH --> CHAT[Chat with AI]
-    DASH --> DOCS[View Documents]
-    DASH --> MARKET[Check Market Rates]
-    DASH --> PROFILE[View Profile]
-    DASH --> SETTINGS[Adjust Settings]
-    CHAT --> VOICE[Voice Input]
-    CHAT --> TEXT[Text Input]
-    CHAT --> IMAGE[Image Analysis]
-```
 
 ---
 
@@ -510,13 +596,6 @@ schemes based on family composition.
 2. SMS fallback for feature phones
 3. State-specific customization
 4. Integration with official government portals
-
----
-
-## 👥 Authors & Contributors
-
-- **Poornachandran** - Primary Developer
-- **Team JanSathi** - Contributors
 
 ---
 

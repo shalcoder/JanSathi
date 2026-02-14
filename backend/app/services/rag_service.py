@@ -1,145 +1,275 @@
-import boto3
-import json
+"""
+RAG Service — Hybrid Knowledge Mesh.
+Combines Vector (Semantic), Graph (Relational), and Intent discovery.
+"""
+
 import os
+import json
+import re
+from difflib import SequenceMatcher
 from botocore.exceptions import ClientError, NoCredentialsError
+
+# Use scikit-learn for professional local RAG
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    import numpy as np
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
 
 class RagService:
     def __init__(self):
         self.kendra_index_id = os.getenv('KENDRA_INDEX_ID', 'mock-index')
         self.region = os.getenv('AWS_REGION', 'us-east-1')
         
-        try:
-            self.kendra_client = boto3.client('kendra', region_name=self.region)
-            self.use_aws = True
-        except NoCredentialsError:
-            print("Warning: No AWS Credentials found. Using Mock RAG.")
-            self.use_aws = False
-        except Exception as e:
-            print(f"Warning: Failed to init Kendra client: {e}. Using Mock RAG.")
-            self.use_aws = False
-
-        # Enhanced Mock Data for Fallback (Regional & Central Schemes)
-        self.mock_data = [
+        # 1. Base Knowledge (Schemes)
+        self.schemes = [
             {
-                "text": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi): Provides 6,000 INR per year in three installments to small and marginal farmers.",
-                "keywords": ["kisan", "money", "6000", "farmer", "agriculture"],
-                "link": "https://pmkisan.gov.in/"
-            },
-            {
-                "text": "Janani Suraksha Yojana (JSY): A safe motherhood intervention providing 1,400 INR for rural and 1,000 INR for urban institutional deliveries.",
                 "id": "pm-kisan",
-                "text": "PM-KISAN Scheme: Provides ₹6,000 per year income support to small farmers in 3 equal installments.",
-                "keywords": ["kisan", "farmer", "money", "fund", "6000", "pm kisan"],
-                "link": "https://pmkisan.gov.in",
                 "title": "PM-KISAN Samman Nidhi",
+                "text": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi): Provides ₹6,000 per year income support to all landholding farmer families in three equal installments of ₹2,000 each. Launched on 1st December 2018. Eligibility: All landholding farmers. Documents: Aadhaar, bank account, land records. Apply at pmkisan.gov.in or nearest CSC. Helpline: 155261.",
+                "keywords": ["kisan", "farmer", "money", "6000", "pm kisan", "agriculture", "farming", "crop", "land", "kisaan"],
+                "link": "https://pmkisan.gov.in",
                 "benefit": "₹6,000/year Income Support",
-                "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/1200px-Digital_India_logo.svg.png" 
+                "ministry": "Ministry of Agriculture",
+                "category": "agriculture",
+                "related": ["fasal-bima", "kisan-credit", "soil-health"]
             },
             {
                 "id": "ayushman",
-                "text": "Ayushman Bharat: Provides health insurance coverage of ₹5 Lakh per family per year for secondary and tertiary care hospitalization.",
-                "keywords": ["health", "insurance", "medical", "hospital", "ayushman", "treatment"],
-                "link": "https://pmjay.gov.in",
                 "title": "Ayushman Bharat - PMJAY",
-                "benefit": "₹5 Lakh Free Treatment",
-                "logo": "https://pmjay.gov.in/sites/default/files/2019-02/pmjay-logo-new.png"
+                "text": "Ayushman Bharat (PM Jan Arogya Yojana): Provides health insurance coverage of ₹5 Lakh per family per year for secondary and tertiary care hospitalization. Covers 1,393 procedures including surgery, medical care, and diagnostics. Eligibility: Based on SECC 2011 deprivation criteria. No premium required. Apply via pmjay.gov.in or Ayushman Mitra at empanelled hospitals.",
+                "keywords": ["health", "insurance", "medical", "hospital", "ayushman", "treatment", "disease", "doctor", "medicine", "surgery", "bimari"],
+                "link": "https://pmjay.gov.in",
+                "benefit": "₹5 Lakh Free Health Cover",
+                "ministry": "Ministry of Health",
+                "category": "health",
+                "related": ["matru-vandana", "jan-aushadhi"]
             },
             {
-                "id": "enam",
-                "text": "e-NAM (National Agriculture Market): An electronic trading portal which networks existing APMC mandis to create a unified national market for agricultural commodities.",
-                "keywords": ["mandi", "market", "price", "sell", "enam", "trading"],
-                "link": "https://enam.gov.in",
-                "title": "e-NAM (National Agriculture Market)",
-                "benefit": "Better Prices for Crops",
-                "logo": "https://enam.gov.in/web/assets/images/logo.png"
+                "id": "fasal-bima",
+                "title": "PM Fasal Bima Yojana (PMFBY)",
+                "text": "Pradhan Mantri Fasal Bima Yojana (PMFBY): Crop insurance scheme providing financial support to farmers suffering crop loss from unforeseen events like drought, flood, hailstorm, cyclone, pest attack. Premium: 2% for Kharif, 1.5% for Rabi, 5% for commercial/horticultural crops. Claim within 72 hours of crop damage. Apply via bank, CSC, or pmfby.gov.in.",
+                "keywords": ["crop", "damage", "bima", "insurance", "loss", "cyclone", "flood", "drought", "fasal", "weather"],
+                "link": "https://pmfby.gov.in",
+                "benefit": "Crop Loss Insurance",
+                "ministry": "Ministry of Agriculture",
+                "category": "agriculture",
+                "related": ["pm-kisan", "kisan-credit"]
             },
             {
-               "id": "fasal-bima",
-               "text": "Pradhan Mantri Fasal Bima Yojana (PMFBY): Crop insurance scheme that provides financial support to farmers suffering crop loss/damage arising out of unforeseen events.",
-               "keywords": ["crop", "damage", "bima", "insurance", "loss", "cyclone"],
-               "link": "https://pmfby.gov.in",
-               "title": "PM Fasal Bima Yojana",
-               "benefit": "Crop Loss Insurance",
-               "logo": "https://pmfby.gov.in/assets/images/logo.png"
+                "id": "awas",
+                "title": "PM Awas Yojana (PMAY)",
+                "text": "Pradhan Mantri Awas Yojana: Housing for All by providing affordable housing. Gramin (Rural): Up to ₹1.30 lakh in plains, ₹1.50 lakh in hilly areas for construction of pucca house. Urban: Interest subsidy of 6.5% on home loans for EWS/LIG. Eligibility: No pucca house anywhere in India. Apply via gram panchayat (rural) or ULB (urban).",
+                "keywords": ["house", "awas", "ghar", "home", "housing", "construction", "build", "rent", "shelter", "makan"],
+                "link": "https://pmaymis.gov.in/",
+                "benefit": "₹1.30-2.67 Lakh Housing Aid",
+                "ministry": "Ministry of Housing",
+                "category": "housing",
+                "related": ["jandhan", "saubhagya-bijli"]
             },
-             {
-               "id": "ujjwala",
-               "text": "PM Ujjwala Yojana: Provides clean cooking fuel (LPG connections) to poor households to prevent health hazards associated with cooking based on fossil fuel.",
-               "keywords": ["gas", "lpg", "cooking", "cylinder", "ujjwala", "fuel"],
-               "link": "https://www.pmuy.gov.in/",
-               "title": "PM Ujjwala Yojana",
-               "benefit": "Free LPG Connection",
-               "logo": "https://www.pmuy.gov.in/images/logo.png"
+            {
+                "id": "mudra",
+                "title": "PM MUDRA Yojana",
+                "text": "Pradhan Mantri MUDRA Yojana: Provides loans up to ₹10 lakh for non-corporate, non-farm small/micro enterprises. Three categories: Shishu (up to ₹50,000), Kishore (₹50,000 to ₹5 lakh), Tarun (₹5 lakh to ₹10 lakh). No collateral required. Apply at any bank, NBFC, or MFI. No processing fee for Shishu loans.",
+                "keywords": ["loan", "mudra", "business", "money", "enterprise", "shop", "startup", "self-employed", "vyapaar", "dukaan"],
+                "link": "https://www.mudra.org.in/",
+                "benefit": "Loans up to ₹10 Lakh",
+                "ministry": "Ministry of Finance",
+                "category": "financial",
+                "related": ["svanidhi", "skill-india"]
+            },
+            {
+                "id": "sukanya",
+                "title": "Sukanya Samriddhi Yojana",
+                "text": "Sukanya Samriddhi Yojana: Savings scheme for girl child. Interest rate 8.2% p.a. (highest among small savings). Minimum deposit ₹250/year, maximum ₹1.5 lakh/year. Account opens from birth to age 10. Matures at 21 years. 50% withdrawal allowed at age 18 for education. Tax-free under Section 80C.",
+                "keywords": ["girl", "daughter", "beti", "education", "savings", "sukanya", "ladki", "bachchi", "school", "college"],
+                "link": "https://www.nsiindia.gov.in/",
+                "benefit": "8.2% Interest Girl Child Savings",
+                "ministry": "Ministry of Finance",
+                "category": "education",
+                "related": ["matru-vandana", "jandhan"]
+            },
+            {
+                "id": "pm-vishwakarma",
+                "title": "PM Vishwakarma Yojana",
+                "text": "PM Vishwakarma: Support scheme for traditional artisans and craftspeople working with hands and tools. Covers 18 trades including carpenter, blacksmith, goldsmith, potter, tailor, washerman. Benefits: Recognition (PM Vishwakarma certificate), skill upgradation, toolkit incentive of ₹15,000, collateral-free credit up to ₹3 lakh at 5% interest.",
+                "keywords": ["artisan", "craft", "carpenter", "blacksmith", "tailor", "potter", "vishwakarma", "karigar", "mistri", "darzi", "lohar"],
+                "link": "https://pmvishwakarma.gov.in/",
+                "benefit": "₹15K Toolkit + ₹3 Lakh Loan",
+                "ministry": "Ministry of MSME",
+                "category": "employment",
+                "related": ["mudra", "skill-india"]
+            },
+            {
+                "id": "matru-vandana",
+                "title": "PM Matru Vandana Yojana",
+                "text": "Pradhan Mantri Matru Vandana Yojana (PMMVY): Cash incentive of ₹11,000 for first child and ₹6,000 for second child (girl only) for pregnant women and lactating mothers. Compensation for wage loss during pregnancy. Eligibility: All pregnant women for first living child. Apply at nearest Anganwadi Centre or health facility.",
+                "keywords": ["pregnant", "mother", "baby", "child", "maternity", "birth", "delivery", "garbhwati", "maa", "bachcha"],
+                "link": "https://wcd.nic.in/",
+                "benefit": "₹6,000-11,000 Maternity Benefit",
+                "ministry": "Ministry of Women & Child",
+                "category": "health",
+                "related": ["ayushman", "jandhan"]
+            },
+            {
+                "id": "jandhan",
+                "title": "PM Jan Dhan Yojana",
+                "text": "Pradhan Mantri Jan Dhan Yojana: Financial inclusion scheme providing zero-balance bank accounts with RuPay debit card and ₹2 lakh accident insurance. Overdraft facility of ₹10,000 for eligible accounts. Life cover of ₹30,000 for accounts opened before Jan 2015. Apply at any bank branch with Aadhaar/voter ID.",
+                "keywords": ["bank", "account", "jan dhan", "debit card", "insurance", "zero balance", "khata", "paisa"],
+                "link": "https://pmjdy.gov.in/",
+                "benefit": "Zero Balance Bank Account + Insurance",
+                "ministry": "Ministry of Finance",
+                "category": "financial",
+                "related": ["mudra", "awas"]
+            },
+            {
+                "id": "skill-india",
+                "title": "Skill India Mission",
+                "text": "Skill India Mission: Provides free skill training in 40+ sectors to Indian youth. Includes PMKVY, NAPS, and Jan Shikshan Sansthan. Linkage to employment and entrepreneurship.",
+                "keywords": ["training", "skill", "job", "career", "employment", "learning"],
+                "link": "https://skillindia.gov.in",
+                "benefit": "Certified Skill Training",
+                "ministry": "Ministry of Skill Development",
+                "category": "employment",
+                "related": ["mudra", "pm-vishwakarma"]
+            },
+            {
+                "id": "svanidhi",
+                "title": "PM SVANidhi",
+                "text": "Micro-credit facility for street vendors to restart their livelihoods. Loans up to ₹50,000 with interest subsidy and digital repayment incentives.",
+                "keywords": ["vendor", "street", "loan", "thela", "hawker"],
+                "link": "https://pmsvanidhi.mohua.gov.in",
+                "benefit": "₹10,000-50,000 Working Capital Loan",
+                "ministry": "Ministry of Housing",
+                "category": "financial",
+                "related": ["mudra", "jandhan"]
             }
         ]
 
-    def retrieve(self, query):
-        """
-        Retrieves relevant documents. 
-        Prioritizes Kendra, falls back to Mock Data.
-        """
-        print(f"Retrieving for: {query}")
-        
-        # 1. AWS Kendra Search (If configured)
-        if self.use_aws and self.kendra_index_id != 'mock-index':
-            try:
-                response = self.kendra_client.retrieve(
-                    IndexId=self.kendra_index_id,
-                    QueryText=query,
-                    PageSize=3
-                )
-                results = [item['Content'] for item in response['ResultItems']]
-                if results:
-                    return results
-            except Exception as e:
-                print(f"Kendra Error: {e}")
+        # 2. Vector Indexing (Local)
+        if HAS_SKLEARN:
+            self.vectorizer = TfidfVectorizer(stop_words='english')
+            self.corpus = [f"{s['title']} {s['text']} {' '.join(s['keywords'])}" for s in self.schemes]
+            self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
+    
+        # Mocking AWS parts
+        self.use_aws = False
 
-        # 2. Fallback / Mock Logic
-        query_lower = query.lower()
-        mock_results = []
-        for doc in self.mock_data:
-            match = False
-            for kw in doc['keywords']:
-                if kw in query_lower:
-                    match = True
-                    break
-            
-            if match:
-                # Format as a structured JSON string so the frontend can parse it if needed, 
-                # or just plain text for LLM.
-                # For the Hybrid UI (LLM + Cards), we return the text for the LLM 
-                # AND we can append a special marker or handle the object retrieval separately.
-                # Here we simply return the rich text expecting Bedrock to use it,
-                # BUT we also tag it so the frontend could potentially extract it if we passed raw objects.
-                # For simplicity in this hackathon phase, we will return the text for the LLM.
-                
-                # However, to enable the "Scheme Card" on frontend, we need the frontend to receive this structured data.
-                # The 'retrieve' method is currently only returning strings for the LLM Context.
-                # We need to change the API response structure to send these 'sources' back.
-                # For now, let's keep this returning Text for Bedrock context.
-                # The 'Server.py' /query endpoint calls this. We will modify Server.py to also fetch 'sources'.
-                
-                entry = f"{doc['text']} [Source: {doc['link']}]"
-                mock_results.append(entry)
-        
-        # Combine results, prioritizing Kendra but adding mock if relevant
-        final_results = mock_results # Prioritize our rich mock data for the demo
-        
-        if not final_results:
-            return ["I do not have specific public data on this local query yet. Please check official portals like india.gov.in."]
-            
-        return final_results[:5] 
+    # ============================================================
+    # HYBRID SEARCH (Vector + Graph)
+    # ============================================================
+
+    def retrieve(self, query):
+        """Standard retrieval interface."""
+        scored_docs = self._hybrid_search(query)
+        return [f"{doc['text']} [Source: {doc['link']}]" for doc, _ in scored_docs]
 
     def get_structured_sources(self, query):
-        """
-        New method explicitly for UI Cards.
-        Returns the full dict objects for matching schemes.
-        """
+        """Detailed data for UI scheme cards."""
+        scored_docs = self._hybrid_search(query)
+        results = []
+        for doc, score in scored_docs[:3]:
+            # Add Graph recommendations
+            related_schemes = [self._get_by_id(rid) for rid in doc.get('related', [])]
+            doc['graph_recommendations'] = [r['title'] for r in related_schemes if r]
+            results.append(doc)
+        return results
+
+    def _hybrid_search(self, query, top_k=5):
+        """Combines TF-IDF Semantic similarity with Keyword overlap."""
+        if not query: return []
+        
         query_lower = query.lower()
-        matches = []
-        for doc in self.mock_data:
+        results_map = {} # id -> (doc, score)
+
+        # 1. Vector Search (Semantic)
+        if HAS_SKLEARN:
+            try:
+                query_vec = self.vectorizer.transform([query_lower])
+                cos_sim = cosine_similarity(query_vec, self.vector_matrix).flatten()
+                for idx, score in enumerate(cos_sim):
+                    if score > 0.05:
+                        did = self.schemes[idx]['id']
+                        results_map[did] = (self.schemes[idx], score * 1.5) # Weight semantic higher
+            except Exception:
+                pass
+
+        # 2. Keyword/Keyword Overlap (Manual)
+        for doc in self.schemes:
+            k_score = 0
+            # Check exact keyword matches
             for kw in doc['keywords']:
                 if kw in query_lower:
-                    matches.append(doc)
-                    break
-        return matches[:3]
+                    k_score += 0.3
+            
+            # Boost if query contains title
+            if doc['title'].lower() in query_lower:
+                k_score += 0.5
+
+            if k_score > 0:
+                did = doc['id']
+                if did in results_map:
+                    results_map[did] = (results_map[did][0], results_map[did][1] + k_score)
+                else:
+                    results_map[did] = (doc, k_score)
+
+        # Convert map to list and sort
+        final_results = list(results_map.values())
+        final_results.sort(key=lambda x: x[1], reverse=True)
+        return final_results[:top_k]
+
+    def _get_by_id(self, sid):
+        return next((s for s in self.schemes if s['id'] == sid), None)
+
+    # ============================================================
+    # INTENT DISCOVERY
+    # ============================================================
+
+    def discover_intent(self, query):
+        """Classify the user's intent to refine the prompt."""
+        q = query.lower()
+        if any(w in q for w in ['document', 'certificate', 'patra', 'proof', 'apply']):
+            return "DOCUMENTATION_AID"
+        if any(w in q for w in ['money', 'cash', 'loan', 'paisa', 'subsidy', 'interest']):
+            return "FINANCIAL_SUPPORT"
+        if any(w in q for w in ['health', 'hospital', 'medicine', 'ill', 'treatment']):
+            return "HEALTHCARE_ACCESS"
+        if any(w in q for w in ['job', 'work', 'skill', 'training', 'naukri']):
+            return "EMPLOYMENT_LIFELIKE"
+        if any(w in q for w in ['mandi', 'price', 'bhaav', 'crop', 'market']):
+            return "MARKET_ACCESS"
+        return "GENERAL_INQUIRY"
+
+    def get_market_prices(self):
+        """Mock Mandi API for Market Access feature."""
+        return [
+            {"item": "Wheat", "price": "₹2,275", "trend": "up", "demand": "High"},
+            {"item": "Mustard", "price": "₹5,400", "trend": "stable", "demand": "Medium"},
+            {"item": "Potato", "price": "₹1,200", "trend": "down", "demand": "Low"}
+        ]
+
+    def match_livelihood(self, crop_type):
+        """
+        EXTRAORDINARY FEATURE: Agentic Livelihood matching.
+        Matches a farmer's crop to local government buyers or warehouse subsidies.
+        """
+        matches = {
+            "wheat": ["FCI Local Procurement Center", "State Seed Corporation", "PM-Kisan Warehouse Subsidy"],
+            "rice": ["State Civil Supplies", "Export Grade A Hub", "Cold Storage Cluster"],
+            "mustard": ["Nafed Procurement Point", "Oilseed Cooperative", "Organic Certification Hub"]
+        }
+        return matches.get(crop_type.lower(), ["Local APMC Mandi", "Cooperative Bank Support"])
+
+    def verify_digital_signature(self, doc_type):
+        """Simulates a secure check for 'Zero-Knowledge' digital signatures."""
+        return {
+            "status": "Verified",
+            "provider": "DigiLocker / Bharat-Identity",
+            "integrity": "100%",
+            "timestamp": "2026-02-14"
+        }
+
+    def get_all_schemes(self):
+        return self.schemes

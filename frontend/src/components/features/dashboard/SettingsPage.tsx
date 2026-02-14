@@ -1,37 +1,57 @@
+'use client';
+
 import React from 'react';
-import { Globe, Volume2, Shield, Trash2, Save } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Globe, Volume2, Shield, Trash2, Save, Languages, Bell, Database } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 
 const SettingsPage = () => {
     const { settings, updateSettings } = useSettings();
 
     const handleSave = () => {
-        // Settings are saved on change in our hook, but we can show a feedback here
         alert("Settings saved successfully!");
     };
 
     return (
+<<<<<<< HEAD
         <div className="min-h-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-black text-white mb-8">App Settings</h2>
+=======
+        <div className="h-full max-w-5xl mx-auto pb-20 relative px-4 sm:px-0">
+>>>>>>> poornachandran
 
-            <div className="space-y-6">
-                {/* Interface Settings */}
-                <div className="glass-panel p-8 rounded-[40px] border border-white/10">
-                    <h3 className="text-lg font-bold text-slate-200 mb-6 flex items-center gap-2">
-                        <Globe className="w-5 h-5 text-blue-400" />
-                        Interface & Language
+            {/* Header */}
+            <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-10"
+            >
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] font-bold text-secondary-foreground uppercase tracking-widest opacity-40">System Settings</span>
+                </div>
+                <h2 className="text-4xl font-bold text-foreground tracking-tight">
+                    Settings
+                </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                {/* Language Settings */}
+                <div className="p-8 rounded-2xl bg-card border border-border/50 shadow-sm">
+                    <h3 className="text-lg font-bold text-foreground mb-8 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <Languages className="w-5 h-5 text-primary" />
+                        </div>
+                        Language
                     </h3>
 
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-300">Default Query Language</p>
-                                <p className="text-xs text-slate-500">Preferred language for AI responses.</p>
-                            </div>
+                    <div className="space-y-8">
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-50">Select Main Language</label>
                             <select
                                 value={settings.language}
                                 onChange={(e) => updateSettings({ language: e.target.value })}
-                                className="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
+                                className="w-full h-14 bg-secondary/30 border border-border/50 rounded-xl px-5 text-foreground font-bold outline-none focus:border-primary appearance-none cursor-pointer"
                             >
                                 <option value="hi">Hindi (हिन्दी)</option>
                                 <option value="en">English</option>
@@ -40,96 +60,146 @@ const SettingsPage = () => {
                             </select>
                         </div>
 
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between p-5 rounded-xl bg-secondary/20 border border-border/50">
                             <div>
-                                <p className="text-sm font-semibold text-slate-300">Auto-translate Voice</p>
-                                <p className="text-xs text-slate-500">Automatically translate speech to preferred language.</p>
+                                <p className="text-sm font-bold text-foreground">Auto-translation</p>
+                                <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-widest opacity-40">Translate as you type</p>
                             </div>
                             <button
                                 onClick={() => updateSettings({ autoTranslate: !settings.autoTranslate })}
-                                className={`w-12 h-6 rounded-full transition-all relative ${settings.autoTranslate ? 'bg-blue-600' : 'bg-slate-700'}`}
+                                className={`w-14 h-8 rounded-full transition-all relative p-1 ${settings.autoTranslate ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
                             >
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.autoTranslate ? 'left-7' : 'left-1'}`}></div>
+                                <motion.div
+                                    animate={{ x: settings.autoTranslate ? 24 : 0 }}
+                                    className="w-6 h-6 bg-white rounded-full shadow-sm"
+                                />
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* AI & Accessibility */}
-                <div className="glass-panel p-8 rounded-[40px] border border-white/10">
-                    <h3 className="text-lg font-bold text-slate-200 mb-6 flex items-center gap-2">
-                        <Volume2 className="w-5 h-5 text-purple-400" />
-                        AI & Accessibility
+                {/* Voice & Alerts */}
+                <div className="p-8 rounded-2xl bg-card border border-border/50 shadow-sm">
+                    <h3 className="text-lg font-bold text-foreground mb-8 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                            <Volume2 className="w-5 h-5 text-blue-600" />
+                        </div>
+                        Voice & Alerts
                     </h3>
 
                     <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between p-5 rounded-xl bg-secondary/20 border border-border/50">
                             <div>
-                                <p className="text-sm font-semibold text-slate-300">Voice Synthesis (TTS)</p>
-                                <p className="text-xs text-slate-500">Read AI responses aloud automatically.</p>
+                                <p className="text-sm font-bold text-foreground">Voice Responses</p>
+                                <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-widest opacity-40">JanSathi will speak to you</p>
                             </div>
                             <button
                                 onClick={() => updateSettings({ voiceEnabled: !settings.voiceEnabled })}
-                                className={`w-12 h-6 rounded-full transition-all relative ${settings.voiceEnabled ? 'bg-blue-600' : 'bg-slate-700'}`}
+                                className={`w-14 h-8 rounded-full transition-all relative p-1 ${settings.voiceEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
                             >
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.voiceEnabled ? 'left-7' : 'left-1'}`}></div>
+                                <motion.div
+                                    animate={{ x: settings.voiceEnabled ? 24 : 0 }}
+                                    className="w-6 h-6 bg-white rounded-full shadow-sm"
+                                />
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between p-5 rounded-xl bg-secondary/20 border border-border/50">
                             <div>
-                                <p className="text-sm font-semibold text-slate-300">Push Notifications</p>
-                                <p className="text-xs text-slate-500">Alerts for new government schemes.</p>
+                                <p className="text-sm font-bold text-foreground">Push Notifications</p>
+                                <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-widest opacity-40">Get updates on schemes</p>
                             </div>
                             <button
-                                onClick={() => updateSettings({ notifications: !settings.notifications })}
-                                className={`w-12 h-6 rounded-full transition-all relative ${settings.notifications ? 'bg-blue-600' : 'bg-slate-700'}`}
-                            >
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.notifications ? 'left-7' : 'left-1'}`}></div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                                onClick={async () => {
+                                    if (!settings.notifications) {
+                                        // Request Permission
+                                        if (!("Notification" in window)) {
+                                            alert("This browser does not support notifications.");
+                                            return;
+                                        }
 
-                {/* Data & Privacy */}
-                <div className="glass-panel p-8 rounded-[40px] border border-white/10 border-red-500/10">
-                    <h3 className="text-lg font-bold text-slate-200 mb-6 flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-red-400" />
-                        Data & Privacy
-                    </h3>
-
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-300">Clear Chat History</p>
-                                <p className="text-xs text-slate-500">Permanently delete all conversation records.</p>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    if (confirm('Are you sure you want to clear all history?')) {
-                                        localStorage.removeItem('jansathi_chat_sessions');
-                                        sessionStorage.removeItem('current_jansathi_session');
-                                        window.location.reload();
+                                        if (Notification.permission === "granted") {
+                                            updateSettings({ notifications: true });
+                                            new Notification("JanSathi Notifications Enabled", {
+                                                body: "You will now receive updates about government schemes.",
+                                                icon: "/icons/icon-192.png" // Assuming this exists
+                                            });
+                                        } else if (Notification.permission !== "denied") {
+                                            const permission = await Notification.requestPermission();
+                                            if (permission === "granted") {
+                                                updateSettings({ notifications: true });
+                                                new Notification("JanSathi Notifications Enabled", {
+                                                    body: "You will now receive updates about government schemes.",
+                                                    icon: "/icons/icon-192.png"
+                                                });
+                                            }
+                                        } else {
+                                            alert("Notifications are disabled in browser settings. Please enable them manually.");
+                                        }
+                                    } else {
+                                        updateSettings({ notifications: false });
                                     }
                                 }}
-                                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl text-xs font-bold transition-all"
+                                className={`w-14 h-8 rounded-full transition-all relative p-1 ${settings.notifications ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
                             >
-                                <Trash2 className="w-4 h-4 mr-2 inline" />
-                                Clear Data
+                                <motion.div
+                                    animate={{ x: settings.notifications ? 24 : 0 }}
+                                    className="w-6 h-6 bg-white rounded-full shadow-sm"
+                                />
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex justify-end pt-4">
-                    <button
-                        onClick={handleSave}
-                        className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[2rem] font-bold shadow-xl shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95"
-                    >
-                        <Save className="w-5 h-5" />
-                        Save All Changes
-                    </button>
+                {/* Privacy & Security */}
+                <div className="md:col-span-2 p-8 rounded-2xl bg-card border border-red-100 dark:border-red-900/20 shadow-sm">
+                    <h3 className="text-lg font-bold text-foreground mb-8 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                            <Shield className="w-5 h-5 text-red-600" />
+                        </div>
+                        Privacy & Security
+                    </h3>
+
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex-1 text-center md:text-left">
+                            <p className="text-base font-bold text-foreground mb-1">Delete All Chat History</p>
+                            <p className="text-xs font-medium text-secondary-foreground opacity-60 leading-relaxed">
+                                This will permanently remove all your messages and document history from this device.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                if (confirm('Delete all history? This cannot be undone.')) {
+                                    localStorage.removeItem('jansathi_chat_sessions');
+                                    sessionStorage.removeItem('current_jansathi_session');
+                                    window.location.reload();
+                                }
+                            }}
+                            className="px-8 py-3 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-200/50 dark:border-red-900/40 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                            Clear History
+                        </button>
+                    </div>
                 </div>
+            </div>
+
+            {/* Sticky Save Button - Improved Spacing */}
+            <div className="mt-16 flex justify-center pb-8 border-t border-border/50 pt-12">
+                <button
+                    onClick={handleSave}
+                    className="w-full sm:w-auto px-12 py-5 bg-foreground dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-sm uppercase tracking-widest shadow-xl flex items-center justify-center gap-4 hover:opacity-90 transition-opacity"
+                >
+                    <Save className="w-5 h-5" />
+                    Save All Changes
+                </button>
+            </div>
+
+            <div className="mt-8 text-center">
+                <p className="text-[10px] font-bold text-secondary-foreground uppercase tracking-widest opacity-30 px-6 py-2 rounded-full border border-border inline-block">
+                    JanSathi v2.5.0 • BharatAI Core
+                </p>
             </div>
         </div>
     );

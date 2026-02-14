@@ -9,6 +9,8 @@ from app.services.bedrock_service import BedrockService
 from app.services.rag_service import RagService
 from app.services.polly_service import PollyService
 from app.services.workflow_service import WorkflowService
+from app.services.agent_service import AgentService
+from app.services.fl_service import FederatedLearningService
 from app.core.utils import logger, normalize_query, log_event, timed
 from app.core.validators import (
     validate_query, validate_language, validate_user_id,
@@ -46,6 +48,11 @@ try:
     rag_service = RagService()
     polly_service = PollyService()
     workflow_service = WorkflowService()
+    
+    # Advanced AI Agents
+    agent_service = AgentService(bedrock_service, rag_service, polly_service)
+    fl_service = FederatedLearningService(min_clients=2)
+    
     if not USE_DYNAMODB:
         response_cache = ResponseCache(ttl_seconds=3600)
     logger.info("All services initialized.")
@@ -318,46 +325,29 @@ def query():
             })
         else:
             # ============================================================
-            # RAG RETRIEVAL + BEDROCK GENERATION (cache miss)
+            # MULTI-AGENT ORCHESTRATION (Real Bedrock Agents)
             # ============================================================
-            # 1. Discover Intent
-            intent = rag_service.discover_intent(user_query)
+            log_event('agent_orch_start', {'query': safe_query_log})
             
-            # 2. Professional Retrieval (Hybrid Search)
-            context_docs = rag_service.retrieve(user_query)
+            # Use the new Multi-Agent Orchestrator (Reasoning + Explainability)
+            # This calls: Intent -> Kendra -> Bedrock (Reasoning) -> Json Output
+            agent_response = agent_service.orchestrate_query(user_query, language, user_id)
             
-            # UNIQUE FEATURE: Sentinel Security Logging (Technical Excellence)
-            print(f"DEBUG: [Sentinel] Verifying query integrity for intent: {intent}")
-            security_check = rag_service.verify_digital_signature("QUERY_HASH")
+            answer_text = agent_response['text']
+            structured_sources = agent_response['structured_sources']
+            context_docs = agent_response['context']
+            provenance = agent_response['provenance']
+            explainability = agent_response['explainability']
+            confidence_score = explainability.get('confidence', 0.9)
             
-            # UNIQUE FEATURE: Inject Market/Livelihood Data if intent is Market Access
-            if intent == "MARKET_ACCESS":
-                market_data = rag_service.get_market_prices()
-                context_docs.append(f"CURRENT MANDI PRICES: {json.dumps(market_data)}")
-                
-                # Agentic Livelihood matching
-                livelihood_matches = rag_service.match_livelihood(user_query)
-                context_docs.append(f"AGENTIC MATCHES: {json.dumps(livelihood_matches)}")
-                context_docs.append(f"SECURITY STATUS: {security_check['status']} via {security_check['provider']}")
-            
-            context_text = "\n".join(context_docs)
-            structured_sources = rag_service.get_structured_sources(user_query)
-
-            # 3. LLM Generation (with intent context)
-            response_data = bedrock_service.generate_response(user_query, context_text, language, intent)
-            
-            # Handle both string and dict responses for backward compatibility
-            if isinstance(response_data, dict):
-                answer_text = response_data['text']
-                provenance = response_data.get('provenance', 'unknown')
-            else:
-                answer_text = response_data
-                provenance = 'legacy'
+            # Log the full thought process (for debugging/observability)
+            log_event('agent_thought_process', {'steps': agent_response['execution_log']})
 
             # Cache the response
+            # In production, we might want to cache specific intents differently
             response_cache.set(user_query, language, answer_text, structured_sources)
             
-            log_event('cache_miss', {'query': safe_query_log, 'intent': intent, 'provenance': provenance})
+            log_event('cache_miss', {'query': safe_query_log, 'provenance': provenance})
 
         # Generate Audio
         audio_url = polly_service.synthesize(answer_text, language)
@@ -394,7 +384,8 @@ def query():
             "answer": {
                 "text": answer_text,
                 "audio": audio_url,
-                "provenance": provenance if 'provenance' in locals() else 'legacy'
+                "provenance": provenance if 'provenance' in locals() else 'legacy',
+                "explainability": explainability if 'explainability' in locals() else None
             },
             "context": context_docs,
             "structured_sources": structured_sources,
@@ -534,3 +525,29 @@ def start_workflow():
 def get_workflow_status(execution_id):
     result = workflow_service.get_workflow_status(execution_id)
     return jsonify(result)
+
+# ============================================================
+# FEDERATED LEARNING ENDPOINTS (Real Implementation)
+# ============================================================
+
+@bp.route('/fl/register', methods=['POST'])
+def register_fl_client():
+    """Register a client for Federated Learning."""
+    data = request.json or {}
+    client_id = data.get('client_id', 'anon')
+    return jsonify(fl_service.register_client(client_id))
+
+@bp.route('/fl/update', methods=['POST'])
+def submit_fl_update():
+    """Receive encrypted model updates (gradients)."""
+    data = request.json or {}
+    client_id = data.get('client_id')
+    weights = data.get('weights') # In practice, huge JSON array
+    
+    result = fl_service.submit_update(client_id, {'weights': weights, 'num_samples': 1})
+    return jsonify(result)
+
+@bp.route('/fl/metrics', methods=['GET'])
+def get_fl_metrics():
+    """Get global FL training progress."""
+    return jsonify(fl_service.get_metrics())

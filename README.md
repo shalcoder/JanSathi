@@ -29,7 +29,7 @@ JanSathi works seamlessly in:
 
 ### 🏗️ Architecture diagram of the proposed solution:
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#ffffff', 'mainBkg': '#ffffff', 'clusterBkg': '#ffffff', 'nodeBorder': '#000000', 'clusterBorder': '#000000', 'lineColor': '#000000'}}}%%
+%%{init: {'theme': 'default', 'themeVariables': { 'mainBkg': '#ffffff', 'background': '#ffffff' }}}%%
 graph TD
     %% Styling
     classDef user fill:#f97316,stroke:#fff,stroke-width:2px,color:#fff
@@ -128,35 +128,11 @@ graph LR
 ```
 
 ### 🛠️ Advanced Tech Stack Taxonomy:
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#ffffff', 'mainBkg': '#ffffff', 'clusterBkg': '#ffffff', 'nodeBorder': '#000000', 'clusterBorder': '#000000', 'lineColor': '#000000'}}}%%
-graph TB
-    %% Styling
-    classDef fe fill:#000,stroke:#3b82f6,stroke-width:2px,color:#fff
-    classDef be fill:#3776ab,stroke:#10b981,stroke-width:2px,color:#fff
-    classDef cloud fill:#000,stroke:#ef4444,stroke-width:2px,color:#fff
-
-    subgraph "🛸 Orchestration & FL"
-        direction TB
-        FL["🌸 Flower (Federated Learning)"]:::be
-        SF["🔄 AWS Step Functions"]:::be
-        Lang["🎭 LangGraph Agents"]:::be
-    end
-    
-    subgraph "⚖️ Trust & XAI"
-        direction TB
-        Clarify["⚖️ SageMaker Clarify"]:::cloud
-        Trace["📜 Bedrock Trace Engine"]:::cloud
-        Prov["🔍 JanSathi Provenance"]:::cloud
-    end
-    
-    subgraph "🏗️ Core Services"
-        direction TB
-        NextJS["⚛️ Next.js 15"]:::fe
-        Flask["🐍 Python Flask"]:::fe
-        Bedrock["☁️ AWS Bedrock"]:::fe
-    end
-```
+| **🛸 Orchestration & FL** | **⚖️ Trust & XAI** | **🏗️ Core Services** |
+| :---: | :---: | :---: |
+| ![Flower](https://img.shields.io/badge/Flower-Federated_Learning-f47721?style=flat-square&logo=flower&logoColor=white) | ![SageMaker](https://img.shields.io/badge/Amazon-SageMaker_Clarify-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) | ![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=next.js&logoColor=white) |
+| ![StepFunctions](https://img.shields.io/badge/AWS-Step_Functions-E7157B?style=flat-square&logo=amazon-aws&logoColor=white) | ![BedrockTrace](https://img.shields.io/badge/Amazon-Bedrock_Trace-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) | ![Flask](https://img.shields.io/badge/Python-Flask-000000?style=flat-square&logo=flask&logoColor=white) |
+| ![LangGraph](https://img.shields.io/badge/LangGraph-Agents-1C1C1C?style=flat-square&logo=python&logoColor=white) | ![Provenance](https://img.shields.io/badge/JanSathi-Provenance_Engine-10b981?style=flat-square) | ![Bedrock](https://img.shields.io/badge/AWS-Bedrock-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) |
 
 ---
 

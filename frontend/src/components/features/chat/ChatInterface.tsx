@@ -10,6 +10,7 @@ import SchemeCard from './SchemeCard';
 import { useSettings } from '@/hooks/useSettings';
 import DocumentScorecard from './DocumentScorecard';
 import ExplainabilityCard from './ExplainabilityCard';
+import MultiAgentThoughtProcess from './MultiAgentThoughtProcess';
 import { Languages, Globe } from 'lucide-react';
 
 const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
@@ -69,6 +70,7 @@ export default function ChatInterface() {
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isThinking, setIsThinking] = useState(false);
     const [language, setLanguage] = useState(settings.language);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -232,6 +234,14 @@ export default function ChatInterface() {
                                             ? 'max-w-[85%] sm:max-w-[70%] bg-primary text-white'
                                             : 'w-full sm:max-w-[90%] bg-card border border-border/50 text-foreground'}
                                      `}>
+
+                                        {/* User Federated Learning Badge */}
+                                        {msg.role === 'user' && (
+                                            <div className="absolute -top-3 right-4 bg-background border border-border/50 shadow-sm px-2 py-1 rounded-full flex items-center gap-1.5 z-10">
+                                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">FL-Node Active</span>
+                                            </div>
+                                        )}
                                         {msg.role === 'assistant' && msg.isTyping ? (
                                             <div className="font-bold text-base leading-relaxed">
                                                 <Typewriter text={msg.text} onComplete={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isTyping: false } : m))} />
@@ -260,12 +270,19 @@ export default function ChatInterface() {
                                                 )}
                                                 <p className="whitespace-pre-wrap leading-relaxed font-bold text-base tracking-normal">{msg.text}</p>
 
+                                                {/* Explainability Section */}
                                                 {msg.explainability && (
-                                                    <ExplainabilityCard
-                                                        confidence={msg.explainability.confidence}
-                                                        criteria={msg.explainability.matching_criteria}
-                                                        protocol={msg.explainability.privacy_protocol}
-                                                    />
+                                                    <div className="mt-4 pt-4 border-t border-border/10">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                                                            <Shield className="w-3 h-3 text-emerald-500" />
+                                                            Trust & Provenance
+                                                        </h4>
+                                                        <ExplainabilityCard
+                                                            confidence={msg.explainability.confidence}
+                                                            criteria={msg.explainability.matching_criteria}
+                                                            protocol={msg.explainability.privacy_protocol}
+                                                        />
+                                                    </div>
                                                 )}
 
                                                 {msg.structured_sources && msg.structured_sources.length > 0 && (
@@ -322,8 +339,16 @@ export default function ChatInterface() {
                                     </div>
                                 </motion.div>
                             ))}
-                            {isLoading && (
-                                <div className="flex justify-start">
+                            {/* Thinking State */}
+                            {isThinking && (
+                                <div className="flex justify-start px-2">
+                                    <MultiAgentThoughtProcess />
+                                </div>
+                            )}
+
+                            {/* Loading State (fallback) */}
+                            {isLoading && !isThinking && (
+                                <div className="flex justify-start px-2">
                                     <div className="flex items-center gap-3 p-3 px-5 bg-secondary/30 rounded-full border border-border">
                                         <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
                                         <span className="text-[10px] text-foreground font-bold uppercase tracking-wider">JanSathi is thinking...</span>

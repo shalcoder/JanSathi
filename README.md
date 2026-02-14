@@ -30,68 +30,95 @@ JanSathi works seamlessly in:
 ### 🏗️ Architecture diagram of the proposed solution:
 ```mermaid
 graph TD
-    User((Citizen)) -- "Voice/Text Query" --> Frontend[Next.js 15 UI]
+    %% Styling
+    classDef user fill:#f97316,stroke:#fff,stroke-width:2px,color:#fff
+    classDef fe fill:#3b82f6,stroke:#fff,stroke-width:2px,color:#fff
+    classDef be fill:#10b981,stroke:#fff,stroke-width:2px,color:#fff
+    classDef ai fill:#6366f1,stroke:#fff,stroke-width:2px,color:#fff
+    classDef trust fill:#ef4444,stroke:#fff,stroke-width:2px,color:#fff
+    classDef db fill:#f59e0b,stroke:#fff,stroke-width:2px,color:#fff
+
+    User((👤 Citizen)):::user -- "🎙️ Voice/Text Query" --> Frontend[💻 Next.js 15 UI]:::fe
     
-    subgraph "Access Layer"
-        Frontend -- "API Req" --> Flask[Flask Backend]
-        Flask -- "Auth" --> Clerk[Clerk Security]
+    subgraph "🔐 Privacy & Edge (FL)"
+        Frontend -- "🧩 Model Updates" --> FL[🌸 Federated Learning - Flower]:::ai
     end
 
-    subgraph "Intelligence Engine"
-        Flask -- "Search" --> Kendra[AWS Kendra RAG]
-        Flask -- "STT/TTS" --> AI_Voice[Polly & Transcribe]
-        Flask -- "Reasoning" --> Bedrock[Claude 3.5 Sonnet]
+    subgraph "🌐 Access Layer"
+        Frontend -- "📡 API Req" --> Flask[🐍 Flask Backend]:::be
+        Flask -- "🔒 Auth" --> Clerk[🛡️ Clerk Security]:::be
     end
 
-    subgraph "Persistence"
-        Flask -- "Save" --> DB[(PostgreSQL / SQLite)]
-        DB -- "History" --> Flask
+    subgraph "🤖 Multi-Agent Orchestration"
+        Flask -- "🔄 Step Functions" --> Agents[🎭 Bedrock Agents / LangGraph]:::ai
+        Agents -- "🔍 RAG" --> Kendra[📚 AWS Kendra]:::ai
+        Agents -- "🧠 Reasoning" --> Bedrock[☁️ Claude 3.5 Sonnet]:::ai
     end
 
-    Bedrock -- "Advice" --> Flask
-    Flask -- "Response" --> Frontend
-    Frontend -- "Voice" --> User
+    subgraph "🛡️ Explainable AI (XAI)"
+        Bedrock -- "🔍 Provenance" --> XAI[⚖️ SageMaker Clarify / Audit]:::trust
+        XAI -- "📄 Cite" --> Flask
+    end
+
+    subgraph "💾 Persistence"
+        Flask -- "📝 Save" --> DB[(🗄️ PostgreSQL / SQLite)]:::db
+        DB -- "📜 History" --> Flask
+    end
+
+    Flask -- "📩 Response" --> Frontend
+    Frontend -- "🔊 Voice" --> User
 ```
 
-### � Process flow diagram or Use-case diagram:
+### 🔄 Process flow diagram or Use-case diagram:
 ```mermaid
 graph LR
-    Citizen((Citizen User))
-    Admin((Govt admin))
+    %% Styling
+    classDef actor fill:#475569,stroke:#fff,stroke-width:2px,color:#fff
+    classDef usecase fill:#e2e8f0,stroke:#64748b,stroke-width:1px,color:#1e293b
 
-    subgraph "JanSathi Use Cases"
-        Citizen --> UC1(Voice-Based Search)
-        Citizen --> UC2(Scheme Eligibility Check)
-        Citizen --> UC3(Document Vision Analysis)
-        Admin --> UC4(View Livelihood Analytics)
-        Admin --> UC5(Audit AI Responses)
+    Citizen((👤 Citizen User)):::actor
+    Admin((👮 Govt Admin)):::actor
+
+    subgraph "✨ Advanced AI Workflows"
+        Citizen --> UC1(🎙️ Voice Search):::usecase
+        Citizen --> UC2(🎭 Multi-Agent Eligibility):::usecase
+        Citizen --> UC3(⚖️ Explainable AI - Provenance):::usecase
+        Admin --> UC4(🌸 Federated Learning - Sync):::usecase
+        Admin --> UC5(🛡️ Human-in-the-loop Audit):::usecase
     end
 
-    UC1 -.-> UC6(Multilingual STT)
-    UC2 -.-> UC7(Policy Database RAG)
-    UC3 -.-> UC8(Vision Claude Engine)
+    UC1 -.-> UC6(🌐 STT Engine):::usecase
+    UC2 -.-> UC7(🔄 Orchestration Layer):::usecase
+    UC3 -.-> UC8(📜 Citation Engine):::usecase
 ```
 
-### 🛠️ Technologies to be used in the solution:
+### 🛠️ Advanced Tech Stack Taxonomy:
 ```mermaid
-graph LR
-    subgraph "Frontend"
-        NextJS[Next.js 15]
-        Tailwind[Tailwind CSS]
-        TypeScript[TypeScript]
+graph TB
+    %% Styling
+    classDef fe fill:#000,stroke:#3b82f6,stroke-width:2px,color:#fff
+    classDef be fill:#3776ab,stroke:#10b981,stroke-width:2px,color:#fff
+    classDef cloud fill:#000,stroke:#ef4444,stroke-width:2px,color:#fff
+
+    subgraph "🛸 Orchestration & FL"
+        direction TB
+        FL["🌸 Flower (Federated Learning)"]:::be
+        SF["🔄 AWS Step Functions"]:::be
+        Lang["🎭 LangGraph Agents"]:::be
     end
     
-    subgraph "Backend & AI"
-        Flask[Python Flask]
-        Bedrock[AWS Bedrock]
-        Kendra[Amazon Kendra]
-        Polly[Amazon Polly]
+    subgraph "⚖️ Trust & XAI"
+        direction TB
+        Clarify["⚖️ SageMaker Clarify"]:::cloud
+        Trace["📜 Bedrock Trace Engine"]:::cloud
+        Prov["🔍 JanSathi Provenance"]:::cloud
     end
     
-    subgraph "Infrastructure"
-        Docker[Docker]
-        Lambda[AWS Lambda]
-        SQS[AWS SQS]
+    subgraph "🏗️ Core Services"
+        direction TB
+        NextJS["⚛️ Next.js 15"]:::fe
+        Flask["🐍 Python Flask"]:::fe
+        Bedrock["☁️ AWS Bedrock"]:::fe
     end
 ```
 
@@ -116,27 +143,27 @@ Citizens struggle with:
 ## 🚀 Tech Stack
 
 ### Frontend (Website)
-- **Framework**: Next.js 16 (React, TypeScript)
-- **Styling**: Tailwind CSS with custom design system
-- **UI/UX**: Glassmorphism, Aurora gradients, Premium animations
-- **Speech**: Web Speech API (browser-based STT)
-- **Audio**: HTML5 `<audio>` for playback
-- **State Management**: React Hooks + localStorage
-- **Mobile**: Fully responsive (320px - 4K)
+- **Framework**: ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js) **Next.js 16** (React, TypeScript)
+- **Styling**: ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) **Tailwind CSS**
+- **UI/UX**: ✨ **Glassmorphism**, Aurora gradients, Premium animations
+- **Speech**: 🎙️ **Web Speech API** (browser-based STT)
+- **Audio**: 🔊 **HTML5 Audio** for playback
+- **State**: 🔄 **React Hooks + localStorage**
+- **Mobile**: 📱 **Fully responsive** (320px - 4K)
 
 ### Backend
-- **Framework**: Python Flask
-- **Architecture**: Clean Architecture (API → Services → Core)
-- **Database**: SQLite with SQLAlchemy ORM
-- **Server**: Gunicorn with async workers
-- **Security**: Talisman, CORS, Rate Limiting
-- **Logging**: JSON-based structured logging
+- **Framework**: ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-000000?style=flat-square&logo=flask&logoColor=white) **Python Flask**
+- **Architecture**: 🏛️ **Clean Architecture** (API → Services → Core)
+- **Database**: ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white) **SQLAlchemy ORM**
+- **Server**: ⚡ **Gunicorn** with async workers
+- **Security**: 🛡️ **Talisman, CORS, Rate Limiting**
+- **Logging**: 📝 **Structured JSON Logging**
 
 ### AI / Cloud Services
-- **AWS Services**: Bedrock (Claude 3.5 Haiku/Sonnet), Kendra (RAG), Polly (TTS), Transcribe (STT)
-- **Security**: Prompt Injection Guards, PII Anonymization (HMAC), Content Moderation
-- **Observability**: Request Tracing, AI Quality Monitoring, Structured JSON Logging
-- **Fallback**: Intelligent Hybrid RAG with Local Edge Caching
+- **AWS Services**: ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) **Bedrock (Claude 3.5), Kendra (RAG), Polly (TTS)**
+- **Security**: 🛡️ **Prompt Injection Guards**, PII Anonymization, Content Moderation
+- **Observability**: 📊 **Request Tracing**, AI Quality Metrics
+- **Fallback**: 🔄 **Intelligent Hybrid RAG** with Local Edge Caching
 
 ---
 

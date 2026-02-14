@@ -10,6 +10,7 @@ import ProfilePage from "@/components/features/dashboard/ProfilePage";
 import SettingsPage from "@/components/features/dashboard/SettingsPage";
 
 import BackendStatus from "@/components/BackendStatus";
+import FederatedLearningStatus from "@/components/features/dashboard/FederatedLearningStatus";
 import { Menu, Sun, Moon, Search, Bell, Activity } from 'lucide-react';
 
 export default function Home() {

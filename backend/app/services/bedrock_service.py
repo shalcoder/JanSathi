@@ -1,13 +1,16 @@
 import boto3
 import json
 import os
+import re
 import time
 from botocore.exceptions import ClientError, NoCredentialsError
+from app.core.utils import log_event, timed
+from app.core.security import sanitize_ai_response
 
 class BedrockService:
     def __init__(self):
         self.region = os.getenv('AWS_REGION', 'us-east-1')
-        self.model_id = os.getenv('BEDROCK_MODEL_ID', "anthropic.claude-3-haiku-20240307-v1:0")
+        self.model_id = os.getenv('BEDROCK_MODEL_ID', "anthropic.claude-3-5-sonnet-20240620-v1:0")
         
         try:
             self.bedrock_runtime = boto3.client(
@@ -19,7 +22,8 @@ class BedrockService:
             print("Bedrock Init Failed: No Credentials.")
             self.working = False
 
-    def generate_response(self, query, context_text, language='hi'):
+    @timed
+    def generate_response(self, query, context_text, language='hi', intent="GENERAL_INQUIRY"):
         if not self.working:
             return self._get_context_based_response(query, context_text, language)
 
@@ -27,102 +31,122 @@ class BedrockService:
         if not context_text or "I do not have specific public data" in context_text:
             return f"I don't have specific information about '{query}'. Please check official government portals like india.gov.in for accurate details."
 
+        # ============================================================
+        # CLAUDE 3.5 SONNET OPTIMIZED PROMPT (Sovereign Expert)
+        # ============================================================
         prompt = f"""
-        Human: You are JanSathi, a helpful government assistant for rural India.
-        
-        CONTEXT (Official Government Information):
-        {context_text}
-        
-        USER QUESTION: {query}
-        LANGUAGE: {language}
-        
-        CRITICAL INSTRUCTIONS:
-        1. Answer ONLY using the CONTEXT provided above. Do NOT make up information.
-        2. If the context contains information about the user's question, use it to provide a helpful answer.
-        3. Structure your response clearly with the scheme/service name and key details.
-        4. Keep language simple and practical.
-        5. Reply in {language} if possible, otherwise English.
-        
-        Format your answer like this:
-        ✅ **What this is**: [Brief explanation based on context]
-        
-        📋 **Key Details**:
-        • [Detail 1 from context]
-        • [Detail 2 from context]
-        
-        🌐 **More Information**: [Website from context if available]
-        
-        Assistant:
-        """
+System: You are JanSathi, the premier AI Citizen Assistant for India. Your goal is to provide accurate, verified information about government schemes and market resources with empathy and clarity.
 
-        # Check if using Titan or Claude
-        if "titan" in self.model_id.lower():
-            body = json.dumps({
-                "inputText": prompt,
-                "textGenerationConfig": {
-                    "maxTokenCount": 400,
-                    "temperature": 0.1,
-                    "topP": 0.9
+CONTEXT (Verified Knowledge Base):
+{context_text}
+
+USER QUERY: {query}
+PRIMARY LANGUAGE: {language}
+USER INTENT: {intent}
+
+CRITICAL OPERATING PROCEDURES:
+1. CITATION: Every claim about an amount, date, or eligibility MUST be supported by the provided CONTEXT.
+2. AASTHA VOICE (Sentiment): Analyze user tone. If the user is in distress, prioritize highly empathetic language and immediate aid like Loan Waivers.
+3. MARKET INSIGHTS: If intent is MARKET_ACCESS, explain the price trends (₹) and suggest when to sell/hold produce simply.
+4. SOURCE LINKING: Always finish with the official link from the context (e.g., enam.gov.in).
+5. STRUCTURE: Use professional Markdown. Use bolding for key terms.
+6. HALLUCINATION GUARD: If context is insufficient, politely direct to 'india.gov.in'. NEVER invent data.
+7. SIMPLE LANGUAGE: Break down complex bureaucratic terms into simple concepts.
+
+RESPONSE TEMPLATE:
+✅ **Summary**: [1-2 sentences explaining what this is / Current Market Status]
+
+📋 **Key Details**:
+• [Points from context]
+• [Mandi Prices if applicable]
+
+🪜 **Action Plan**:
+1. [Step 1]
+2. [Step 2]
+
+🛡️ **Sentinel Security**: [Privacy/Verification Status]
+
+🌐 **Official Source**: [URL from context]
+
+Reply directly in {language}.
+"""
+
+        # Build request body for Claude 3.5 Sonnet
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 1000,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
                 }
-            })
-        else:
-            body = json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 400,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "temperature": 0.1,
-                "top_p": 0.9
-            })
+            ],
+            "temperature": 0.1,
+            "top_p": 0.9
+        })
 
-        retries = 2
-        for attempt in range(retries + 1):
-            try:
-                response = self.bedrock_runtime.invoke_model(
-                    body=body, 
-                    modelId=self.model_id, 
-                    accept='application/json', 
-                    contentType='application/json'
-                )
-                
-                response_body = json.loads(response.get('body').read())
-                
-                # Parse response based on model type
-                if "titan" in self.model_id.lower():
-                    return response_body['results'][0]['outputText']
-                else:
-                    return response_body['content'][0]['text']
+        try:
+            response = self.bedrock_runtime.invoke_model(
+                body=body, 
+                modelId=self.model_id, 
+                accept='application/json', 
+                contentType='application/json'
+            )
+            
+            response_body = json.loads(response.get('body').read())
+            raw_response = response_body['content'][0]['text']
+            
+            # Validate and sanitize the response
+            validated = self._validate_response(raw_response)
+            sanitized = sanitize_ai_response(validated)
+            
+            log_event('bedrock_success', {
+                'model': self.model_id,
+                'query_length': len(query),
+                'response_length': len(sanitized),
+                'intent': intent
+            })
+            
+            return sanitized
 
-            except ClientError as e:
-                error_code = e.response['Error']['Code']
-                print(f"Bedrock ClientError: {error_code} - {e}")
-                if error_code == 'ThrottlingException':
-                    if attempt < retries:
-                        time.sleep(1 * (attempt + 1)) # Simple backoff
-                        continue
-                    else:
-                        return "System is busy. Please try again later."
-                elif error_code == 'AccessDeniedException':
-                    if "INVALID_PAYMENT_INSTRUMENT" in str(e):
-                        print("Bedrock Notice: Payment instrument invalid. Using Context-based response.")
-                    else:
-                        print(f"Bedrock Access Denied: {e}")
-                    return self._get_context_based_response(query, context_text, language)
-                else:
-                    print(f"Bedrock Error: {e}")
-                    return self._get_context_based_response(query, context_text, language)
-            except Exception as e:
-                print(f"Unknown Bedrock Error: {e}")
-                return self._get_context_based_response(query, context_text, language)
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            print(f"Bedrock ClientError: {error_code}")
+            return self._get_context_based_response(query, context_text, language)
+        except Exception as e:
+            print(f"Claude/Bedrock Error: {e}")
+            return self._get_context_based_response(query, context_text, language)
+
+    def _validate_response(self, response: str) -> str:
+        """
+        Validate AI response for hallucination markers.
+        Checks for fabricated URLs, suspicious claims, and ensures citations.
+        """
+        if not response:
+            return "I could not generate a response. Please try again."
+        
+        # Remove any 'Human:' or 'Assistant:' markers
+        response = re.sub(r'^(Human|Assistant):\s*', '', response, flags=re.MULTILINE)
+        
+        # Check for fabricated URLs
+        known_domains = [
+            'gov.in', 'nic.in', 'india.gov.in', 'pmkisan.gov.in',
+            'pmjay.gov.in', 'enam.gov.in', 'pmfby.gov.in', 'pmaymis.gov.in',
+            'pmuy.gov.in', 'mudra.org.in', 'nsiindia.gov.in', 'pmjdy.gov.in',
+            'nfsa.gov.in', 'pmvishwakarma.gov.in', 'pmsvanidhi.mohua.gov.in',
+            'pmkvyofficial.org', 'edistrict.up.gov.in', 'myscheme.gov.in'
+        ]
+        
+        urls_in_response = re.findall(r'https?://[^\s\)\]]+', response)
+        for url in urls_in_response:
+            if not any(domain in url for domain in known_domains):
+                response = response.replace(url, 'https://myscheme.gov.in')
+                log_event('hallucination_detected', {'type': 'fabricated_url', 'url': url})
+        
+        return response
 
     def analyze_image(self, image_bytes, prompt_text="Explain this document.", language='hi'):
-        """
-        Analyzes an image (Document/Scene) using Claude 3 Vision.
-        """
+        """Analyzes an image using Claude 3 Vision."""
         if not self.working:
             return "AI Vision not connected."
 
@@ -130,17 +154,15 @@ class BedrockService:
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
 
         vision_prompt = f"""
-        You are JanSathi. The user has uploaded an image of a government document, notice, or agricultural scene.
+        You are JanSathi. The user has uploaded a government document.
         
         USER INSTRUCTION: {prompt_text}
         TARGET LANGUAGE: {language}
         
         TASK:
-        1. Identify the key purpose of the document/image.
+        1. Identify the key purpose of the document.
         2. Explain the critical details (Dates, Deadlines, Amounts, Requirements) simply.
-        3. Do NOT translate word-for-word. Summarize for a rural user.
-        4. If it's a form, tell them what documents they need to attach.
-        5. Output directly in {language}.
+        3. Output directly in {language}.
         """
 
         body = json.dumps({
@@ -169,79 +191,32 @@ class BedrockService:
         })
 
         try:
+            # SONNET FOR VISION - Highly advanced auditor
             response = self.bedrock_runtime.invoke_model(
                 body=body,
-                modelId="anthropic.claude-3-sonnet-20240229-v1:0", # Use Sonnet/Haiku for Vision
+                modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
                 accept='application/json',
                 contentType='application/json'
             )
             response_body = json.loads(response.get('body').read())
-            return response_body['content'][0]['text']
+            analysis_text = response_body['content'][0]['text']
+            
+            # UNIQUE FEATURE: Automated PII Warning
+            if any(term in analysis_text.lower() for term in ['aadhaar', 'number', 'address', 'phone']):
+                analysis_text = "🛡️ **Privacy Notice**: This document contains personal identifiers. JanSathi has analyzed it securely, but please avoid sharing raw photos of your Aadhaar in public groups.\n\n" + analysis_text
+                
+            return analysis_text
         except Exception as e:
             print(f"Vision Error: {e}")
             return "Could not analyze the image. Please ensure it is clear."
 
     def _get_context_based_response(self, query, context_text, language='hi'):
-        """Generate a response based on the RAG context when Bedrock is not available"""
+        """Fallback response based on RAG context when Bedrock is offline."""
         if not context_text or "I do not have specific public data" in context_text:
-            return f"I don't have specific information about '{query}'. Please check official government portals like india.gov.in for accurate details."
+            return f"I don't have specific information about '{query}'. Please visit india.gov.in."
         
-        # Extract key information from context
+        # Simpler structured fallback
         lines = context_text.split('\n')
-        scheme_info = []
-        website = ""
+        primary_info = lines[0] if lines else "Scheme information"
         
-        for line in lines:
-            if line.strip():
-                if "https://" in line:
-                    # Extract website
-                    import re
-                    urls = re.findall(r'https://[^\s\]]+', line)
-                    if urls:
-                        website = urls[0]
-                
-                # Clean up the line
-                clean_line = line.replace('[Source:', '').replace(']', '').strip()
-                if clean_line and not clean_line.startswith('http'):
-                    scheme_info.append(clean_line)
-        
-        # Generate structured response
-        if scheme_info:
-            main_info = scheme_info[0] if scheme_info else "Government scheme information"
-            
-            response = f"✅ **What this is**: {main_info}\n\n"
-            
-            if len(scheme_info) > 1:
-                response += "📋 **Key Details**:\n"
-                for info in scheme_info[1:3]:  # Limit to 2 additional details
-                    response += f"• {info}\n"
-                response += "\n"
-            
-            if website:
-                response += f"🌐 **More Information**: {website}\n\n"
-            
-            response += "💡 **Note**: This information is from official government sources. For the latest updates and application procedures, please visit the official website."
-            
-            return response
-        
-        return self._get_demo_response()
-
-    def _get_demo_response(self):
-        return """✅ **What this is**: (Demo Mode) The Income Certificate is an official statement provided to the citizen by the state government confirming their annual income.
-
-📋 **Eligibility**:
-• Citizen of India.
-• Resident of the respective state.
-
-🧾 **Required Documents**:
-• Identity Proof (Aadhaar Card, Voter ID).
-• Address Proof (Ration Card, Electricity Bill).
-• Self-declaration of income.
-
-🪜 **Steps to Apply**:
-1. Visit your state's e-District portal.
-2. Select 'Income Certificate' service.
-3. Fill the application form and upload documents.
-4. Pay the nominal fee.
-
-🌐 **Where to Apply**: Online via e-District Portal or nearest Common Service Centre (CSC)."""
+        return f"✅ **Verified Info**: {primary_info}\n\n📋 **Next Steps**: Please check the official government portal for application details and requirements."

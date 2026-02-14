@@ -14,6 +14,12 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
     const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const onTranscriptRef = React.useRef(onTranscript);
+
+    useEffect(() => {
+        onTranscriptRef.current = onTranscript;
+    }, [onTranscript]);
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -26,13 +32,18 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
                 recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
                     const transcript = event.results[0][0].transcript;
                     console.log('Transcript:', transcript);
-                    onTranscript(transcript);
+                    onTranscriptRef.current(transcript);
                     setIsListening(false);
                 };
 
                 recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
+                    if (event.error === 'no-speech') {
+                        console.warn('Voice input: No speech detected.');
+                        setIsListening(false);
+                        return; // Don't show error for timeout
+                    }
                     console.error('Speech recognition error', event.error);
-                    setError('Could not hear you. Please try again.');
+                    setError('Error: ' + event.error);
                     setIsListening(false);
                 };
 
@@ -41,11 +52,15 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
                 };
 
                 setRecognition(recognitionInstance);
+
+                return () => {
+                    recognitionInstance.abort();
+                };
             } else {
                 setError('Voice input not supported in this browser.');
             }
         }
-    }, [onTranscript]);
+    }, []);
 
     const toggleListening = useCallback(() => {
         if (!recognition) return;

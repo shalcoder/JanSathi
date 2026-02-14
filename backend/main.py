@@ -8,15 +8,17 @@ from flask import Flask
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_talisman import Talisman
 
-from app.models.models import db
 from app.core.utils import setup_logging
 from app.api.routes import bp as api_bp
 from app.core.config import Config
 
 # Setup Logging Early
 setup_logging()
+
+# Detect deployment mode
+USE_DYNAMODB = os.getenv("USE_DYNAMODB", "false").lower() == "true"
+
 
 def create_app():
     # Validate critical env vars if in production
@@ -25,30 +27,48 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Security: CORS and Talisman
+    # Security: CORS
     CORS(app, resources={r"/*": {"origins": Config.ALLOWED_ORIGINS}})
-    Talisman(app, content_security_policy=None) # CSP managed by frontend if needed
+    
+    # Talisman only in non-Lambda mode (API Gateway handles HTTPS)
+    if not USE_DYNAMODB:
+        try:
+            from flask_talisman import Talisman
+            Talisman(app, content_security_policy=None)
+        except ImportError:
+            pass
 
-    db.init_app(app)
+    # Database: SQLite only for local dev
+    if not USE_DYNAMODB:
+        from app.models.models import db
+        db.init_app(app)
 
-    # Rate Limiting
+    # Rate Limiting (memory storage for Lambda, file for local)
     limiter = Limiter(
         get_remote_address,
         app=app,
         default_limits=[Config.RATELIMIT_DEFAULT],
-        storage_uri=Config.RATELIMIT_STORAGE_URL,
+        storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
     )
 
     # Register Blueprints
     app.register_blueprint(api_bp)
 
-    with app.app_context():
-        db.create_all()
+    # Create SQLite tables only in local dev mode
+    if not USE_DYNAMODB:
+        with app.app_context():
+            from app.models.models import db
+            db.create_all()
 
     return app
 
-app = create_app()
+
+# Only create app at module level for local dev (Lambda uses lambda_handler.py)
+if not USE_DYNAMODB:
+    app = create_app()
 
 if __name__ == '__main__':
+    if USE_DYNAMODB:
+        app = create_app()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=(os.environ.get('NODE_ENV') != 'production'))

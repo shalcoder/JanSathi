@@ -1,19 +1,5 @@
 'use client';
 
-<<<<<<< HEAD
-import React from 'react';
-import { User, Mail, Shield, Bell, MapPin, Calendar, Award } from 'lucide-react';
-import { useSettings } from '@/hooks/useSettings';
-
-const ProfilePage = () => {
-    const { settings } = useSettings();
-    // Demo user (no authentication required)
-    const user = {
-        firstName: 'Demo',
-        lastName: 'User',
-        imageUrl: '',
-        primaryEmailAddress: { toString: () => 'demo@jansathi.ai' }
-=======
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -43,6 +29,24 @@ const ProfilePage = () => {
         notifications: 'SMS & Voice'
     });
 
+    React.useEffect(() => {
+        const userStr = localStorage.getItem('jansathi_user');
+        if (userStr) {
+            try {
+                const userData = JSON.parse(userStr);
+                const nameParts = (userData.name || '').split(' ');
+                setProfile(prev => ({
+                    ...prev,
+                    firstName: nameParts[0] || 'Citizen',
+                    lastName: nameParts.slice(1).join(' ') || 'User',
+                    email: userData.email || prev.email
+                }));
+            } catch (e) {
+                console.error("Failed to parse user data in Profile", e);
+            }
+        }
+    }, []);
+
     const [familyMembers, setFamilyMembers] = useState([
         { relation: "Spouse", name: "Suman Devi", age: "32", status: "Covered", initials: "SD" },
         { relation: "Child", name: "Rahul Kumar", age: "08", status: "Covered", initials: "RK" },
@@ -66,7 +70,6 @@ const ProfilePage = () => {
         setFamilyMembers(prev => [...prev, { ...familyForm, status: 'Covered', initials }]);
         setFamilyForm({ relation: 'Child', name: '', age: '' });
         setIsFamilyModalOpen(false);
->>>>>>> poornachandran
     };
 
     const languageMap: Record<string, string> = {
@@ -77,12 +80,7 @@ const ProfilePage = () => {
     };
 
     return (
-<<<<<<< HEAD
-        <div className="min-h-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 font-sans">
-=======
         <div className="h-full max-w-6xl mx-auto pb-20 relative px-4 sm:px-0">
-
->>>>>>> poornachandran
             {/* Profile Header */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -191,18 +189,6 @@ const ProfilePage = () => {
                             ))}
                         </div>
                     </div>
-<<<<<<< HEAD
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center">
-                                <Bell className="w-5 h-5 text-slate-400" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">Preferred Language</p>
-                                <p className="text-sm text-slate-200">{languageMap[settings.language] || 'Hindi (हिन्दी)'}</p>
-                            </div>
-=======
-
                     {/* Family Registry */}
                     <div className="bg-card p-8 rounded-2xl border border-border shadow-sm">
                         <div className="flex justify-between items-center mb-8">
@@ -246,7 +232,6 @@ const ProfilePage = () => {
                                     </div>
                                 </div>
                             ))}
->>>>>>> poornachandran
                         </div>
                     </div>
                 </div>

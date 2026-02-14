@@ -13,12 +13,7 @@ const SettingsPage = () => {
     };
 
     return (
-<<<<<<< HEAD
-        <div className="min-h-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-black text-white mb-8">App Settings</h2>
-=======
         <div className="h-full max-w-5xl mx-auto pb-20 relative px-4 sm:px-0">
->>>>>>> poornachandran
 
             {/* Header */}
             <motion.div

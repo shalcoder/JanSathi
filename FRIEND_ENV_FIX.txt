@@ -16,7 +16,7 @@ BEDROCK_MODEL_ID=mock
 KENDRA_INDEX_ID=mock-index
 
 # Flask Configuration
-SECRET_KEY=87e0ecaf-c1dd-4c81-9564-069d8a24865b
+SECRET_KEY=YOUR_FLASK_SECRET_KEY
 NODE_ENV=development
 ALLOWED_ORIGINS=http://localhost:3000
 

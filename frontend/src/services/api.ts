@@ -5,6 +5,12 @@ export interface QueryResponse {
     answer: {
         text: string;
         audio: string;
+        provenance?: string;
+        explainability?: {
+            confidence: number;
+            matching_criteria: string[];
+            privacy_protocol: string;
+        };
     };
     context: string[];
     structured_sources?: {

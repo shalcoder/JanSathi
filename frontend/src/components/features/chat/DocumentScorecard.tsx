@@ -73,14 +73,14 @@ export default function DocumentScorecard({ scores, docType, vulnerabilities = [
                 </div>
             )}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-2 border-t border-border/10">
                 <div className="flex items-center gap-1.5 opacity-60">
-                    <Info className="w-3 h-3" />
-                    <span className="text-[9px] font-medium">Sovereign Bharat Cloud Nodes</span>
+                    <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                    <span className="text-[9px] font-medium">Privacy: Federated TFLite Audit (On-Device)</span>
                 </div>
-                <button className="px-4 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg transition-colors border border-primary/20">
-                    Secure AI Audit Report
-                </button>
+                <div className="text-[9px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-1">
+                    Sentinel v4 Active
+                </div>
             </div>
         </motion.div>
     );

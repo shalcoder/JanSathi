@@ -5,14 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Camera, X, Sparkles, Bot, ArrowUpRight, CheckCircle2, Shield, Activity } from 'lucide-react';
 import VoiceInput from './VoiceInput';
 import AudioPlayer from './AudioPlayer';
-<<<<<<< HEAD
-import { sendQuery, getHistory, analyzeImage } from '@/services/api';
-=======
 import { sendQuery, analyzeImage, QueryResponse } from '@/services/api';
->>>>>>> poornachandran
 import SchemeCard from './SchemeCard';
 import { useSettings } from '@/hooks/useSettings';
 import DocumentScorecard from './DocumentScorecard';
+import ExplainabilityCard from './ExplainabilityCard';
 import { Languages, Globe } from 'lucide-react';
 
 const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
@@ -49,6 +46,12 @@ type Message = {
     audio?: string;
     isTyping?: boolean;
     structured_sources?: any[];
+    provenance?: string;
+    explainability?: {
+        confidence: number;
+        matching_criteria: string[];
+        privacy_protocol: string;
+    };
 };
 
 const SUGGESTIONS = [
@@ -61,16 +64,7 @@ const SUGGESTIONS = [
 const SESSIONS_KEY = 'jansathi_chat_sessions';
 
 export default function ChatInterface() {
-<<<<<<< HEAD
-    // Demo user (no authentication required)
-    const user = { id: 'demo_user', firstName: 'JanSathi User' };
-
-    // Global Settings
-    const { settings, updateSettings } = useSettings();
-
-=======
     const { settings } = useSettings();
->>>>>>> poornachandran
     const [messages, setMessages] = useState<Message[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [inputText, setInputText] = useState('');
@@ -133,6 +127,8 @@ export default function ChatInterface() {
                     role: 'assistant',
                     text: data.answer.text,
                     audio: data.answer.audio,
+                    provenance: data.answer.provenance,
+                    explainability: data.answer.explainability,
                     structured_sources: data.structured_sources,
                     timestamp: new Date(),
                     isTyping: true
@@ -156,27 +152,11 @@ export default function ChatInterface() {
     ];
 
     return (
-<<<<<<< HEAD
-        <div className="flex flex-col h-full w-full glass-panel rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl relative border border-white/10 bg-black/20 backdrop-blur-xl transition-all duration-500">
-
-            {/* Header Controls */}
-            <div className="flex justify-between items-center p-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-10">
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleDeleteChat}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete this chat"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">Live Consultation</span>
-=======
         <div className="flex flex-col h-full w-full relative bg-transparent">
             {/* Vishwa Dialect Tuner — Elite Feature */}
             <div className="absolute top-4 left-4 z-50 flex items-center gap-2 p-1.5 bg-background/50 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
                 <div className="p-2 rounded-xl bg-primary/10">
                     <Globe className="w-4 h-4 text-primary" />
->>>>>>> poornachandran
                 </div>
                 <select
                     value={language}
@@ -196,97 +176,6 @@ export default function ChatInterface() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
 
             {/* Messages Area */}
-<<<<<<< HEAD
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-                {messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome') ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-4 sm:p-8 opacity-80 animate-in fade-in duration-700">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-blue-500/10 rounded-2xl sm:rounded-3xl flex items-center justify-center mb-4 sm:mb-6 border border-blue-500/20 shadow-2xl rotate-3">
-                            <BotIcon className="w-10 h-10 sm:w-12 sm:h-12 text-blue-500" />
-                        </div>
-                        <h3 className="text-xl sm:text-2xl font-black text-white mb-2 tracking-tighter">
-                            Namaste! How can I help you today?
-                        </h3>
-                        <p className="text-sm sm:text-base text-slate-400 max-w-md mb-8 sm:mb-12 font-medium px-4">
-                            Ask me about government schemes, farming prices, or health benefits in your language.
-                        </p>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg px-4">
-                            {[
-                                "PM Kisan Samman Nidhi details",
-                                "Ayushman Bharat eligibility",
-                                "Apply for Ration Card",
-                                "Mandi prices for Wheat"
-                            ].map((q, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => {
-                                        setInputText(q);
-                                        handleSend(q);
-                                    }}
-                                    className="px-4 sm:px-5 py-3 sm:py-4 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl text-left text-xs sm:text-sm text-slate-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 hover:shadow-xl hover:shadow-blue-600/20 transition-all flex items-center justify-between group"
-                                >
-                                    <span className="font-bold">{q}</span>
-                                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    <>
-                        {messages.map((msg) => (
-                            <div
-                                key={msg.id}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}
-                            >
-                                <div
-                                    className={`
-                                        max-w-[95%] sm:max-w-[85%] md:max-w-[75%] p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-[1.5rem] shadow-sm text-sm md:text-base transition-all duration-200
-                                        ${msg.role === 'user'
-                                            ? 'bg-blue-600 text-white rounded-br-none shadow-blue-600/20'
-                                            : 'bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 rounded-bl-none border border-white/10 backdrop-blur-md'}
-                                    `}
-                                >
-                                    {msg.role === 'assistant' && msg.isTyping ? (
-                                        <Typewriter text={msg.text} onComplete={() => {
-                                            // Handle completion if needed
-                                        }} />
-                                    ) : (
-                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
-                                    )}
-
-                                    {msg.role === 'assistant' && msg.structured_sources && msg.structured_sources.length > 0 && (
-                                        <div className="mt-6 flex flex-col gap-6 w-full">
-                                            <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                                                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center animate-pulse">
-                                                    <BotIcon className="w-4 h-4 text-white" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">Fill For Me (Phase 4 Beta)</p>
-                                                    <p className="text-xs text-slate-400 font-medium">I can help you apply for these schemes using voice!</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => alert("JanSathi Form Assistant is initializing... (Finalizing AWS Integration for Phase 4)")}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-600/20"
-                                                >
-                                                    Start Agent
-                                                </button>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 gap-3 sm:gap-4 w-full">
-                                                {msg.structured_sources.map((source, idx) => (
-                                                    <SchemeCard
-                                                        key={idx}
-                                                        title={source.title || "Government Scheme"}
-                                                        description={source.text}
-                                                        link={source.link}
-                                                        benefit={source.benefit || "View Details"}
-                                                        logo={source.logo}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-=======
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 scroll-smooth scrollbar-none pb-8 sm:pb-12">
 
                 <AnimatePresence mode="wait">
@@ -308,7 +197,6 @@ export default function ChatInterface() {
                                     Hello! <br />
                                     How can <span className="text-primary">JanSathi</span> help?
                                 </h1>
->>>>>>> poornachandran
 
                                 <p className="text-base text-secondary-foreground max-w-lg mx-auto font-medium opacity-60 leading-relaxed">
                                     Ask me anything about government schemes, documents, or your benefits.
@@ -350,7 +238,35 @@ export default function ChatInterface() {
                                             </div>
                                         ) : (
                                             <div className="space-y-4">
+                                                {msg.role === 'assistant' && (
+                                                    <div className={`
+                                                        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2
+                                                        ${msg.provenance === 'verified_doc'
+                                                            ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                                                            : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'}
+                                                    `}>
+                                                        {msg.provenance === 'verified_doc' ? (
+                                                            <>
+                                                                <Shield className="w-3 h-3" />
+                                                                Official Source
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Sparkles className="w-3 h-3" />
+                                                                AI Search
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <p className="whitespace-pre-wrap leading-relaxed font-bold text-base tracking-normal">{msg.text}</p>
+
+                                                {msg.explainability && (
+                                                    <ExplainabilityCard
+                                                        confidence={msg.explainability.confidence}
+                                                        criteria={msg.explainability.matching_criteria}
+                                                        protocol={msg.explainability.privacy_protocol}
+                                                    />
+                                                )}
 
                                                 {msg.structured_sources && msg.structured_sources.length > 0 && (
                                                     <div className="grid grid-cols-1 gap-4 pt-4">
@@ -420,26 +336,6 @@ export default function ChatInterface() {
             </div>
 
             {/* Input Area */}
-<<<<<<< HEAD
-            <div className="p-3 sm:p-4 bg-white/10 dark:bg-black/40 backdrop-blur-xl border-t border-white/5 z-20">
-
-                {/* Image Preview Banner */}
-                {imagePreview && (
-                    <div className="mb-3 sm:mb-4 p-3 bg-blue-500/10 rounded-xl sm:rounded-2xl flex items-center justify-between animate-in slide-in-from-bottom-4 backdrop-blur-md border border-blue-500/20">
-                        <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
-                            <div className="relative h-12 w-12 sm:h-14 sm:w-14 group flex-shrink-0">
-                                <img src={imagePreview} alt="Selected" className="h-full w-full object-cover rounded-lg sm:rounded-xl border border-white/20" />
-                                <div className="absolute inset-0 bg-blue-500/20 rounded-lg sm:rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Document Selected</p>
-                                <p className="text-xs sm:text-sm text-slate-300 font-bold truncate">{selectedImage?.name}</p>
-                            </div>
-                        </div>
-                        <button onClick={clearImage} className="p-2 bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg sm:rounded-xl transition-all flex-shrink-0 ml-2">
-                            <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </button>
-=======
             <div className="shrink-0 p-4 sm:p-6 bg-background/80 backdrop-blur-md border-t border-border/50">
                 <div className="max-w-4xl mx-auto w-full">
 
@@ -495,61 +391,15 @@ export default function ChatInterface() {
                                 <Send className="w-5 h-5" />
                             </button>
                         </div>
->>>>>>> poornachandran
                     </div>
 
-<<<<<<< HEAD
-                {/* Voice Input Centered */}
-                <div className="mb-4 sm:mb-6 flex justify-center">
-                    <VoiceInput onTranscript={handleSend} isProcessing={isLoading} />
-                </div>
-
-                {/* Text Input Row */}
-                <div className="flex gap-2 sm:gap-3 items-center bg-white/5 p-1.5 sm:p-2 rounded-2xl sm:rounded-[2rem] border border-white/10 shadow-2xl shadow-black/20 focus-within:border-blue-500/50 transition-all">
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={handleImageSelect}
-                    />
-
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`p-3 sm:p-4 rounded-xl sm:rounded-[1.5rem] transition-all ${selectedImage ? 'bg-blue-600 text-white' : 'hover:bg-white/10 text-slate-400 hover:text-white'}`}
-                        title="Analyze Document/Image"
-                        disabled={isLoading}
-                    >
-                        <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </button>
-
-                    <input
-                        type="text"
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSend(inputText)}
-                        placeholder={selectedImage ? "Press Send to analyze this image..." : (language === 'hi' ? 'अपना प्रश्न पूछें...' : 'Ask JanSathi...')}
-                        className="flex-1 p-2 sm:p-3 bg-transparent text-white placeholder:text-slate-500 focus:outline-none font-medium text-sm sm:text-base"
-                        disabled={isLoading}
-                    />
-                    <button
-                        onClick={() => handleSend(inputText)}
-                        disabled={isLoading || (!inputText.trim() && !selectedImage)}
-                        className="p-3 sm:p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl sm:rounded-[1.5rem] shadow-xl shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 group"
-                    >
-                        <Send className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                    </button>
-                </div>
-                <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-widest mt-3 sm:mt-4">JanSathi Professional AI • v2.0</p>
-=======
                     <div className="flex justify-center items-center gap-3 mt-4 opacity-30">
                         <div className="h-px w-8 bg-foreground"></div>
                         <p className="text-[9px] font-bold uppercase tracking-widest text-foreground">Verified Information • Secure Helper</p>
                         <div className="h-px w-8 bg-foreground"></div>
                     </div>
                 </div>
->>>>>>> poornachandran
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

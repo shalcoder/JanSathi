@@ -29,6 +29,7 @@ api_stack = ApiStack(
     cache_table=data_stack.cache_table,
     audio_bucket=data_stack.audio_bucket,
     uploads_bucket=data_stack.uploads_bucket,
+    kendra_index=data_stack.kendra_index,
     env=env,
 )
 api_stack.add_dependency(data_stack)

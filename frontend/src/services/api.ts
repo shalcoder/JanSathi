@@ -46,18 +46,24 @@ export const sendQuery = async (params: QueryRequest | FormData): Promise<QueryR
             headers: params instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {}
         });
         return response.data;
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('API Error:', error);
         throw error;
     }
 };
 
-export const getHistory = async (userId?: string, limit: number = 10): Promise<any[]> => {
+export interface HistoryItem {
+    id: string;
+    query: string;
+    timestamp: string;
+}
+
+export const getHistory = async (userId?: string, limit: number = 10): Promise<HistoryItem[]> => {
     try {
         const url = userId ? `/history?userId=${userId}&limit=${limit}` : `/history?limit=${limit}`;
         const response = await apiClient.get(url);
         return response.data;
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('History API Error:', error);
         return [];
     }
@@ -67,11 +73,19 @@ export const checkHealth = async (): Promise<boolean> => {
     try {
         const response = await apiClient.get('/health');
         return response.status === 200;
-    } catch (error) {
+    } catch {
         return false;
     }
 };
-export const analyzeImage = async (imageFile: File, language: string = 'hi'): Promise<any> => {
+
+export interface AnalyzeResponse {
+    analysis: {
+        text: string;
+        audio?: string;
+    };
+}
+
+export const analyzeImage = async (imageFile: File, language: string = 'hi'): Promise<AnalyzeResponse> => {
     try {
         const formData = new FormData();
         formData.append('image', imageFile);
@@ -84,16 +98,26 @@ export const analyzeImage = async (imageFile: File, language: string = 'hi'): Pr
             },
         });
         return response.data;
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Analysis API Error:', error);
         throw error;
     }
 };
-export const getMarketRates = async (): Promise<any[]> => {
+
+export interface MarketRate {
+    crop: string;
+    market: string;
+    price: string;
+    unit: string;
+    change: string;
+    trend: 'up' | 'down';
+}
+
+export const getMarketRates = async (): Promise<MarketRate[]> => {
     try {
         const response = await apiClient.get('/market-rates');
         return response.data;
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Market Rates API Error:', error);
         return [];
     }

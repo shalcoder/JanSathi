@@ -70,28 +70,31 @@ export default function Home() {
   const [userInitials, setUserInitials] = useState('JD');
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    const initialColorValue = localStorage.getItem('jansathi-theme') || 'dark';
+    const initializeTheme = () => {
+      const root = window.document.documentElement;
+      const initialColorValue = localStorage.getItem('jansathi-theme') || 'dark';
 
-    if (initialColorValue === 'dark') {
-      root.classList.add('dark');
-      setIsDarkMode(true);
-    } else {
-      root.classList.remove('dark');
-      setIsDarkMode(false);
-    }
-
-    // Get user name for initials
-    const userStr = localStorage.getItem('jansathi_user');
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        const userName = userData.name || userData.email?.split('@')[0] || 'User';
-        setUserInitials(userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
-      } catch (e) {
-        console.error("Failed to parse user data", e);
+      if (initialColorValue === 'dark') {
+        root.classList.add('dark');
+        setIsDarkMode(true);
+      } else {
+        root.classList.remove('dark');
+        setIsDarkMode(false);
       }
-    }
+
+      // Get user name for initials
+      const userStr = localStorage.getItem('jansathi_user');
+      if (userStr) {
+        try {
+          const userData = JSON.parse(userStr);
+          const userName = userData.name || userData.email?.split('@')[0] || 'User';
+          setUserInitials(userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
+        } catch (e) {
+          console.error("Failed to parse user data", e);
+        }
+      }
+    };
+    initializeTheme();
   }, []);
 
   const toggleTheme = () => {

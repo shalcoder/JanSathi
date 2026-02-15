@@ -22,9 +22,10 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognitionAPI) {
-                const recognitionInstance = new SpeechRecognitionAPI();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const recognitionInstance = new (SpeechRecognitionAPI as any)();
                 recognitionInstance.continuous = false;
                 recognitionInstance.interimResults = false;
                 recognitionInstance.lang = 'hi-IN'; // Defaulting to Hindi/India mixed
@@ -51,13 +52,16 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
                     setIsListening(false);
                 };
 
-                setRecognition(recognitionInstance);
+                // Use setTimeout to avoid synchronous state update in effect
+                setTimeout(() => {
+                    setRecognition(recognitionInstance);
+                }, 0);
 
                 return () => {
                     recognitionInstance.abort();
                 };
             } else {
-                setError('Voice input not supported in this browser.');
+                setTimeout(() => setError('Voice input not supported in this browser.'), 0);
             }
         }
     }, []);
@@ -161,8 +165,8 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
 // Type definitions for Web Speech API
 declare global {
     interface Window {
-        SpeechRecognition: any;
-        webkitSpeechRecognition: any;
+        SpeechRecognition: unknown;
+        webkitSpeechRecognition: unknown;
     }
 
     // Basic type placeholders to satisfy TS

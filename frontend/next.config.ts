@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
-const withPWA = require("@ducanh2912/next-pwa").default({
+import withPWAModule from "@ducanh2912/next-pwa";
+
+const withPWA = withPWAModule({
   dest: "public",
   register: true,
   skipWaiting: true,

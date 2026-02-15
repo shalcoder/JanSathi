@@ -134,8 +134,44 @@ def list_applications():
     """List all scheme applications for a user."""
     user_id = request.args.get('user_id', 'demo-user')
     from app.models.models import SchemeApplication
-    apps = SchemeApplication.query.filter_by(user_id=user_id).all()
+    apps = SchemeApplication.query.filter_by(user_id=user_id).order_by(SchemeApplication.updated_at.desc()).all()
     return jsonify([a.to_dict() for a in apps])
+
+@bp.route('/apply', methods=['POST'])
+def apply_for_scheme():
+    """Simulate applying for a government scheme."""
+    try:
+        data = request.json
+        user_id = data.get('user_id', 'demo-user')
+        scheme_name = data.get('scheme_name')
+        
+        if not scheme_name:
+            return jsonify({"error": "Scheme name is required"}), 400
+            
+        from app.models.models import SchemeApplication, db
+        
+        # Check if already applied
+        existing = SchemeApplication.query.filter_by(user_id=user_id, scheme_name=scheme_name).first()
+        if existing:
+            return jsonify({"status": "exists", "message": "Already applied", "application": existing.to_dict()})
+            
+        new_app = SchemeApplication(
+            user_id=user_id,
+            scheme_name=scheme_name,
+            status='Pending Review',
+            execution_id=str(uuid.uuid4())[:8]
+        )
+        db.session.add(new_app)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Application for {scheme_name} submitted successfully!",
+            "application": new_app.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"Application Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @bp.route('/history', methods=['GET'])
 def get_user_history():
@@ -470,7 +506,7 @@ def query():
             logger.error(f"Failed to save conversation: {db_err}")
 
         # Calculate latency
-        latency_ms = float(round((time.perf_counter() - request_start) * 1000, 2))
+        latency_ms = round((time.perf_counter() - request_start) * 1000, 2)
         
         log_event('query_completed', {
             'query': safe_query_log,

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, ArrowRight, Landmark, Sprout, Building2, GraduationCap, HeartPulse } from 'lucide-react';
+import { Search, Filter, ArrowRight, Landmark, Sprout, Building2, GraduationCap, HeartPulse, CheckCircle } from 'lucide-react';
+import { getSchemes } from '@/services/api';
 
 interface Scheme {
     id: string;
@@ -27,13 +28,23 @@ export default function SchemesPage() {
     ];
 
     useEffect(() => {
-        const fetchSchemes = async () => {
+        const fetchSchemesData = async () => {
+            setLoading(true);
             try {
-                const response = await fetch('/api/schemes');
-                const data = await response.json();
-                if (data.schemes) {
+                const data = await getSchemes();
+                if (data.schemes && data.schemes.length > 0) {
                     setSchemes(data.schemes);
                     setFilteredSchemes(data.schemes);
+                } else {
+                    // Fallback to demo data if backend is empty
+                    const demoSchemes: Scheme[] = [
+                        { id: '1', title: 'PM Kisan Samman Nidhi', benefit: '₹6,000/year', ministry: 'Ministry of Agriculture', category: 'agriculture', keywords: ['farmers', 'direct transfer'] },
+                        { id: '2', title: 'Ayushman Bharat', benefit: '₹5 Lakh Cover', ministry: 'Ministry of Health', category: 'health', keywords: ['health', 'insurance'] },
+                        { id: '3', title: 'PM Awas Yojana', benefit: 'Housing Subsidy', ministry: 'Ministry of Housing', category: 'housing', keywords: ['home', 'urban', 'rural'] },
+                        { id: '4', title: 'Atal Pension Yojana', benefit: 'Monthly Pension', ministry: 'PFRDA', category: 'general', keywords: ['pension', 'old age'] },
+                    ];
+                    setSchemes(demoSchemes);
+                    setFilteredSchemes(demoSchemes);
                 }
             } catch (error) {
                 console.error("Failed to fetch schemes:", error);
@@ -41,7 +52,7 @@ export default function SchemesPage() {
                 setLoading(false);
             }
         };
-        fetchSchemes();
+        fetchSchemesData();
     }, []);
 
     useEffect(() => {
@@ -124,27 +135,43 @@ export default function SchemesPage() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: i * 0.05 }}
-                            className="group relative bg-card hover:bg-secondary/10 border border-border/50 hover:border-primary/30 rounded-2xl p-6 transition-all cursor-pointer shadow-sm hover:shadow-md"
+                            className="group relative bg-card hover:bg-secondary/5 border border-border/50 hover:border-primary/30 rounded-3xl p-6 sm:p-8 transition-all shadow-sm hover:shadow-xl flex flex-col"
                         >
-                            <div className="flex justify-between items-start mb-4">
-                                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                                    Official
+                            <div className="flex justify-between items-start mb-6">
+                                <span className="px-4 py-1.5 rounded-full bg-orange-500/10 text-orange-600 text-[10px] font-black uppercase tracking-[0.2em] border border-orange-500/20">
+                                    ELIGIBLE
                                 </span>
-                                <button className="text-secondary-foreground/40 hover:text-primary transition-colors">
-                                    <ArrowRight className="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform" />
-                                </button>
+                                <div className="text-secondary-foreground/20 group-hover:text-primary transition-colors">
+                                    <ArrowRight className="w-6 h-6 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                                </div>
                             </div>
 
-                            <h3 className="text-xl font-black text-foreground mb-1">{scheme.title}</h3>
-                            <p className="text-sm font-medium text-secondary-foreground mb-4">{scheme.ministry}</p>
+                            <div className="mb-6 flex-1">
+                                <h3 className="text-2xl font-black text-foreground mb-2 group-hover:text-primary transition-colors">{scheme.title}</h3>
+                                <p className="text-sm font-bold text-secondary-foreground/60">{scheme.ministry}</p>
+                            </div>
 
-                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/40">
+                            <div className="flex flex-wrap gap-2 mb-8">
+                                {scheme.keywords?.slice(0, 2).map((k, ki) => (
+                                    <span key={ki} className="px-3 py-1 bg-secondary border border-border/50 rounded-lg text-[10px] font-bold text-secondary-foreground uppercase tracking-wider">
+                                        {k}
+                                    </span>
+                                ))}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-6 border-t border-border/30">
                                 <div>
-                                    <p className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider">Benefit</p>
-                                    <p className="font-bold text-foreground truncate max-w-[150px]">{scheme.benefit}</p>
+                                    <p className="text-[10px] font-black text-secondary-foreground/40 uppercase tracking-[0.2em] mb-1">BENEFIT</p>
+                                    <p className="text-lg font-black text-foreground tracking-tight">{scheme.benefit}</p>
                                 </div>
-                                <button className="px-4 py-2 bg-foreground text-background rounded-lg text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
-                                    View Details
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        alert(`Opening application for ${scheme.title}`);
+                                    }}
+                                    className="px-6 py-3.5 bg-foreground text-background rounded-xl text-xs font-black uppercase tracking-[0.1em] hover:scale-105 active:scale-95 transition-all shadow-lg"
+                                >
+                                    APPLY NOW
                                 </button>
                             </div>
                         </motion.div>

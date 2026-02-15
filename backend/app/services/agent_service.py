@@ -2,19 +2,22 @@ import time
 import uuid
 import json
 from app.core.utils import logger, log_event
+from app.services.rules_engine import RulesEngine
 
 class AgentService:
     """
     Multi-Agent Orchestrator Service.
-    Handles the structured reasoning chain and dispatching tasks to specialized agents.
-    For the hackathon, we simulate the 'Bedrock Agent' flow with deterministic steps.
+    Implements a Hybrid Neuro-Symbolic Architecture:
+    1. Intent Classification (Neural)
+    2. RAG & Knowledge Retrieval (Neural + Symbolic)
+    3. Deterministic Policy Verification (Symbolic Rules Engine)
+    4. Response Generation (Neural)
     """
 
     def __init__(self, bedrock_service, rag_service, polly_service, rules_engine=None):
         self.bedrock_service = bedrock_service
         self.rag_service = rag_service
         self.polly_service = polly_service
-        from app.services.rules_engine import RulesEngine
         self.rules_engine = rules_engine or RulesEngine()
 
     def orchestrate_query(self, user_query, language='en', user_id=None):
@@ -25,7 +28,7 @@ class AgentService:
         3. Policy Verification Agent (Reasoning + JSON Explainability)
         4. Response Formatter Agent
         """
-        execution_id = f"ag-exec-{uuid.uuid4().hex[:8]}"
+        execution_id = f"ag-exec-{str(uuid.uuid4().hex)[:8]}"
         steps_log = []
         
         # Real-time Context Enrichment
@@ -33,7 +36,13 @@ class AgentService:
         user_docs = []
         if user_id:
              user_profile, user_docs = self._get_user_context(user_id)
-             steps_log.append({"step": "context_enrichment", "status": "completed", "profile_found": user_profile is not None, "docs_count": len(user_docs)})
+             steps_log.append({
+                 "step": "context_enrichment", 
+                 "status": "completed", 
+                 "profile_found": user_profile is not None, 
+                 "docs_count": len(user_docs),
+                 "matching_realtime": True
+             })
 
         try:
             # Step 1: Intent Parsing (Real Agent Call)
@@ -45,6 +54,13 @@ class AgentService:
             # This uses the real Kendra RAG service enriched with user data
             steps_log.append({"step": "knowledge_retrieval", "status": "started"})
             context_docs = self.rag_service.retrieve(user_query, language, user_profile=user_profile, user_docs=user_docs)
+            
+            # Enrich with content from user documents directly
+            if user_docs and isinstance(user_docs, list):
+                for doc in user_docs:
+                    if isinstance(doc, dict) and 'content' in doc:
+                        context_docs.append(f"CONTENT FROM YOUR UPLOADED DOCUMENT ({doc.get('filename')}):\n{doc['content']}")
+            
             steps_log.append({"step": "knowledge_retrieval", "status": "completed", "docs_found": len(context_docs)})
 
             # Step 3: Policy Verification & Reasoning (Bedrock Agent)
@@ -144,12 +160,26 @@ class AgentService:
             return "general_info"
 
     def _get_user_context(self, user_id):
-        """Fetch real profile and documents from DB."""
+        """Fetch real profile and documents from DB, including reading document contents."""
         try:
             from app.models.models import UserProfile, UserDocument
             profile = UserProfile.query.get(user_id)
             docs = UserDocument.query.filter_by(user_id=user_id).all()
-            return profile.to_dict() if profile else None, [d.to_dict() for d in docs]
+            
+            doc_list = []
+            import os
+            for d in docs:
+                d_dict = d.to_dict()
+                # If it's a text file, try to read it to enrich RAG
+                if d.file_path and d.file_path.endswith('.txt') and os.path.exists(d.file_path):
+                    try:
+                        with open(d.file_path, 'r', encoding='utf-8') as f:
+                            d_dict['content'] = f.read()[:5000] # Limit size
+                    except Exception as e:
+                        logger.error(f"Error reading user doc {d.id}: {e}")
+                doc_list.append(d_dict)
+
+            return profile.to_dict() if profile else None, doc_list
         except Exception as e:
             logger.error(f"Failed to fetch user context: {e}")
             return None, []

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, CheckCircle, XCircle, FileText, ChevronRight } from 'lucide-react';
+import { getApplications } from '@/services/api';
+import { useUser } from '@clerk/nextjs';
 
 interface Application {
     id: number;
@@ -14,14 +16,23 @@ interface Application {
 export default function ApplicationsPage() {
     const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
-    const userId = "demo-user"; // Usually from auth
+    const { user } = useUser();
+    const userId = user?.id || 'demo-user';
 
     useEffect(() => {
         const fetchApps = async () => {
+            setLoading(true);
             try {
-                const response = await fetch(`/api/applications?user_id=${userId}`);
-                const data = await response.json();
-                setApplications(data);
+                const data = await getApplications(userId);
+                const mappedApps: Application[] = data.map((a: any) => ({
+                    id: a.id,
+                    title: a.scheme_name,
+                    date: new Date(a.updated_at).toLocaleDateString(),
+                    status: a.status,
+                    step: a.status === 'Approved' ? 3 : (a.status === 'Verified' ? 2 : 1),
+                    totalSteps: 4
+                }));
+                setApplications(mappedApps);
             } catch (error) {
                 console.error("Failed to fetch applications:", error);
             } finally {

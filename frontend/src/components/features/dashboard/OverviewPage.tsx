@@ -18,13 +18,32 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (page: string
                     <h1 className="text-3xl font-black tracking-tight text-foreground">Dashboard</h1>
                     <p className="text-secondary-foreground font-medium mt-1">Welcome back, here&apos;s what&apos;s happening today.</p>
                 </div>
-                <button
-                    onClick={() => onNavigate('assistant')}
-                    className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold transition-all shadow-lg active:scale-95 flex items-center gap-2"
-                >
-                    <span>Ask Assistant</span>
-                    <ArrowRight className="w-4 h-4" />
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={async () => {
+                            if (confirm("This will populate the production database with schemes and forum data. Proceed?")) {
+                                try {
+                                    const res = await fetch('/api/admin/seed', { method: 'POST' });
+                                    const data = await res.json();
+                                    alert(data.message || "Database seeded!");
+                                    window.location.reload();
+                                } catch (e) {
+                                    alert("Seeding failed. Check console.");
+                                }
+                            }
+                        }}
+                        className="px-6 py-3 bg-secondary/50 hover:bg-secondary text-foreground rounded-xl font-bold transition-all border border-border flex items-center gap-2"
+                    >
+                        <span>Sync Database</span>
+                    </button>
+                    <button
+                        onClick={() => onNavigate('assistant')}
+                        className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                    >
+                        <span>Ask Assistant</span>
+                        <ArrowRight className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
             {/* Stats Grid */}

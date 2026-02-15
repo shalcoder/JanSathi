@@ -52,7 +52,14 @@ export const sendQuery = async (params: QueryRequest | FormData): Promise<QueryR
     }
 };
 
-export const getHistory = async (userId?: string, limit: number = 10): Promise<any[]> => {
+interface HistoryItem {
+    id: string;
+    query: string;
+    response: string;
+    timestamp: string;
+}
+
+export const getHistory = async (userId?: string, limit: number = 10): Promise<HistoryItem[]> => {
     try {
         const url = userId ? `/history?userId=${userId}&limit=${limit}` : `/history?limit=${limit}`;
         const response = await apiClient.get(url);
@@ -71,7 +78,13 @@ export const checkHealth = async (): Promise<boolean> => {
         return false;
     }
 };
-export const analyzeImage = async (imageFile: File, language: string = 'hi'): Promise<any> => {
+interface ImageAnalysisResponse {
+    description: string;
+    text?: string;
+    insights?: string[];
+}
+
+export const analyzeImage = async (imageFile: File, language: string = 'hi'): Promise<ImageAnalysisResponse> => {
     try {
         const formData = new FormData();
         formData.append('image', imageFile);
@@ -89,7 +102,16 @@ export const analyzeImage = async (imageFile: File, language: string = 'hi'): Pr
         throw error;
     }
 };
-export const getMarketRates = async (): Promise<any[]> => {
+interface MarketRate {
+    crop: string;
+    market: string;
+    price: string;
+    unit: string;
+    change?: string;
+    trend?: string;
+}
+
+export const getMarketRates = async (): Promise<MarketRate[]> => {
     try {
         const response = await apiClient.get('/market-rates');
         return response.data;

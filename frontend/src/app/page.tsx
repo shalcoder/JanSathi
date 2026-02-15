@@ -466,7 +466,7 @@ function StatCard({ number, label, desc }: { number: string, label: string, desc
   );
 }
 
-function ProcessStep({ number, title, desc, icon, color }: any) {
+function ProcessStep({ number, title, desc, icon, color }: { number: string; title: string; desc: string; icon: React.ReactNode; color: string }) {
   return (
     <div className="relative z-10 flex flex-col items-center text-center group">
       <div className={`w-16 h-16 rounded-2xl ${color} flex items-center justify-center text-white shadow-lg mb-6 transform group-hover:scale-110 transition-transform duration-300`}>
@@ -488,7 +488,7 @@ function ArchListItem({ text }: { text: string }) {
   );
 }
 
-function RoadmapItem({ phase, title, desc, align }: any) {
+function RoadmapItem({ phase, title, desc, align }: { phase: string; title: string; desc: string; align: string }) {
   return (
     <div className={`relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active`}>
       <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-card shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
@@ -507,7 +507,7 @@ function RoadmapItem({ phase, title, desc, align }: any) {
 
 function FeatureCard({
   icon, title, subtitle, description, className = '', iconBg = 'bg-secondary', textColor = 'text-foreground', subTextColor = 'text-primary', delay = 0
-}: any) {
+}: { icon: React.ReactNode; title: string; subtitle: string; description: string; className?: string; iconBg?: string; textColor?: string; subTextColor?: string; delay?: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

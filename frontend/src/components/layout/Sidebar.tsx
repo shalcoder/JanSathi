@@ -42,7 +42,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
             const stored = localStorage.getItem(SESSIONS_KEY);
             if (stored) {
                 const parsed = JSON.parse(stored);
-                const sorted = Object.values(parsed).sort((a: any, b: any) =>
+                const sorted = Object.values(parsed).sort((a: { timestamp: string | number | Date }, b: { timestamp: string | number | Date }) =>
                     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
                 ) as ChatSession[];
                 setSessions(sorted);

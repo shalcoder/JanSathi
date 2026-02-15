@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { MessageSquare, ThumbsUp, MapPin, Users } from 'lucide-react';
 
+interface Post {
+    id: string;
+    title: string;
+    content: string;
+    author: string;
+    role: string;
+    location: string;
+    likes: number;
+    comments: number;
+    time: string;
+}
+
 export default function CommunityPage() {
-    const [posts, setPosts] = useState<any[]>([]);
+    const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newPost, setNewPost] = useState({ title: '', content: '' });

@@ -22,7 +22,7 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            const SpeechRecognitionAPI = (window as Window & { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition || (window as Window & { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
             if (SpeechRecognitionAPI) {
                 const recognitionInstance = new SpeechRecognitionAPI();
                 recognitionInstance.continuous = false;
@@ -162,8 +162,8 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
 // Type definitions for Web Speech API
 declare global {
     interface Window {
-        SpeechRecognition: any;
-        webkitSpeechRecognition: any;
+        SpeechRecognition: typeof SpeechRecognition;
+        webkitSpeechRecognition: typeof SpeechRecognition;
     }
 
     // Basic type placeholders to satisfy TS

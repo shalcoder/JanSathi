@@ -11,7 +11,15 @@ export interface AuditResult {
     localTimestamp: string;
 }
 
-export const runLocalEligibilityAudit = (userData: any): AuditResult => {
+interface UserData {
+    income?: number;
+    landSize?: number;
+    hasBankAccount?: boolean;
+    age?: number;
+    [key: string]: unknown;
+}
+
+export const runLocalEligibilityAudit = (userData: UserData): AuditResult => {
     console.log("🔒 [Federated Learning] Executing TFLite Model On-Device...");
 
     // In a real scenario, this would load a .tflite model via tensorflow-js
@@ -21,7 +29,7 @@ export const runLocalEligibilityAudit = (userData: any): AuditResult => {
     const income = userData.income || 0;
     const landSize = userData.landSize || 0;
 
-    let factors = [];
+    const factors: string[] = [];
     let riskScore = 0.95; // Initial high confidence
 
     if (income < 250000) {

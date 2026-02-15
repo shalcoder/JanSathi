@@ -35,32 +35,41 @@
 }
 
 .dark {
-  /* Midnight Vedis Dark Mode */
-  --background: #0f172a;
-  --foreground: #f8fafc;
+  /* Obsidian & Gold Premium Dark Mode */
+  --background: #09090b;
+  /* Zinc 950 - Deeper, neutral black */
+  --foreground: #fafafa;
+  /* Zinc 50 - Crisp white */
 
   --primary: #f97316;
+  /* Keeping Saffron but ensuring it glows */
   --primary-foreground: #ffffff;
 
-  --secondary: #1e293b;
-  --secondary-foreground: #94a3b8;
+  --secondary: #27272a;
+  /* Zinc 800 - Subtle card/button variation */
+  --secondary-foreground: #a1a1aa;
+  /* Zinc 400 - Readable but muted */
 
   --accent: #3b82f6;
   --accent-foreground: #ffffff;
 
-  --card: #1e293b;
-  --card-foreground: #f1f5f9;
+  --card: #18181b;
+  /* Zinc 900 - Distinct but dark */
+  --card-foreground: #f4f4f5;
+  /* Zinc 100 */
 
-  /* More subtle border for polish */
-  --border: rgba(255, 255, 255, 0.06);
-  --input: #0f172a;
+  /* Polished, subtle borders */
+  --border: rgba(255, 255, 255, 0.1);
+  --input: #18181b;
 
-  --glass-surface: rgba(30, 41, 59, 0.8);
+  --glass-surface: rgba(9, 9, 11, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: 12px;
+  --glass-blur: 16px;
+  /* Stronger blur for premium feel */
 
-  --shadow-premium: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-  --shadow-premium-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-premium: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  /* Heavier shadow for depth */
+  --shadow-premium-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
 }
 
 @theme inline {

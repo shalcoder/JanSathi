@@ -11,6 +11,8 @@ from app.services.polly_service import PollyService
 from app.services.workflow_service import WorkflowService
 from app.services.agent_service import AgentService
 from app.services.fl_service import FederatedLearningService
+from app.services.ivr_service import IVRService
+from app.services.whatsapp_service import WhatsAppService
 from app.core.utils import logger, normalize_query, log_event, timed
 from app.core.validators import (
     validate_query, validate_language, validate_user_id,
@@ -21,6 +23,62 @@ import uuid
 import os
 import json
 import time
+from app.models.models import db, Conversation, CommunityPost
+from bs4 import BeautifulSoup
+
+# ... existing imports ...
+
+# ============================================================
+# BLUEPRINT INITIALIZATION
+# ============================================================
+bp = Blueprint('api', __name__)
+
+# ============================================================
+# COMMUNITY / FORUM ENDPOINTS (RealDB)
+# ============================================================
+@bp.route('/community/posts', methods=['GET'])
+def get_community_posts():
+    """Get verified community posts from local database."""
+    try:
+        limit = request.args.get('limit', 20, type=int)
+        location = request.args.get('location')
+        
+        query = db.session.query(CommunityPost)
+        if location:
+            query = query.filter(CommunityPost.location.ilike(f"%{location}%"))
+            
+        posts = query.order_by(CommunityPost.timestamp.desc()).limit(limit).all()
+        return jsonify([p.to_dict() for p in posts])
+    except Exception as e:
+        logger.error(f"Community Error: {e}")
+        return jsonify([])
+
+@bp.route('/community/posts', methods=['POST'])
+def create_community_post():
+    """Create a new community post."""
+    try:
+        data = request.json
+        if not data.get('title') or not data.get('content'):
+            return jsonify({"error": "Title and Content are required"}), 400
+            
+        new_post = CommunityPost(
+            title=data['title'],
+            content=data['content'],
+            author=data.get('author', 'Anonymous'),
+            author_role=data.get('role', 'Citizen'),
+            location=data.get('location', 'India')
+        )
+        db.session.add(new_post)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "post": new_post.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"Post Creation Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 # ============================================================
 # DETECT DEPLOYMENT MODE (Lambda/DynamoDB vs Local/SQLite)
@@ -37,8 +95,6 @@ else:
     dynamo_repo = None
     logger.info("Using SQLite backend (local dev mode)")
 
-bp = Blueprint('api', __name__)
-
 # ============================================================
 # SERVICE INITIALIZATION
 # ============================================================
@@ -48,6 +104,9 @@ try:
     rag_service = RagService()
     polly_service = PollyService()
     workflow_service = WorkflowService()
+    # Multi-Channel Services
+    ivr_service = IVRService()
+    whatsapp_service = WhatsAppService()
     
     # Advanced AI Agents
     agent_service = AgentService(bedrock_service, rag_service, polly_service)
@@ -69,6 +128,22 @@ def index():
         "version": "2.0.0",
         "endpoints": ["/health", "/query", "/analyze", "/documents", "/history", "/schemes"]
     })
+
+@bp.route('/applications', methods=['GET'])
+def list_applications():
+    """List all scheme applications for a user."""
+    user_id = request.args.get('user_id', 'demo-user')
+    from app.models.models import SchemeApplication
+    apps = SchemeApplication.query.filter_by(user_id=user_id).all()
+    return jsonify([a.to_dict() for a in apps])
+
+@bp.route('/history', methods=['GET'])
+def get_user_history():
+    """Get conversation history."""
+    user_id = request.args.get('user_id', 'demo-user')
+    from app.models.models import Conversation
+    history = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.desc()).limit(50).all()
+    return jsonify([h.to_dict() for h in history])
 
 # ============================================================
 # DOCUMENT MANAGEMENT
@@ -331,8 +406,13 @@ def query():
             
             # Use the new Multi-Agent Orchestrator (Reasoning + Explainability)
             # This calls: Intent -> Kendra -> Bedrock (Reasoning) -> Json Output
-            agent_response = agent_service.orchestrate_query(user_query, language, user_id)
-            
+            # Orchestrate Multi-Agent Query
+            agent_response = agent_service.orchestrate_query(
+                user_query=user_query, 
+                language=language,
+                user_id=user_id
+            )
+        
             answer_text = agent_response['text']
             structured_sources = agent_response['structured_sources']
             context_docs = agent_response['context']
@@ -525,6 +605,42 @@ def start_workflow():
 def get_workflow_status(execution_id):
     result = workflow_service.get_workflow_status(execution_id)
     return jsonify(result)
+
+# ============================================================
+# MULTI-CHANNEL WEBHOOKS (IVR & WhatsApp)
+# ============================================================
+
+@bp.route('/ivr/webhook', methods=['POST'])
+def ivr_webhook():
+    """Twilio Webhook for Voice Calls."""
+    from_number = request.form.get('From', 'Unknown')
+    lang = request.args.get('lang', 'hi-IN')
+    
+    # 1. Orchestrate JanSathi Logic
+    ivr_data = ivr_service.handle_incoming_call(from_number)
+    
+    # 2. Return TwiML
+    twiml = ivr_service.generate_twiml(ivr_data['message'], lang)
+    return twiml, 200, {'Content-Type': 'text/xml'}
+
+@bp.route('/whatsapp/webhook', methods=['POST', 'GET'])
+def whatsapp_webhook():
+    """Meta WhatsApp Webhook."""
+    if request.method == 'GET':
+        # Webhook Verification (for Meta Setup)
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+        return challenge if mode == 'subscribe' else "Invalid", 200
+
+    # Handle incoming message
+    data = request.json
+    if data:
+        processed = whatsapp_service.process_incoming_message(data)
+        # In production, we trigger an async background task to respond via WhatsApp API
+        logger.info(f"WhatsApp Processed: {processed}")
+    
+    return jsonify({"status": "received"}), 200
 
 # ============================================================
 # FEDERATED LEARNING ENDPOINTS (Real Implementation)

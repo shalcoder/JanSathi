@@ -86,3 +86,70 @@ class SchemeApplication(db.Model):
             "execution_id": self.execution_id,
             "updated_at": self.updated_at.isoformat()
         }
+
+class Scheme(db.Model):
+    """Government Scheme Data"""
+    id = db.Column(db.String(100), primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    benefit = db.Column(db.String(200))
+    ministry = db.Column(db.String(200))
+    link = db.Column(db.String(500))
+    keywords = db.Column(db.JSON) # List of strings
+    category = db.Column(db.String(50))
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "text": self.text,
+            "benefit": self.benefit,
+            "ministry": self.ministry,
+            "link": self.link,
+            "keywords": self.keywords,
+            "category": self.category
+        }
+
+class UserDocument(db.Model):
+    """User Uploaded Documents"""
+    id = db.Column(db.String(100), primary_key=True)
+    user_id = db.Column(db.String(100), index=True)
+    filename = db.Column(db.String(200), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    document_type = db.Column(db.String(100)) # e.g., Aadhaar, Income Cert
+    verification_status = db.Column(db.String(50), default='pending') # pending, verified, rejected
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "filename": self.filename,
+            "type": self.document_type,
+            "status": self.verification_status,
+            "date": self.uploaded_at.isoformat()
+        }
+
+class CommunityPost(db.Model):
+    """Local Forum Posts"""
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    author = db.Column(db.String(100), default='Anonymous')
+    author_role = db.Column(db.String(100)) # e.g., Sarpanch, Farmer
+    location = db.Column(db.String(100))
+    likes = db.Column(db.Integer, default=0)
+    comments_count = db.Column(db.Integer, default=0)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "content": self.content,
+            "author": self.author,
+            "author_role": self.author_role,
+            "location": self.location,
+            "likes": self.likes,
+            "comments": self.comments_count,
+            "time": self.timestamp.strftime("%Y-%m-%d %H:%M")
+        }

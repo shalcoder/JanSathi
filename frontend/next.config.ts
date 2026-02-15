@@ -1,10 +1,17 @@
 import type { NextConfig } from "next";
+const withPWA = require("@ducanh2912/next-pwa").default({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
 
 const isProduction = process.env.NODE_ENV === "production";
+const isStaticExport = process.env.STATIC_EXPORT === "true";
 
 const nextConfig: NextConfig = {
-  // Static export for S3 + CloudFront deployment
-  ...(isProduction && { output: "export" }),
+  // Static export for S3 + CloudFront deployment (Only if explicitly requested)
+  ...(isStaticExport && { output: "export" }),
 
   // Environment variables available in browser
   env: {
@@ -41,5 +48,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Avoid PWA plugin in development to prevent Turbopack conflicts
+if (process.env.NODE_ENV === "development") {
+  module.exports = nextConfig;
+} else {
+  module.exports = withPWA(nextConfig);
+}
 

@@ -59,16 +59,17 @@ except ImportError:
             documents = rag_service.retrieve(normalized)
             context_text = "\n".join(documents)
 
-            answer = bedrock_service.generate_response(
+            result = bedrock_service.generate_response(
                 query=normalized,
                 context_text=context_text,
                 language=language,
             )
+            answer_text = result['text']
 
             return _response(200, {
                 "status": "success",
                 "query": normalized,
-                "answer": {"text": answer, "audio": None},
+                "answer": {"text": answer_text, "audio": None},
                 "meta": {"language": language},
             })
 

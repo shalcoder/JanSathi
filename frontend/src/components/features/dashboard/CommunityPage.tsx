@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, ThumbsUp, MapPin, Users } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CommunityPage() {
     const [posts, setPosts] = useState<any[]>([]);

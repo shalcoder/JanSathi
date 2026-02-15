@@ -21,7 +21,7 @@ export const runLocalEligibilityAudit = (userData: any): AuditResult => {
     const income = userData.income || 0;
     const landSize = userData.landSize || 0;
 
-    let factors = [];
+    const factors = [];
     let riskScore = 0.95; // Initial high confidence
 
     if (income < 250000) {

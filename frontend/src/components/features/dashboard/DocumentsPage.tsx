@@ -23,10 +23,17 @@ import { analyzeImage } from '@/services/api';
 
 const HISTORY_KEY = 'jansathi_vision_history';
 
+interface HistoryItem {
+    id: string;
+    name: string;
+    date: string;
+    result: string;
+}
+
 const DocumentsPage = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [visionResult, setVisionResult] = useState<string | null>(null);
-    const [history, setHistory] = useState<any[]>([]);
+    const [history, setHistory] = useState<HistoryItem[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -36,7 +43,7 @@ const DocumentsPage = () => {
         }
     }, []);
 
-    const saveHistory = (newHistory: any[]) => {
+    const saveHistory = (newHistory: HistoryItem[]) => {
         setHistory(newHistory);
         localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
     };

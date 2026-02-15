@@ -23,7 +23,6 @@ const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => voi
 
     useEffect(() => {
         index.current = 0;
-        setDisplayedText('');
         const intervalId = setInterval(() => {
             index.current += 3;
             if (index.current > text.length) index.current = text.length;
@@ -39,6 +38,15 @@ const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => voi
     return <div className="leading-relaxed whitespace-pre-wrap">{displayedText}</div>;
 };
 
+interface Source {
+    title: string;
+    text: string;
+    link: string;
+    benefit: string;
+    logo: string;
+    graph_recommendations?: string[]; // Keep strict string[] for SchemeCard compatibility
+}
+
 type Message = {
     id: string;
     role: 'user' | 'assistant';
@@ -47,7 +55,7 @@ type Message = {
     language?: string;
     audio?: string;
     isTyping?: boolean;
-    structured_sources?: any[];
+    structured_sources?: Source[];
     provenance?: string;
     explainability?: {
         confidence: number;

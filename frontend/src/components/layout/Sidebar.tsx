@@ -37,22 +37,22 @@ const SESSIONS_KEY = 'jansathi_chat_sessions';
 export default function Sidebar({ activePage, onPageChange, onNewChat }: SidebarProps) {
     const [sessions, setSessions] = useState<ChatSession[]>([]);
 
-    const loadSessions = () => {
-        try {
-            const stored = localStorage.getItem(SESSIONS_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                const sorted = Object.values(parsed).sort((a: any, b: any) =>
-                    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-                ) as ChatSession[];
-                setSessions(sorted);
-            }
-        } catch (e) {
-            console.error("Failed to load sessions", e);
-        }
-    };
-
     useEffect(() => {
+        const loadSessions = () => {
+            try {
+                const stored = localStorage.getItem(SESSIONS_KEY);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    const sorted = Object.values(parsed).sort((a: ChatSession, b: ChatSession) =>
+                        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                    ) as ChatSession[];
+                    setSessions(sorted);
+                }
+            } catch (e) {
+                console.error("Failed to load sessions", e);
+            }
+        };
+
         loadSessions();
         const handleUpdate = () => loadSessions();
         window.addEventListener('chat-storage-update', handleUpdate);

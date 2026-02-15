@@ -2,8 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, CheckCircle, XCircle, FileText, ChevronRight } from 'lucide-react';
 
+interface Application {
+    id: number;
+    title: string;
+    date: string;
+    status: string;
+    step: number;
+    totalSteps: number;
+}
+
 export default function ApplicationsPage() {
-    const [applications, setApplications] = useState<any[]>([]);
+    const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
     const userId = "demo-user"; // Usually from auth
 

@@ -1,0 +1,132 @@
+
+> frontend@0.1.0 lint
+> eslint
+
+
+E:\JanSathi\frontend\public\sw.js
+  5:7  warning  'OFFLINE_URL' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\app\dashboard\page.tsx
+  17:8   warning  'BackendStatus' is defined but never used            @typescript-eslint/no-unused-vars
+  18:8   warning  'FederatedLearningStatus' is defined but never used  @typescript-eslint/no-unused-vars
+  19:41  warning  'Activity' is defined but never used                 @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\app\docs\page.tsx
+  5:10  warning  'Book' is defined but never used    @typescript-eslint/no-unused-vars
+  5:16  warning  'Shield' is defined but never used  @typescript-eslint/no-unused-vars
+  5:39  warning  'Zap' is defined but never used     @typescript-eslint/no-unused-vars
+  5:57  warning  'Users' is defined but never used   @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\app\layout.tsx
+  8:8  warning  'Script' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\app\page.tsx
+    6:68   warning  'Server' is defined but never used         @typescript-eslint/no-unused-vars
+    6:76   warning  'Database' is defined but never used       @typescript-eslint/no-unused-vars
+    6:115  warning  'Users' is defined but never used          @typescript-eslint/no-unused-vars
+    6:158  warning  'Radio' is defined but never used          @typescript-eslint/no-unused-vars
+    9:43   warning  'SignOutButton' is defined but never used  @typescript-eslint/no-unused-vars
+  569:10   warning  'TechItem' is defined but never used       @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\auth\CustomAuth.tsx
+  5:22  warning  'LogIn' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\ChatInterface.tsx
+    5:37  warning  'Bot' is defined but never used                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+    5:42  warning  'ArrowUpRight' is defined but never used                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+    5:78  warning  'Activity' is defined but never used                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   47:29  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   83:24  warning  'setIsThinking' is assigned a value but never used                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  153:18  warning  'e' is defined but never used                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  390:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+E:\JanSathi\frontend\src\components\features\chat\DocumentScorecard.tsx
+  5:10  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+  5:61  warning  'Info' is defined but never used          @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\ModerationLoop.tsx
+  13:38  warning  'approved' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\MultiAgentThoughtProcess.tsx
+   2:18  warning  'AnimatePresence' is defined but never used                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  27:8   warning  React Hook useEffect has a missing dependency: 'onComplete'. Either include it or remove the dependency array. If 'onComplete' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+E:\JanSathi\frontend\src\components\features\chat\OutreachSimulator.tsx
+  5:32  warning  'Send' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\SchemeCard.tsx
+   4:10  warning  'ExternalLink' is defined but never used                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   4:37  warning  'ShieldCheck' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   4:50  warning  'Award' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   4:71  warning  'Activity' is defined but never used                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  26:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+E:\JanSathi\frontend\src\components\features\chat\VoiceInput.tsx
+   63:17  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\JanSathi\frontend\src\components\features\chat\VoiceInput.tsx:63:17
+  61 |                 };
+  62 |             } else {
+> 63 |                 setError('Voice input not supported in this browser.');
+     |                 ^^^^^^^^ Avoid calling setState() directly within an effect
+  64 |             }
+  65 |         }
+  66 |     }, []);  react-hooks/set-state-in-effect
+  167:28  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  168:34  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+
+E:\JanSathi\frontend\src\components\features\dashboard\CommunityPage.tsx
+  3:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\dashboard\DocumentsPage.tsx
+    7:5   warning  'Download' is defined but never used      @typescript-eslint/no-unused-vars
+    8:5   warning  'Eye' is defined but never used           @typescript-eslint/no-unused-vars
+    9:5   warning  'Clock' is defined but never used         @typescript-eslint/no-unused-vars
+   16:5   warning  'Search' is defined but never used        @typescript-eslint/no-unused-vars
+   17:5   warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+   18:5   warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+  279:45  warning  'i' is defined but never used             @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\dashboard\FederatedLearningStatus.tsx
+   2:18  warning  'AnimatePresence' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  43:8   warning  React Hook useEffect has a missing dependency: 'startTrainingRound'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\JanSathi\frontend\src\components\features\dashboard\HelpPage.tsx
+  2:10  warning  'HelpCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\dashboard\ProfilePage.tsx
+  18:5   warning  'ArrowUpRight' is defined but never used          @typescript-eslint/no-unused-vars
+  87:11  warning  'languageMap' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\dashboard\SettingsPage.tsx
+  5:10  warning  'Globe' is defined but never used     @typescript-eslint/no-unused-vars
+  5:59  warning  'Bell' is defined but never used      @typescript-eslint/no-unused-vars
+  5:65  warning  'Database' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\layout\Navbar.tsx
+  4:10  warning  'Ghost' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\layout\Sidebar.tsx
+  16:5  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\layout\TelemetryPanel.tsx
+  13:24  warning  'prev' is defined but never used  @typescript-eslint/no-unused-vars
+  14:25  warning  'prev' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\ui\ErrorBoundary.tsx
+  18:44  warning  '_' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\services\api.ts
+  76:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\services\localAudit.ts
+  14:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 60 problems (5 errors, 55 warnings)
+

@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
 
   // Environment variables available in browser
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000",
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://jansathi.onrender.com",
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_Y2xlcmsuY2xlcmsuY29tJ",
   },
 
@@ -27,19 +27,19 @@ const nextConfig: NextConfig = {
       return [
         {
           source: "/query",
-          destination: "http://127.0.0.1:5000/query",
+          destination: "https://jansathi.onrender.com/query",
         },
         {
           source: "/health",
-          destination: "http://127.0.0.1:5000/health",
+          destination: "https://jansathi.onrender.com/health",
         },
         {
           source: "/schemes",
-          destination: "http://127.0.0.1:5000/schemes",
+          destination: "https://jansathi.onrender.com/schemes",
         },
         {
           source: "/analyze",
-          destination: "http://127.0.0.1:5000/analyze",
+          destination: "https://jansathi.onrender.com/analyze",
         },
       ];
     },

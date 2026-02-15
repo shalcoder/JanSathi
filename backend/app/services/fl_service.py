@@ -1,4 +1,10 @@
-import flwr as fl
+try:
+    import flwr as fl
+    FLWR_AVAILABLE = True
+except ImportError:
+    FLWR_AVAILABLE = False
+    fl = None
+
 import numpy as np
 from typing import List, Tuple, Dict, Optional
 from app.core.utils import logger, log_event
@@ -13,6 +19,14 @@ class FederatedLearningService:
     """
 
     def __init__(self, min_clients=2, round_timeout=300):
+        if not FLWR_AVAILABLE:
+            logger.warning("Flower (flwr) not available - FL service running in mock mode")
+            self.mock_mode = True
+            self.min_clients = min_clients
+            self.current_round = 1
+            return
+            
+        self.mock_mode = False
         self.min_clients = min_clients
         self.round_timeout = round_timeout
         self.current_round = 1
@@ -35,6 +49,10 @@ class FederatedLearningService:
 
     def start_server(self, port=8080):
         """Starts the Flower server."""
+        if getattr(self, 'mock_mode', True):
+            logger.info("FL Server running in mock mode (flwr not available)")
+            return
+            
         logger.info(f"Starting Flower Server on port {port}")
         try:
             fl.server.start_server(
@@ -49,7 +67,7 @@ class FederatedLearningService:
     def get_metrics(self):
         return {
             "current_round": self.current_round,
-            "active_clients": self.min_clients, # Mock for now as flwr manages this internally
-            "status": "Flower Server Running"
+            "active_clients": self.min_clients,
+            "status": "Mock Mode" if getattr(self, 'mock_mode', True) else "Flower Server Running"
         }
 

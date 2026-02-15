@@ -1,0 +1,14 @@
+{
+    "github": {
+        "enabled": true
+    },
+    "buildCommand": "npm install && npm run build",
+    "outputDirectory": ".next",
+    "framework": "nextjs",
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "http://jansathi-backend.onrender.com/api/$1"
+        }
+    ]
+}

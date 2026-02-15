@@ -65,12 +65,9 @@ def create_app():
     return app
 
 
-# Only create app at module level for local dev (Lambda uses lambda_handler.py)
-if not USE_DYNAMODB:
-    app = create_app()
+# Create app for both local and production
+app = create_app()
 
 if __name__ == '__main__':
-    if USE_DYNAMODB:
-        app = create_app()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=(os.environ.get('NODE_ENV') != 'production'))

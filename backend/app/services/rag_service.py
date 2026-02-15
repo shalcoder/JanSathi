@@ -119,9 +119,31 @@ class RagService:
     def refresh_vector_index(self):
         """Update the TF-IDF matrix with current schemes + uploads."""
         if HAS_SKLEARN:
+            # Ensure we have some content to vectorize
+            if not self.schemes:
+                # Add default fallback content to prevent empty vocabulary error
+                self.schemes = [{
+                    "id": "default",
+                    "title": "Government Schemes",
+                    "text": "Information about government schemes and services for citizens",
+                    "keywords": ["government", "schemes", "services", "citizens"],
+                    "link": "#",
+                    "benefit": "General Information",
+                    "ministry": "Government",
+                    "category": "general",
+                    "related": []
+                }]
+            
             self.vectorizer = TfidfVectorizer(stop_words='english')
             self.corpus = [f"{s['title']} {s['text']} {' '.join(s['keywords'])}" for s in self.schemes]
-            self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
+            
+            # Only fit if we have non-empty corpus
+            if self.corpus and any(doc.strip() for doc in self.corpus):
+                self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
+            else:
+                # Fallback with minimal content
+                self.corpus = ["government schemes information"]
+                self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
 
     def index_uploaded_document(self, filename, text):
         """Programmatically add a new document to the RAG memory."""

@@ -1,11 +1,20 @@
-try:
-    import flwr as fl
-    FLWR_AVAILABLE = True
-except ImportError:
-    FLWR_AVAILABLE = False
-    fl = None
+# Professional FL status (lazy loaded)
+FLWR_AVAILABLE = None
+fl = None
+np = None
 
-import numpy as np
+def _lazy_load_fl_deps():
+    global FLWR_AVAILABLE, fl, np
+    if FLWR_AVAILABLE is not None:
+        return FLWR_AVAILABLE
+    try:
+        import flwr as fl
+        import numpy as np
+        FLWR_AVAILABLE = True
+    except ImportError:
+        FLWR_AVAILABLE = False
+    return FLWR_AVAILABLE
+
 from typing import List, Tuple, Dict, Optional
 from app.core.utils import logger, log_event
 
@@ -19,7 +28,7 @@ class FederatedLearningService:
     """
 
     def __init__(self, min_clients=2, round_timeout=300):
-        if not FLWR_AVAILABLE:
+        if not _lazy_load_fl_deps():
             logger.warning("Flower (flwr) not available - FL service running in mock mode")
             self.mock_mode = True
             self.min_clients = min_clients

@@ -8,13 +8,18 @@ import ChatInterface from "@/components/features/chat/ChatInterface";
 import DocumentsPage from "@/components/features/dashboard/DocumentsPage";
 import ProfilePage from "@/components/features/dashboard/ProfilePage";
 import SettingsPage from "@/components/features/dashboard/SettingsPage";
+import OverviewPage from "@/components/features/dashboard/OverviewPage";
+import SchemesPage from "@/components/features/dashboard/SchemesPage";
+import ApplicationsPage from "@/components/features/dashboard/ApplicationsPage";
+import CommunityPage from "@/components/features/dashboard/CommunityPage";
+import HelpPage from "@/components/features/dashboard/HelpPage";
 
 import BackendStatus from "@/components/BackendStatus";
 import FederatedLearningStatus from "@/components/features/dashboard/FederatedLearningStatus";
 import { Menu, Sun, Moon, Search, Bell, Activity } from 'lucide-react';
 
 export default function Home() {
-  const [activePage, setActivePage] = useState('dashboard');
+  const [activePage, setActivePage] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -104,16 +109,27 @@ export default function Home() {
 
   const renderContent = () => {
     switch (activePage) {
-      case 'dashboard':
+      case 'overview':
+        return <OverviewPage onNavigate={setActivePage} />;
+      case 'assistant':
+      case 'dashboard': // Legacy fallback
         return <ChatInterface />;
+      case 'schemes':
+        return <SchemesPage />;
+      case 'applications':
+        return <ApplicationsPage />;
+      case 'community':
+        return <CommunityPage />;
       case 'documents':
         return <DocumentsPage />;
       case 'profile':
         return <ProfilePage />;
       case 'settings':
         return <SettingsPage />;
+      case 'help':
+        return <HelpPage />;
       default:
-        return <ChatInterface />;
+        return <OverviewPage onNavigate={setActivePage} />;
     }
   };
 

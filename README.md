@@ -152,30 +152,61 @@ Citizens struggle with:
 
 ---
 
-## 🚀 Tech Stack
+## �️ Advanced Tech Stack Taxonomy
 
-### Frontend (Website)
-- **Framework**: ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js) **Next.js 16** (React, TypeScript)
-- **Styling**: ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) **Tailwind CSS**
-- **UI/UX**: ✨ **Glassmorphism**, Aurora gradients, Premium animations
-- **Speech**: 🎙️ **Web Speech API** (browser-based STT)
-- **Audio**: 🔊 **HTML5 Audio** for playback
-- **State**: 🔄 **React Hooks + localStorage**
-- **Mobile**: 📱 **Fully responsive** (320px - 4K)
+JanSathi is built using a decentralized, high-availability architecture that balances premium modern web capabilities with robust, low-latency AI orchestration.
 
-### Backend
-- **Framework**: ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-000000?style=flat-square&logo=flask&logoColor=white) **Python Flask**
-- **Architecture**: 🏛️ **Clean Architecture** (API → Services → Core)
-- **Database**: ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white) **SQLAlchemy ORM**
-- **Server**: ⚡ **Gunicorn** with async workers
-- **Security**: 🛡️ **Talisman, CORS, Rate Limiting**
-- **Logging**: 📝 **Structured JSON Logging**
+### 🌐 Frontend Ecosystem
+| Category | Technology | Usage in JanSathi |
+| :--- | :--- | :--- |
+| **Framework** | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js) | Server-Side Rendering (SSR), App Router, ISR for instant scheme loads. |
+| **Language** | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) | End-to-end type safety for mission-critical reliability. |
+| **Styling** | ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) | Utility-first styling for glassmorphic and responsive UI. |
+| **Animations** | ![Framer Motion](https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white) | Premium micro-interactions and smooth layout transitions. |
+| **Auth** | ![Clerk](https://img.shields.io/badge/Clerk-6C47FF?style=flat-square&logo=clerk&logoColor=white) | Multi-factor authentication, Google SSO, and user session management. |
+| **PWA** | ![Workbox](https://img.shields.io/badge/Workbox-33b5e5?style=flat-square&logo=webbox&logoColor=white) | Offline-first service worker for rural/low-connectivity caching. |
+| **Speech** | **Web Speech API** | Browser-native Speech-to-Text and Text-to-Speech for low latency. |
+| **Icons** | **Lucide React** | Consistent, high-fidelity iconography. |
 
-### AI / Cloud Services
-- **AWS Services**: ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) **Bedrock (Claude 3.5), Kendra (RAG), Polly (TTS)**
-- **Security**: 🛡️ **Prompt Injection Guards**, PII Anonymization, Content Moderation
-- **Observability**: 📊 **Request Tracing**, AI Quality Metrics
-- **Fallback**: 🔄 **Intelligent Hybrid RAG** with Local Edge Caching
+### ⚙️ Backend & Orchestration
+| Category | Technology | Usage in JanSathi |
+| :--- | :--- | :--- |
+| **Runtime** | ![Python 3.12](https://img.shields.io/badge/Python_3.12-3776AB?style=flat-square&logo=python&logoColor=white) | Core logic, AI service integration, and data processing. |
+| **Web Framework** | ![Flask](https://img.shields.io/badge/Flask-000000?style=flat-square&logo=flask&logoColor=white) | High-performance REST API with blueprint modularity. |
+| **Orchestrator** | ![AWS Step Functions](https://img.shields.io/badge/AWS_Step_Functions-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Complex state management for scheme application workflows. |
+| **Server** | **Gunicorn + Async workers** | Production-grade WSGI server with concurrency support. |
+| **Security** | **Flask-Talisman / CORS** | Automated security headers and cross-origin protection. |
+
+### 🤖 Artificial Intelligence & Machine Learning
+| Category | Technology | Usage in JanSathi |
+| :--- | :--- | :--- |
+| **Reasoning** | ![AWS Bedrock](https://img.shields.io/badge/AWS_Bedrock-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Orchestrating Claude 3.5 Sonnet for conversational logic. |
+| **RAG Engine** | ![AWS Kendra](https://img.shields.io/badge/AWS_Kendra-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Semantic search and retrieval over official government corpus. |
+| **Speech Processing** | ![AWS Transcribe](https://img.shields.io/badge/AWS_Transcribe-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Real-time multi-lingual speech-to-text for 12+ Indian dialects. |
+| **Voice Synthesis** | ![AWS Polly](https://img.shields.io/badge/AWS_Polly-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Neural TTS (Aditi/Raveena) for human-like voice response. |
+| **Privacy ML** | ![Flower](https://img.shields.io/badge/Flower-000000?style=flat-square&logo=flower) | Federated Learning for on-device dialect adaptation. |
+| **XAI** | ![SageMaker Clarify](https://img.shields.io/badge/SageMaker_Clarify-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Explainable AI metrics for bias detection and citation audit. |
+
+### ☁️ Cloud Infrastructure (AWS Native)
+| Service | Purpose | Specific Implementation |
+| :--- | :--- | :--- |
+| **API Gateway** | Entry Point | Managed REST endpoints with throttling and WAF protection. |
+| **Lambda** | Compute | Serverless horizontal scaling with sub-second cold starts. |
+| **S3** | Storage | High-durability storage for audio caches and document uploads. |
+| **DynamoDB** | Database | High-scale NoSQL persistence for chat sessions (20%+ read hits). |
+| **CloudFront** | Edge Delivery | Global CDN for static asset distribution and edge-side auth. |
+| **EventBridge** | Event Bus | Decoupling agent actions from telemetry and notification services. |
+| **Secret Manager** | Security | Dynamic rotation of API keys and AWS credentials. |
+
+### 📊 Observability & DevOps
+| Category | Tool | Function |
+| :--- | :--- | :--- |
+| **Tracing** | **AWS X-Ray** | Distributed request tracing across Lambda, Bedrock, and Kendra. |
+| **Logging** | **CloudWatch Logs** | Centralized, encrypted JSON-structured logging. |
+| **Analytics** | **QuickSight** | Executive BI dashboards for government outreach impact. |
+| **CI/CD** | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white) | Automated testing, linting, and multi-region AWS deployment. |
+| **IaC** | **AWS CDK** | Infrastructure-as-Code for 100% reproducible environments. |
+| **Containerization** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) | Multi-stage builds for consistent local and cloud execution. |
 
 ---
 
@@ -698,6 +729,22 @@ schemes based on family composition.
 2. SMS fallback for feature phones
 3. State-specific customization
 4. Integration with official government portals
+
+## 🔮 Future Enhancements & Scalability
+
+JanSathi is designed to evolve from a web assistant to a ubiquitous democratic infrastructure.
+
+### 1. Multi-Channel Accessibility (In-Progress)
+*   **📞 Enterprise IVR Integration**: A fully voice-driven interface accessible via basic feature phones without internet. Integrated with **AWS Connect** and **Twilio**.
+*   **💬 WhatsApp AI Concierge**: Official JanSathi WhatsApp Business API that allows users to send document photos (OCR) and query schemes via messaging.
+
+### 2. Privacy-Preserving Federated Learning (FL)
+We are implementing **Federated Learning** to improve model accuracy while maintaining 100% data residency:
+*   **The Problem**: Government queries contain sensitive PII (Personal Identifiable Information).
+*   **The Solution**: Instead of centralizing user data, we train small *local* intent models on the edge (device/gateway).
+*   **IVR/WhatsApp Application**:
+    *   **Dialect Learning**: The IVR system learns local slang and accents directly at the regional server level.
+    *   **Privacy**: Only weight updates (gradients) are sent to the central JanSathi node, ensuring zero raw data leakage.
 
 ---
 

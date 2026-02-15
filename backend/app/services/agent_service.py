@@ -25,6 +25,13 @@ class AgentService:
         """
         execution_id = f"ag-exec-{uuid.uuid4().hex[:8]}"
         steps_log = []
+        
+        # Real-time Context Enrichment
+        user_profile = None
+        user_docs = []
+        if user_id:
+             user_profile, user_docs = self._get_user_context(user_id)
+             steps_log.append({"step": "context_enrichment", "status": "completed", "profile_found": user_profile is not None, "docs_count": len(user_docs)})
 
         try:
             # Step 1: Intent Parsing (Real Agent Call)
@@ -33,9 +40,9 @@ class AgentService:
             steps_log.append({"step": "intent_parsing", "status": "completed", "intent": intent})
 
             # Step 2: Knowledge Retrieval (RAG Agent)
-            # This uses the real Kendra RAG service
+            # This uses the real Kendra RAG service enriched with user data
             steps_log.append({"step": "knowledge_retrieval", "status": "started"})
-            context_docs = self.rag_service.retrieve(user_query, language)
+            context_docs = self.rag_service.retrieve(user_query, language, user_profile=user_profile, user_docs=user_docs)
             steps_log.append({"step": "knowledge_retrieval", "status": "completed", "docs_found": len(context_docs)})
 
             # Step 3: Policy Verification & Reasoning (Bedrock Agent)
@@ -43,7 +50,7 @@ class AgentService:
             steps_log.append({"step": "policy_verification", "status": "started"})
             
             # Construct a specialized prompt for the Reasoning Agent
-            reasoning_response = self._reason_with_bedrock(user_query, context_docs, language, intent)
+            reasoning_response = self._reason_with_bedrock(user_query, context_docs, language, intent, user_profile=user_profile)
             
             answer = reasoning_response.get('answer', "I'm sorry, I couldn't process that request.")
             confidence = reasoning_response.get('confidence', 0.85)
@@ -100,14 +107,30 @@ class AgentService:
         except Exception:
             return "general_info"
 
-    def _reason_with_bedrock(self, query, context_docs, language, intent):
-        """Authentic Multi-Agent Reasoning Chain."""
+    def _get_user_context(self, user_id):
+        """Fetch real profile and documents from DB."""
+        try:
+            from app.models.models import UserProfile, UserDocument
+            profile = UserProfile.query.get(user_id)
+            docs = UserDocument.query.filter_by(user_id=user_id).all()
+            return profile.to_dict() if profile else None, [d.to_dict() for d in docs]
+        except Exception as e:
+            logger.error(f"Failed to fetch user context: {e}")
+            return None, []
+
+    def _reason_with_bedrock(self, query, context_docs, language, intent, user_profile=None):
+        """Authentic Multi-Agent Reasoning Chain enriched with User Profile."""
         context_text = "\n".join(context_docs) if context_docs else "No specific documents found."
         
+        profile_context = ""
+        if user_profile:
+            profile_context = f"\nUser Profile: {json.dumps(user_profile)}"
+
         prompt = f"""
         System: You are the JanSathi Reasoning Engine. Your task is to answer the user query based on the context provided.
-        CRITICAL: You must also explain your reasoning (Explainable AI).
+        CRITICAL: You must also explain your reasoning (Explainable AI) and consider the citizen's profile for eligibility.
         
+        {profile_context}
         Context: {context_text}
         Query: {query}
         Language: {language}

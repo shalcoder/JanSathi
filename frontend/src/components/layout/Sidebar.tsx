@@ -3,18 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
+    PlusCircle,
     LayoutDashboard,
     FileText,
     User,
     Settings,
-    PlusCircle,
+    CheckCircle,
+    Users,
+    HelpCircle,
+    Shield,
     Sparkles,
     ChevronRight,
     Home,
     LogOut,
-    Shield
 } from 'lucide-react';
 import Link from 'next/link';
+import { useUser, UserButton, SignedIn, SignedOut, SignInButton, SignOutButton } from '@clerk/nextjs';
 
 interface ChatSession {
     id: string;
@@ -55,66 +59,102 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
         return () => window.removeEventListener('chat-storage-update', handleUpdate);
     }, []);
 
-    const navItems = [
-        { id: 'dashboard', label: 'Assistant', icon: LayoutDashboard, color: 'text-primary' },
-        { id: 'documents', label: 'Documents', icon: FileText, color: 'text-blue-600' },
-        { id: 'profile', label: 'Profile', icon: User, color: 'text-emerald-500' },
-        { id: 'settings', label: 'Settings', icon: Settings, color: 'text-slate-500' },
+    const navGroups = [
+        {
+            title: "General",
+            items: [
+                { id: 'overview', label: 'Overview', icon: LayoutDashboard, color: 'text-indigo-500' },
+                { id: 'assistant', label: 'AI Assistant', icon: Sparkles, color: 'text-primary' },
+            ]
+        },
+        {
+            title: "Services",
+            items: [
+                { id: 'schemes', label: 'Schemes', icon: Shield, color: 'text-emerald-500' },
+                { id: 'applications', label: 'Applications', icon: CheckCircle, color: 'text-amber-500' },
+                { id: 'documents', label: 'Documents', icon: FileText, color: 'text-blue-500' },
+            ]
+        },
+        {
+            title: "Community",
+            items: [
+                { id: 'community', label: 'Local Forum', icon: Users, color: 'text-purple-500' },
+            ]
+        },
+        {
+            title: "Account",
+            items: [
+                { id: 'profile', label: 'Profile', icon: User, color: 'text-slate-500' },
+                { id: 'settings', label: 'Settings', icon: Settings, color: 'text-slate-500' },
+                { id: 'help', label: 'Help & Support', icon: HelpCircle, color: 'text-rose-500' },
+            ]
+        }
     ];
 
     return (
-        <div className="h-full w-full flex flex-col justify-between py-10 px-6 bg-background lg:bg-transparent border-r border-border/30 relative z-20 transition-all duration-500">
+        <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-background lg:bg-transparent border-r border-border/60 relative z-20 transition-all duration-500">
 
-            <div className="space-y-10 overflow-y-auto scrollbar-none pb-8">
+            <div className="space-y-6 overflow-y-auto scrollbar-none pb-8 h-full">
                 {/* Brand Logo */}
-                <div className="px-2 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-                        <Sparkles className="w-6 h-6 text-white" />
+                <div className="px-2 flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/20">
+                        <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h1 className="font-bold text-2xl tracking-tight text-foreground leading-none">JanSathi</h1>
-                        <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-wider opacity-40 mt-1">Bharat AI Helper</p>
+                        <h1 className="font-bold text-xl tracking-tight text-foreground leading-none">JanSathi</h1>
+                        <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-wider opacity-50 mt-1">Bharat AI Helper</p>
                     </div>
                 </div>
 
                 {/* New Chat Button */}
                 <button
                     onClick={onNewChat}
-                    className="w-full flex items-center justify-center gap-3 py-5 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 shadow-sm"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all hover:bg-primary/90 active:scale-95 shadow-md shadow-primary/20 hover:shadow-lg"
                 >
-                    <PlusCircle className="w-5 h-5" />
+                    <PlusCircle className="w-4 h-4" />
                     <span>New Chat</span>
                 </button>
 
                 {/* Main Navigation */}
-                <nav className="space-y-2">
-                    <p className="px-4 text-[10px] font-bold text-secondary-foreground uppercase tracking-wider mb-4 opacity-30">Menu</p>
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => onPageChange(item.id)}
-                            className={`
-                                w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-colors group relative
-                                ${activePage === item.id
-                                    ? 'bg-primary/10 text-primary border border-primary/20'
-                                    : 'text-secondary-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent'}
-                            `}
-                        >
-                            <item.icon className={`w-5 h-5 ${activePage === item.id ? item.color : 'opacity-40'}`} />
-                            <span className="text-[14px] font-bold tracking-tight">{item.label}</span>
-                            {activePage === item.id && (
-                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
-                            )}
-                        </button>
+                <nav className="space-y-6">
+                    {navGroups.map((group, groupIndex) => (
+                        <div key={groupIndex}>
+                            <p className="px-4 text-[10px] font-bold text-secondary-foreground uppercase tracking-wider mb-2 opacity-40">{group.title}</p>
+                            <div className="space-y-1">
+                                {group.items.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => onPageChange(item.id)}
+                                        className={`
+                                            w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group relative font-medium
+                                            ${activePage === item.id
+                                                ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm'
+                                                : 'text-secondary-foreground hover:bg-secondary/40 hover:text-foreground border border-transparent'}
+                                        `}
+                                    >
+                                        <item.icon className={`w-4 h-4 ${activePage === item.id ? item.color : 'opacity-50 group-hover:opacity-100 group-hover:text-foreground transition-opacity'}`} />
+                                        <span className="text-sm tracking-tight">{item.label}</span>
+                                        {activePage === item.id && (
+                                            <motion.div
+                                                layoutId="active-pill"
+                                                className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
+                                            />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     ))}
 
-                    <Link
-                        href="/"
-                        className="w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-colors text-secondary-foreground hover:bg-secondary/50 hover:text-foreground mt-6"
-                    >
-                        <Home className="w-5 h-5 opacity-40" />
-                        <span className="text-[14px] font-bold tracking-tight">Go to Home</span>
-                    </Link>
+                    <div className="pt-2">
+                        <Link
+                            href="/"
+                            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors text-secondary-foreground hover:bg-secondary/40 hover:text-foreground opacity-70 hover:opacity-100"
+                        >
+                            <Home className="w-4 h-4" />
+                            <span className="text-sm font-medium tracking-tight">Go to Home</span>
+                        </Link>
+                    </div>
                 </nav>
 
                 {/* Recent Chats */}
@@ -150,29 +190,65 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                 </div>
             </div>
 
-            {/* Profile Footer - Better Spacing */}
-            <div className="pt-8 border-t border-border/50 mt-auto">
-                <div
-                    className="p-4 rounded-xl bg-secondary/20 border border-border/50 flex items-center gap-4 group cursor-pointer hover:bg-secondary/40 transition-colors"
-                >
-                    <div className="w-11 h-11 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden shrink-0">
-                        <span className="text-sm font-bold text-foreground/40 text-center">RK</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-foreground truncate tracking-tight">Rajesh Kumar</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-2 mt-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            Verified
-                        </p>
-                    </div>
-                </div>
+            {/* Profile Footer - Compact */}
+            <div className="pt-4 border-t border-border/50 mt-auto">
+                <SignedIn>
+                    <div className="space-y-2">
+                        <div className="p-3 rounded-lg bg-secondary/20 border border-border/50 flex items-center gap-3 group cursor-pointer hover:bg-secondary/40 transition-colors">
+                            <div className="shrink-0">
+                                <UserButton
+                                    afterSignOutUrl="/"
+                                    appearance={{
+                                        elements: {
+                                            avatarBox: "w-8 h-8 border border-slate-200 dark:border-slate-700"
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <UserProfileName />
+                            </div>
+                        </div>
 
-                <p className="text-center text-[9px] font-bold text-secondary-foreground uppercase tracking-widest mt-6 opacity-20">
-                    JanSathi v2.5.0
-                </p>
+                        <SignOutButton>
+                            <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-secondary-foreground hover:bg-red-500/10 hover:text-red-500 font-bold group border border-transparent hover:border-red-500/20 text-xs">
+                                <LogOut className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-red-500 transition-colors" />
+                                <span>Sign Out</span>
+                            </button>
+                        </SignOutButton>
+                    </div>
+                </SignedIn>
+
+                <SignedOut>
+                    <SignInButton mode="modal">
+                        <button className="w-full flex items-center justify-center gap-2 py-2 bg-primary text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-opacity hover:opacity-90 shadow-sm">
+                            <User className="w-3 h-3" />
+                            <span>Sign In</span>
+                        </button>
+                    </SignInButton>
+                </SignedOut>
+
+                <div className="text-center mt-4 opacity-20 hover:opacity-100 transition-opacity">
+                    <p className="text-[9px] font-bold text-secondary-foreground uppercase tracking-widest">
+                        v2.5.0
+                    </p>
+                </div>
             </div>
         </div>
     );
 }
 
-// End of Sidebar Component
+function UserProfileName() {
+    const { user } = useUser();
+    return (
+        <>
+            <p className="text-sm font-bold text-foreground truncate tracking-tight">
+                {user?.fullName || user?.username || "JanSathi Citizen"}
+            </p>
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-2 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Verified
+            </p>
+        </>
+    );
+}

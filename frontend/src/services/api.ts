@@ -52,9 +52,10 @@ export const sendQuery = async (params: QueryRequest | FormData): Promise<QueryR
     }
 };
 
-export const getHistory = async (limit: number = 10): Promise<any[]> => {
+export const getHistory = async (userId?: string, limit: number = 10): Promise<any[]> => {
     try {
-        const response = await apiClient.get(`/history?limit=${limit}`);
+        const url = userId ? `/history?userId=${userId}&limit=${limit}` : `/history?limit=${limit}`;
+        const response = await apiClient.get(url);
         return response.data;
     } catch (error) {
         console.error('History API Error:', error);

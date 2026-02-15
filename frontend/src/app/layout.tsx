@@ -42,17 +42,7 @@ export default function RootLayout({
         </ErrorBoundary>
 
         {/* Unregister Service Worker to clear poisoned cache and stale Server Action IDs */}
-        <Script id="sw-cleanup" strategy="afterInteractive">{`
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-              for (let registration of registrations) {
-                registration.unregister().then(() => {
-                  console.log('[App] Stale SW unregistered');
-                });
-              }
-            });
-          }
-        `}</Script>
+
       </body>
     </html>
   );

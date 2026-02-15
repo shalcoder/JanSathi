@@ -9,14 +9,24 @@ import re
 from difflib import SequenceMatcher
 from botocore.exceptions import ClientError, NoCredentialsError
 
-# Use scikit-learn for professional local RAG
-try:
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    import numpy as np
-    HAS_SKLEARN = True
-except ImportError:
-    HAS_SKLEARN = False
+# Professional local RAG status (lazy loaded)
+HAS_SKLEARN = None
+TfidfVectorizer = None
+cosine_similarity = None
+np = None
+
+def _lazy_load_sklearn():
+    global HAS_SKLEARN, TfidfVectorizer, cosine_similarity, np
+    if HAS_SKLEARN is not None:
+        return HAS_SKLEARN
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+        import numpy as np
+        HAS_SKLEARN = True
+    except ImportError:
+        HAS_SKLEARN = False
+    return HAS_SKLEARN
 
 class RagService:
     def __init__(self):
@@ -51,7 +61,7 @@ class RagService:
         self._load_uploaded_docs()
 
         # 4. Initialize Vector Indexing
-        if HAS_SKLEARN:
+        if _lazy_load_sklearn():
             # Load initial schemes from DB if empty
             if not self.schemes:
                 self._load_schemes_from_db()
@@ -118,10 +128,9 @@ class RagService:
 
     def refresh_vector_index(self):
         """Update the TF-IDF matrix with current schemes + uploads."""
-        if HAS_SKLEARN:
+        if _lazy_load_sklearn():
             # Ensure we have some content to vectorize
             if not self.schemes:
-                # Add default fallback content to prevent empty vocabulary error
                 self.schemes = [{
                     "id": "default",
                     "title": "Government Schemes",
@@ -134,6 +143,7 @@ class RagService:
                     "related": []
                 }]
             
+            global TfidfVectorizer
             self.vectorizer = TfidfVectorizer(stop_words='english')
             self.corpus = [f"{s['title']} {s['text']} {' '.join(s['keywords'])}" for s in self.schemes]
             
@@ -141,7 +151,6 @@ class RagService:
             if self.corpus and any(doc.strip() for doc in self.corpus):
                 self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
             else:
-                # Fallback with minimal content
                 self.corpus = ["government schemes information"]
                 self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
 
@@ -270,8 +279,9 @@ class RagService:
         location = user_profile.get('location') if user_profile else None
 
         # 1. Vector Search (Semantic)
-        if HAS_SKLEARN and self.vectorizer is not None and self.vector_matrix is not None:
+        if _lazy_load_sklearn() and self.vectorizer is not None and self.vector_matrix is not None:
             try:
+                global cosine_similarity
                 query_vec = self.vectorizer.transform([query_lower])
                 cos_sim = cosine_similarity(query_vec, self.vector_matrix).flatten()
                 for idx, score in enumerate(cos_sim):

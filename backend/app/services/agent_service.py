@@ -153,7 +153,7 @@ class AgentService:
             logger.error(f"Failed to fetch user context: {e}")
             return None, []
 
-    def _reason_with_bedrock(self, query, context_docs, language, intent, user_profile=None):
+    def _reason_with_bedrock(self, query, context_docs, language, intent, user_profile=None, **kwargs):
         """Authentic Multi-Agent Reasoning Chain enriched with User Profile."""
         context_text = "\n".join(context_docs) if context_docs else "No specific documents found."
         

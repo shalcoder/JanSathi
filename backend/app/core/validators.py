@@ -139,7 +139,7 @@ def validate_language(language: str) -> str:
     if not language:
         return 'hi'
     
-    lang = language.strip().lower()[:5]
+    lang = str(language).strip().lower()[:5]
     
     if lang not in SUPPORTED_LANGUAGES:
         return 'hi'  # Default to Hindi
@@ -166,4 +166,4 @@ def validate_user_id(user_id: str) -> str:
     if not cleaned:
         return 'anonymous'
     
-    return cleaned[:100]  # Max 100 chars
+    return str(cleaned)[:100]  # Max 100 chars

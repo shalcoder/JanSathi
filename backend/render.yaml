@@ -1,15 +1,11 @@
 services:
   - type: web
     name: jansathi-backend
-    env: python
-    region: oregon
+    runtime: docker
+    region: singapore
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn main:app
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.0
-      - key: SECRET_KEY
-        generateValue: true
+      - key: PORT
+        value: 10000
       - key: WEB_CONCURRENCY
-        value: 2
+        value: 1

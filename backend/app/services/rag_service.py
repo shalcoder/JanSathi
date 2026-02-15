@@ -9,14 +9,24 @@ import re
 from difflib import SequenceMatcher
 from botocore.exceptions import ClientError, NoCredentialsError
 
-# Use scikit-learn for professional local RAG
-try:
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    import numpy as np
-    HAS_SKLEARN = True
-except ImportError:
-    HAS_SKLEARN = False
+# Professional local RAG status (lazy loaded)
+HAS_SKLEARN = None
+TfidfVectorizer = None
+cosine_similarity = None
+np = None
+
+def _lazy_load_sklearn():
+    global HAS_SKLEARN, TfidfVectorizer, cosine_similarity, np
+    if HAS_SKLEARN is not None:
+        return HAS_SKLEARN
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+        import numpy as np
+        HAS_SKLEARN = True
+    except ImportError:
+        HAS_SKLEARN = False
+    return HAS_SKLEARN
 
 class RagService:
     def __init__(self):
@@ -51,7 +61,7 @@ class RagService:
         self._load_uploaded_docs()
 
         # 4. Initialize Vector Indexing
-        if HAS_SKLEARN:
+        if _lazy_load_sklearn():
             # Load initial schemes from DB if empty
             if not self.schemes:
                 self._load_schemes_from_db()
@@ -118,10 +128,9 @@ class RagService:
 
     def refresh_vector_index(self):
         """Update the TF-IDF matrix with current schemes + uploads."""
-        if HAS_SKLEARN:
+        if _lazy_load_sklearn():
             # Ensure we have some content to vectorize
             if not self.schemes:
-                # Add default fallback content to prevent empty vocabulary error
                 self.schemes = [{
                     "id": "default",
                     "title": "Government Schemes",
@@ -134,6 +143,7 @@ class RagService:
                     "related": []
                 }]
             
+            global TfidfVectorizer
             self.vectorizer = TfidfVectorizer(stop_words='english')
             self.corpus = [f"{s['title']} {s['text']} {' '.join(s['keywords'])}" for s in self.schemes]
             
@@ -141,7 +151,6 @@ class RagService:
             if self.corpus and any(doc.strip() for doc in self.corpus):
                 self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
             else:
-                # Fallback with minimal content
                 self.corpus = ["government schemes information"]
                 self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
 
@@ -266,12 +275,19 @@ class RagService:
         results_map = {} # id -> (doc, score)
 
         # Profile-based Category Boost
-        user_cat = user_profile.get('occupation_category') if user_profile else None
-        location = user_profile.get('location') if user_profile else None
+        user_occ = user_profile.get('occupation', '').lower() if user_profile else ''
+        user_state = user_profile.get('location_state', '').lower() if user_profile else ''
+        user_income = user_profile.get('income_bracket', '').lower() if user_profile else ''
 
         # 1. Vector Search (Semantic)
-        if HAS_SKLEARN and self.vectorizer is not None and self.vector_matrix is not None:
+        if _lazy_load_sklearn() and self.vectorizer is not None and self.vector_matrix is not None:
             try:
+                global cosine_similarity
+                # Ensure vectorizer is initialized before use
+                if not self.vectorizer:
+                    # logger.warning("Vectorizer not initialized, skipping semantic search.") # Assuming logger is defined
+                    return [] # Or handle appropriately
+
                 query_vec = self.vectorizer.transform([query_lower])
                 cos_sim = cosine_similarity(query_vec, self.vector_matrix).flatten()
                 for idx, score in enumerate(cos_sim):
@@ -299,11 +315,19 @@ class RagService:
                 k_score += 0.7
 
             # PERSONALIZATION BOOST
-            if user_cat and doc.get('category') == user_cat:
-                k_score += 0.5 # Substantial boost for matching category
+            if user_occ and isinstance(user_occ, str):
+                if user_occ.lower() in str(doc.get('category', '')).lower() or user_occ.lower() in str(doc.get('title', '')).lower():
+                    k_score += 0.4
             
-            if location and location.lower() in str(doc.get('text', '')).lower():
-                k_score += 0.3 # Boost for local relevance
+            if user_state and isinstance(user_state, str):
+                if user_state.lower() in str(doc.get('text', '')).lower() or user_state.lower() in str(doc.get('title', '')).lower():
+                    k_score += 0.3
+            
+            if user_income and isinstance(user_income, str):
+                u_inc_lower = user_income.lower()
+                if "below" in u_inc_lower or "low" in u_inc_lower:
+                    if "low income" in str(doc.get('text', '')).lower() or "bpl" in str(doc.get('text', '')).lower():
+                        k_score += 0.3
 
             if k_score > 0:
                 did = doc['id']

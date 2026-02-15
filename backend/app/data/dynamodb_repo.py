@@ -118,7 +118,7 @@ class DynamoDBRepo:
             if item.get("ttl", 0) < int(time.time()):
                 return None
 
-            log_event("dynamodb_cache_hit", {"key": key[:8]})
+            log_event("dynamodb_cache_hit", {"key": str(key)[:8]})
 
             return {
                 "response": item.get("Response", ""),
@@ -143,7 +143,7 @@ class DynamoDBRepo:
             self.cache_table.put_item(
                 Item={
                     "QueryHash": key,
-                    "Query": query[:200],  # Store truncated query for debugging
+                    "Query": str(query)[:200],  # Store truncated query for debugging
                     "Language": language,
                     "Response": response_text,
                     "Sources": json.dumps(sources or []),
@@ -152,7 +152,7 @@ class DynamoDBRepo:
                     "CreatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 }
             )
-            log_event("dynamodb_cache_set", {"key": key[:8]})
+            log_event("dynamodb_cache_set", {"key": str(key)[:8]})
         except ClientError as e:
             logger.error(f"DynamoDB cache set error: {e}")
 

@@ -23,5 +23,5 @@ EXPOSE 5000
 ENV FLASK_APP=main.py
 ENV NODE_ENV=production
 
-# Run with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--threads", "2", "main:app"]
+# Run with Gunicorn (bind to Render's dynamic PORT, minimal workers for OOM prevention)
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --threads 1 main:app"]

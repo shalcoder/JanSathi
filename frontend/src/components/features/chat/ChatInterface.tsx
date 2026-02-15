@@ -2,7 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Camera, X, Sparkles, Bot, ArrowUpRight, CheckCircle2, Shield, Activity } from 'lucide-react';
+import { Send, Camera, X, Sparkles, Bot, ArrowUpRight, CheckCircle2, Shield, Activity, ExternalLink, Info } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import VoiceInput from './VoiceInput';
 import AudioPlayer from './AudioPlayer';
 import { sendQuery, analyzeImage, QueryResponse } from '@/services/api';
@@ -11,8 +13,9 @@ import { useSettings } from '@/hooks/useSettings';
 import DocumentScorecard from './DocumentScorecard';
 import ExplainabilityCard from './ExplainabilityCard';
 import MultiAgentThoughtProcess from './MultiAgentThoughtProcess';
-import { Languages, Globe } from 'lucide-react';
+import { Languages, Globe, CheckCircle } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { applyForScheme } from '@/services/api';
 
 const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
     const [displayedText, setDisplayedText] = useState('');
@@ -35,7 +38,7 @@ const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => voi
         return () => clearInterval(intervalId);
     }, [text]);
 
-    return <div className="leading-relaxed whitespace-pre-wrap">{displayedText}</div>;
+    return <div className="leading-relaxed font-medium text-foreground/90">{displayedText}</div>;
 };
 
 interface Source {
@@ -155,6 +158,16 @@ export default function ChatInterface() {
         } finally { setIsLoading(false); }
     };
 
+    const handleSchemeApply = async (schemeTitle: string) => {
+        const userId = user?.id || 'demo-user';
+        try {
+            const res = await applyForScheme(userId, schemeTitle);
+            alert(res.message || `Applied for ${schemeTitle}`);
+        } catch (error) {
+            alert("Failed to apply. Please try again.");
+        }
+    };
+
     const DIALECTS = [
         { code: 'hi', name: 'Hindi (Standard)' },
         { code: 'hi-rural', name: 'Hindi (Gramin)' },
@@ -243,10 +256,10 @@ export default function ChatInterface() {
                                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
                                     <div className={`
-                                         p-5 sm:p-7 rounded-2xl relative shadow-sm
+                                         p-4 sm:p-5 rounded-2xl relative shadow-sm
                                          ${msg.role === 'user'
                                             ? 'max-w-[85%] sm:max-w-[70%] bg-primary text-white'
-                                            : 'w-full sm:max-w-[90%] bg-card border border-border/50 text-foreground'}
+                                            : 'w-full sm:max-w-[95%] bg-card border border-border/50 text-foreground'}
                                      `}>
 
                                         {/* User Federated Learning Badge */}
@@ -257,17 +270,17 @@ export default function ChatInterface() {
                                             </div>
                                         )}
                                         {msg.role === 'assistant' && msg.isTyping ? (
-                                            <div className="font-bold text-base leading-relaxed">
+                                            <div className="text-base leading-relaxed">
                                                 <Typewriter text={msg.text} onComplete={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isTyping: false } : m))} />
                                             </div>
                                         ) : (
                                             <div className="space-y-4">
                                                 {msg.role === 'assistant' && (
                                                     <div className={`
-                                                        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2
+                                                        inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest mb-3
                                                         ${msg.provenance === 'verified_doc'
-                                                            ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                                                            : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'}
+                                                            ? 'bg-success/10 text-success border border-success/20'
+                                                            : 'bg-accent/10 text-accent border border-accent/20'}
                                                     `}>
                                                         {msg.provenance === 'verified_doc' ? (
                                                             <>
@@ -282,7 +295,35 @@ export default function ChatInterface() {
                                                         )}
                                                     </div>
                                                 )}
-                                                <p className="whitespace-pre-wrap leading-relaxed font-bold text-base tracking-normal">{msg.text}</p>
+                                                <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed font-medium">
+                                                    <ReactMarkdown
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                                                            a: ({ href, children }) => (
+                                                                <a
+                                                                    href={href}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-1 text-primary hover:underline font-bold decoration-primary/30 underline-offset-4"
+                                                                >
+                                                                    {children}
+                                                                    <ExternalLink className="w-2.5 h-2.5" />
+                                                                </a>
+                                                            ),
+                                                            ul: ({ children }) => <ul className="space-y-1 mb-4 list-none">{children}</ul>,
+                                                            li: ({ children }) => (
+                                                                <li className="flex items-start gap-2 text-sm">
+                                                                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+                                                                    <span>{children}</span>
+                                                                </li>
+                                                            ),
+                                                            strong: ({ children }) => <strong className="font-black text-foreground underline decoration-primary/20 decoration-2 underline-offset-2">{children}</strong>,
+                                                        }}
+                                                    >
+                                                        {msg.text}
+                                                    </ReactMarkdown>
+                                                </div>
 
                                                 {/* Explainability Section */}
                                                 {msg.explainability && (
@@ -317,6 +358,7 @@ export default function ChatInterface() {
                                                                     benefit={s.benefit}
                                                                     logo={s.logo}
                                                                     related={s.graph_recommendations}
+                                                                    onApply={handleSchemeApply}
                                                                 />
                                                                 {/* Agentic Form Draft — Extraordinary Feature */}
                                                                 {msg.text.includes("Form") && (
@@ -347,8 +389,9 @@ export default function ChatInterface() {
 
                                         {msg.audio && <div className="mt-6 pt-6 border-t border-border/10"><AudioPlayer src={msg.audio} /></div>}
 
-                                        <div className={`text-[9px] font-bold uppercase tracking-wider mt-4 opacity-50 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                                            {msg.role === 'user' ? 'Sent' : 'Verified Information'}
+                                        <div className={`text-[8px] font-black uppercase tracking-[0.2em] mt-4 flex items-center gap-2 ${msg.role === 'user' ? 'justify-end text-white/60' : 'justify-start text-muted-foreground'}`}>
+                                            <div className={`w-1 h-1 rounded-full ${msg.role === 'user' ? 'bg-white/40' : 'bg-success'}`} />
+                                            {msg.role === 'user' ? 'Transmission Secure' : 'Authenticated Data'}
                                         </div>
                                     </div>
                                 </motion.div>

@@ -164,6 +164,7 @@ def xray_traced(segment_name: str):
         def wrapper(*args, **kwargs):
             t_obj = uuid4()
             hex_id = str(t_obj.hex)
+            # Ensure hex_id is long enough before slicing, though uuid hex is always 32 chars
             trace_id = f"1-{hex(int(time.time()))[2:]}-{hex_id[:24]}"
             start = time.perf_counter()
             log_event('xray_segment_start', {

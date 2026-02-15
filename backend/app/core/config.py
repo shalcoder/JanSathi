@@ -93,7 +93,11 @@ class Config:
     def validate():
         """Ensure critical env vars are set in production."""
         if os.environ.get('NODE_ENV') == 'production':
-            required = ['SECRET_KEY', 'DATABASE_URL', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']
+            use_dynamo = os.getenv("USE_DYNAMODB", "false").lower() == "true"
+            required = ['SECRET_KEY', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']
+            if not use_dynamo:
+                required.append('DATABASE_URL')
+                
             for var in required:
                 if not os.environ.get(var):
                     raise RuntimeError(f"Missing required environment variable: {var}")

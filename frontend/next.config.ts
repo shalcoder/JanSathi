@@ -4,7 +4,7 @@ import withPWAModule from "@ducanh2912/next-pwa";
 const withPWA = withPWAModule({
   dest: "public",
   register: true,
-  skipWaiting: true,
+  // skipWaiting: true, // Deprecated/Invalid in newer version
   disable: process.env.NODE_ENV === "development",
 });
 

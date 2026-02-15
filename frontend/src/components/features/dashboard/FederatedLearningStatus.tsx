@@ -8,14 +8,13 @@ export default function FederatedLearningStatus() {
     const [privacyBudget, setPrivacyBudget] = useState(100);
     const [lastContribution, setLastContribution] = useState<string | null>(null);
 
-    // Simulate Federated Learning Cycle
-    useEffect(() => {
-        const cycle = setInterval(() => {
-            startTrainingRound();
-        }, 15000); // New round every 15 seconds
-
-        return () => clearInterval(cycle);
-    }, []);
+    const finishRound = () => {
+        setIsTraining(false);
+        setProgress(100);
+        setRound(prev => prev + 1);
+        setPrivacyBudget(prev => Math.max(0, prev - 0.5)); // Consumpte privacy budget
+        setLastContribution(new Date().toLocaleTimeString());
+    };
 
     const startTrainingRound = () => {
         setIsTraining(true);
@@ -34,13 +33,14 @@ export default function FederatedLearningStatus() {
         }, 500);
     };
 
-    const finishRound = () => {
-        setIsTraining(false);
-        setProgress(100);
-        setRound(prev => prev + 1);
-        setPrivacyBudget(prev => Math.max(0, prev - 0.5)); // Consumpte privacy budget
-        setLastContribution(new Date().toLocaleTimeString());
-    };
+    // Simulate Federated Learning Cycle
+    useEffect(() => {
+        const cycle = setInterval(() => {
+            startTrainingRound();
+        }, 15000); // New round every 15 seconds
+
+        return () => clearInterval(cycle);
+    }, []);
 
     return (
         <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-xl border border-white/10 p-4 shadow-xl overflow-hidden relative group">

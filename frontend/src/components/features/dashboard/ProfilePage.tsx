@@ -18,34 +18,47 @@ import {
     ArrowUpRight,
     Activity
 } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 const ProfilePage = () => {
+    const { user, isLoaded } = useUser();
     const [profile, setProfile] = useState({
-        firstName: 'Rajesh',
-        lastName: 'Kumar',
-        email: 'rajesh.k@jansathi.in',
-        location: 'Varanasi, Uttar Pradesh',
+        firstName: '',
+        lastName: '',
+        email: '',
+        location: 'Update Location',
         language: 'Hindi',
-        notifications: 'SMS & Voice'
+        notifications: 'SMS & Voice',
+        kycStatus: 'Pending Verification'
     });
 
     React.useEffect(() => {
-        const userStr = localStorage.getItem('jansathi_user');
-        if (userStr) {
-            try {
-                const userData = JSON.parse(userStr);
-                const nameParts = (userData.name || '').split(' ');
+        if (isLoaded && user) {
+            // Load custom overrides from local storage if any
+            const stored = localStorage.getItem('jansathi_user_profile');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                setProfile(prev => ({ ...prev, ...parsed }));
+            } else {
+                // Default to Clerk data
                 setProfile(prev => ({
                     ...prev,
-                    firstName: nameParts[0] || 'Citizen',
-                    lastName: nameParts.slice(1).join(' ') || 'User',
-                    email: userData.email || prev.email
+                    firstName: user.firstName || 'Citizen',
+                    lastName: user.lastName || '',
+                    email: user.primaryEmailAddress?.emailAddress || '',
+                    // Keep location/kyc as default placeholders if not in storage
                 }));
-            } catch (e) {
-                console.error("Failed to parse user data in Profile", e);
             }
         }
-    }, []);
+    }, [isLoaded, user]);
+
+    const handleProfileSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setProfile(editForm);
+        // Persist local edits
+        localStorage.setItem('jansathi_user_profile', JSON.stringify(editForm));
+        setIsProfileModalOpen(false);
+    };
 
     const [familyMembers, setFamilyMembers] = useState([
         { relation: "Spouse", name: "Suman Devi", age: "32", status: "Covered", initials: "SD" },
@@ -56,13 +69,12 @@ const ProfilePage = () => {
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isFamilyModalOpen, setIsFamilyModalOpen] = useState(false);
     const [editForm, setEditForm] = useState({ ...profile });
-    const [familyForm, setFamilyForm] = useState({ relation: 'Child', name: '', age: '' });
+    // Sync editForm when profile changes (e.g. on load)
+    React.useEffect(() => {
+        setEditForm(profile);
+    }, [profile]);
 
-    const handleProfileSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setProfile(editForm);
-        setIsProfileModalOpen(false);
-    };
+    const [familyForm, setFamilyForm] = useState({ relation: 'Child', name: '', age: '' });
 
     const handleFamilySubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -114,9 +126,9 @@ const ProfilePage = () => {
                             </p>
 
                             <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                                <div className="px-4 py-2 bg-secondary/50 border border-border rounded-xl flex items-center gap-2">
-                                    <CheckCircle className="w-4 h-4 text-emerald-500" />
-                                    <span className="text-[10px] font-bold text-foreground opacity-60 uppercase tracking-widest">KYC Completed</span>
+                                <div className={`px-4 py-2 ${profile.kycStatus === 'KYC Completed' ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'} border rounded-xl flex items-center gap-2`}>
+                                    {profile.kycStatus === 'KYC Completed' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Activity className="w-4 h-4 text-amber-500" />}
+                                    <span className={`text-[10px] font-bold ${profile.kycStatus === 'KYC Completed' ? 'text-emerald-700' : 'text-amber-700'} uppercase tracking-widest`}>{profile.kycStatus}</span>
                                 </div>
                                 <div className="px-4 py-2 bg-secondary/50 border border-border rounded-xl flex items-center gap-2">
                                     <MapPin className="w-4 h-4 text-primary opacity-60" />
@@ -326,6 +338,13 @@ const ProfilePage = () => {
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Region / Location</label>
                                         <input type="text" value={editForm.location} onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary" required />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">KYC Status</label>
+                                        <select value={editForm.kycStatus} onChange={(e) => setEditForm(prev => ({ ...prev, kycStatus: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary appearance-none">
+                                            <option value="Pending Verification">Pending Verification</option>
+                                            <option value="KYC Completed">KYC Completed</option>
+                                        </select>
                                     </div>
                                     <button type="submit" className="w-full py-4 mt-4 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm hover:opacity-90 transition-opacity">
                                         Save Changes

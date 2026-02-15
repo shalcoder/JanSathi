@@ -40,6 +40,7 @@ class ApiStack(Stack):
         audio_bucket: s3.Bucket,
         uploads_bucket: s3.Bucket,
         kendra_index: kendra.CfnIndex,
+        state_machine_arn: str = None, # OPTIONAL: ARN from WorkflowStack
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -79,10 +80,11 @@ class ApiStack(Stack):
                 "BEDROCK_MODEL_ID": "anthropic.claude-3-5-sonnet-20240620-v1:0",
                 "BEDROCK_MAX_TOKENS": "1000",
                 "KENDRA_INDEX_ID": kendra_index.attr_id,
+                "STATE_MACHINE_ARN": state_machine_arn or "", # Env Var for WorkflowService
                 "NODE_ENV": "production",
-                "USE_DYNAMODB": "true",  # Flag to switch from SQLite
+                "USE_DYNAMODB": "true",
             },
-            tracing=_lambda.Tracing.ACTIVE,  # X-Ray tracing
+            tracing=_lambda.Tracing.ACTIVE,
             log_retention=logs.RetentionDays.ONE_MONTH,
         )
 
@@ -123,6 +125,15 @@ class ApiStack(Stack):
                 resources=["*"],
             )
         )
+
+        # Step Functions (Agri/Civic Workflow)
+        if state_machine_arn:
+            self.lambda_function.add_to_role_policy(
+                iam.PolicyStatement(
+                    actions=["states:StartExecution"],
+                    resources=[state_machine_arn],
+                )
+            )
 
         # SSM Parameter Store (for config)
         self.lambda_function.add_to_role_policy(

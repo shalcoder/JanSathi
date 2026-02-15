@@ -9,6 +9,10 @@ from app.services.bedrock_service import BedrockService
 from app.services.rag_service import RagService
 from app.services.polly_service import PollyService
 from app.services.workflow_service import WorkflowService
+from app.services.agent_service import AgentService
+from app.services.fl_service import FederatedLearningService
+from app.services.ivr_service import IVRService
+from app.services.whatsapp_service import WhatsAppService
 from app.core.utils import logger, normalize_query, log_event, timed
 from app.core.validators import (
     validate_query, validate_language, validate_user_id,
@@ -19,6 +23,62 @@ import uuid
 import os
 import json
 import time
+from app.models.models import db, Conversation, CommunityPost
+from bs4 import BeautifulSoup
+
+# ... existing imports ...
+
+# ============================================================
+# BLUEPRINT INITIALIZATION
+# ============================================================
+bp = Blueprint('api', __name__)
+
+# ============================================================
+# COMMUNITY / FORUM ENDPOINTS (RealDB)
+# ============================================================
+@bp.route('/community/posts', methods=['GET'])
+def get_community_posts():
+    """Get verified community posts from local database."""
+    try:
+        limit = request.args.get('limit', 20, type=int)
+        location = request.args.get('location')
+        
+        query = db.session.query(CommunityPost)
+        if location:
+            query = query.filter(CommunityPost.location.ilike(f"%{location}%"))
+            
+        posts = query.order_by(CommunityPost.timestamp.desc()).limit(limit).all()
+        return jsonify([p.to_dict() for p in posts])
+    except Exception as e:
+        logger.error(f"Community Error: {e}")
+        return jsonify([])
+
+@bp.route('/community/posts', methods=['POST'])
+def create_community_post():
+    """Create a new community post."""
+    try:
+        data = request.json
+        if not data.get('title') or not data.get('content'):
+            return jsonify({"error": "Title and Content are required"}), 400
+            
+        new_post = CommunityPost(
+            title=data['title'],
+            content=data['content'],
+            author=data.get('author', 'Anonymous'),
+            author_role=data.get('role', 'Citizen'),
+            location=data.get('location', 'India')
+        )
+        db.session.add(new_post)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "post": new_post.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"Post Creation Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 # ============================================================
 # DETECT DEPLOYMENT MODE (Lambda/DynamoDB vs Local/SQLite)
@@ -35,8 +95,6 @@ else:
     dynamo_repo = None
     logger.info("Using SQLite backend (local dev mode)")
 
-bp = Blueprint('api', __name__)
-
 # ============================================================
 # SERVICE INITIALIZATION
 # ============================================================
@@ -46,6 +104,14 @@ try:
     rag_service = RagService()
     polly_service = PollyService()
     workflow_service = WorkflowService()
+    # Multi-Channel Services
+    ivr_service = IVRService()
+    whatsapp_service = WhatsAppService()
+    
+    # Advanced AI Agents
+    agent_service = AgentService(bedrock_service, rag_service, polly_service)
+    fl_service = FederatedLearningService(min_clients=2)
+    
     if not USE_DYNAMODB:
         response_cache = ResponseCache(ttl_seconds=3600)
     logger.info("All services initialized.")
@@ -62,6 +128,22 @@ def index():
         "version": "2.0.0",
         "endpoints": ["/health", "/query", "/analyze", "/documents", "/history", "/schemes"]
     })
+
+@bp.route('/applications', methods=['GET'])
+def list_applications():
+    """List all scheme applications for a user."""
+    user_id = request.args.get('user_id', 'demo-user')
+    from app.models.models import SchemeApplication
+    apps = SchemeApplication.query.filter_by(user_id=user_id).all()
+    return jsonify([a.to_dict() for a in apps])
+
+@bp.route('/history', methods=['GET'])
+def get_user_history():
+    """Get conversation history."""
+    user_id = request.args.get('user_id', 'demo-user')
+    from app.models.models import Conversation
+    history = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.desc()).limit(50).all()
+    return jsonify([h.to_dict() for h in history])
 
 # ============================================================
 # DOCUMENT MANAGEMENT
@@ -318,57 +400,48 @@ def query():
             })
         else:
             # ============================================================
-            # RAG RETRIEVAL + BEDROCK GENERATION (cache miss)
+            # MULTI-AGENT ORCHESTRATION (Real Bedrock Agents)
             # ============================================================
-            # 1. Discover Intent
-            intent = rag_service.discover_intent(user_query)
+            log_event('agent_orch_start', {'query': safe_query_log})
             
-            # 2. Professional Retrieval (Hybrid Search)
-            context_docs = rag_service.retrieve(user_query)
+            # Use the new Multi-Agent Orchestrator (Reasoning + Explainability)
+            # This calls: Intent -> Kendra -> Bedrock (Reasoning) -> Json Output
+            # Orchestrate Multi-Agent Query
+            agent_response = agent_service.orchestrate_query(
+                user_query=user_query, 
+                language=language,
+                user_id=user_id
+            )
+        
+            answer_text = agent_response['text']
+            structured_sources = agent_response['structured_sources']
+            context_docs = agent_response['context']
+            provenance = agent_response['provenance']
+            explainability = agent_response['explainability']
+            confidence_score = explainability.get('confidence', 0.9)
             
-            # UNIQUE FEATURE: Sentinel Security Logging (Technical Excellence)
-            print(f"DEBUG: [Sentinel] Verifying query integrity for intent: {intent}")
-            security_check = rag_service.verify_digital_signature("QUERY_HASH")
-            
-            # UNIQUE FEATURE: Inject Market/Livelihood Data if intent is Market Access
-            if intent == "MARKET_ACCESS":
-                market_data = rag_service.get_market_prices()
-                context_docs.append(f"CURRENT MANDI PRICES: {json.dumps(market_data)}")
-                
-                # Agentic Livelihood matching
-                livelihood_matches = rag_service.match_livelihood(user_query)
-                context_docs.append(f"AGENTIC MATCHES: {json.dumps(livelihood_matches)}")
-                context_docs.append(f"SECURITY STATUS: {security_check['status']} via {security_check['provider']}")
-            
-            context_text = "\n".join(context_docs)
-            structured_sources = rag_service.get_structured_sources(user_query)
-
-            # 3. LLM Generation (with intent context)
-            response_data = bedrock_service.generate_response(user_query, context_text, language, intent)
-            
-            # Handle both string and dict responses for backward compatibility
-            if isinstance(response_data, dict):
-                answer_text = response_data['text']
-                provenance = response_data.get('provenance', 'unknown')
-            else:
-                answer_text = response_data
-                provenance = 'legacy'
+            # Log the full thought process (for debugging/observability)
+            log_event('agent_thought_process', {'steps': agent_response['execution_log']})
 
             # Cache the response
+            # In production, we might want to cache specific intents differently
             response_cache.set(user_query, language, answer_text, structured_sources)
             
-            log_event('cache_miss', {'query': safe_query_log, 'intent': intent, 'provenance': provenance})
+            log_event('cache_miss', {'query': safe_query_log, 'provenance': provenance})
 
         # Generate Audio
         audio_url = polly_service.synthesize(answer_text, language)
 
         # Save to History
         try:
+            confidence = 0.95 if not cache_hit else 1.0 # Mock confidence for now
             new_conv = Conversation(
                 query=user_query,
                 answer=answer_text,
                 language=language,
-                user_id=user_id
+                user_id=user_id,
+                provenance=provenance if not cache_hit else {"source": "cache"},
+                confidence=confidence
             )
             db.session.add(new_conv)
             db.session.commit()
@@ -391,7 +464,8 @@ def query():
             "answer": {
                 "text": answer_text,
                 "audio": audio_url,
-                "provenance": provenance if 'provenance' in locals() else 'legacy'
+                "provenance": provenance if 'provenance' in locals() else 'legacy',
+                "explainability": explainability if 'explainability' in locals() else None
             },
             "context": context_docs,
             "structured_sources": structured_sources,
@@ -417,15 +491,15 @@ def get_history():
         limit = request.args.get('limit', 10, type=int)
         
         try:
-            all_conversations = db.session.query(Conversation).order_by(
+            query = db.session.query(Conversation)
+            if user_id:
+                query = query.filter(Conversation.user_id == user_id)
+            
+            all_conversations = query.order_by(
                 Conversation.timestamp.desc()
             ).limit(limit).all()
             
-            if user_id:
-                filtered = [c for c in all_conversations if c.user_id == user_id]
-                return jsonify([c.to_dict() for c in filtered[:limit]])
-            else:
-                return jsonify([c.to_dict() for c in all_conversations])
+            return jsonify([c.to_dict() for c in all_conversations])
                 
         except Exception as db_error:
             logger.error(f"Database query error: {db_error}")
@@ -531,3 +605,65 @@ def start_workflow():
 def get_workflow_status(execution_id):
     result = workflow_service.get_workflow_status(execution_id)
     return jsonify(result)
+
+# ============================================================
+# MULTI-CHANNEL WEBHOOKS (IVR & WhatsApp)
+# ============================================================
+
+@bp.route('/ivr/webhook', methods=['POST'])
+def ivr_webhook():
+    """Twilio Webhook for Voice Calls."""
+    from_number = request.form.get('From', 'Unknown')
+    lang = request.args.get('lang', 'hi-IN')
+    
+    # 1. Orchestrate JanSathi Logic
+    ivr_data = ivr_service.handle_incoming_call(from_number)
+    
+    # 2. Return TwiML
+    twiml = ivr_service.generate_twiml(ivr_data['message'], lang)
+    return twiml, 200, {'Content-Type': 'text/xml'}
+
+@bp.route('/whatsapp/webhook', methods=['POST', 'GET'])
+def whatsapp_webhook():
+    """Meta WhatsApp Webhook."""
+    if request.method == 'GET':
+        # Webhook Verification (for Meta Setup)
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+        return challenge if mode == 'subscribe' else "Invalid", 200
+
+    # Handle incoming message
+    data = request.json
+    if data:
+        processed = whatsapp_service.process_incoming_message(data)
+        # In production, we trigger an async background task to respond via WhatsApp API
+        logger.info(f"WhatsApp Processed: {processed}")
+    
+    return jsonify({"status": "received"}), 200
+
+# ============================================================
+# FEDERATED LEARNING ENDPOINTS (Real Implementation)
+# ============================================================
+
+@bp.route('/fl/register', methods=['POST'])
+def register_fl_client():
+    """Register a client for Federated Learning."""
+    data = request.json or {}
+    client_id = data.get('client_id', 'anon')
+    return jsonify(fl_service.register_client(client_id))
+
+@bp.route('/fl/update', methods=['POST'])
+def submit_fl_update():
+    """Receive encrypted model updates (gradients)."""
+    data = request.json or {}
+    client_id = data.get('client_id')
+    weights = data.get('weights') # In practice, huge JSON array
+    
+    result = fl_service.submit_update(client_id, {'weights': weights, 'num_samples': 1})
+    return jsonify(result)
+
+@bp.route('/fl/metrics', methods=['GET'])
+def get_fl_metrics():
+    """Get global FL training progress."""
+    return jsonify(fl_service.get_metrics())

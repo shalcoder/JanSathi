@@ -1,32 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 
 export function useAuth() {
     const router = useRouter();
-    const [user, setUser] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const { user, isLoaded: isUserLoaded } = useUser();
+    const { signOut: clerkSignOut, isLoaded: isAuthLoaded } = useClerkAuth();
 
-    useEffect(() => {
-        // Check if user is authenticated (demo mode - checks localStorage)
-        const storedUser = localStorage.getItem('jansathi_user');
+    const loading = !isUserLoaded || !isAuthLoaded;
 
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (error) {
-                console.error('Failed to parse user data:', error);
-                localStorage.removeItem('jansathi_user');
-            }
-        }
-
-        setLoading(false);
-    }, []);
-
-    const signOut = () => {
-        localStorage.removeItem('jansathi_user');
-        setUser(null);
+    const signOut = async () => {
+        await clerkSignOut();
         router.push('/sign-in');
     };
 
@@ -36,5 +21,16 @@ export function useAuth() {
         }
     };
 
-    return { user, loading, signOut, requireAuth, isAuthenticated: !!user };
+    return {
+        user: user ? {
+            email: user.primaryEmailAddress?.emailAddress,
+            name: user.fullName || user.username || user.firstName,
+            imageUrl: user.imageUrl,
+            id: user.id
+        } : null,
+        loading,
+        signOut,
+        requireAuth,
+        isAuthenticated: !!user
+    };
 }

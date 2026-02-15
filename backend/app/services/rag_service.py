@@ -22,6 +22,7 @@ class RagService:
     def __init__(self):
         self.kendra_index_id = os.getenv('KENDRA_INDEX_ID', 'mock-index')
         self.region = os.getenv('AWS_REGION', 'us-east-1')
+        self.app_context = None # Initialize to avoid lint error
         
         # Initialize AWS Kendra Client
         import boto3
@@ -36,129 +37,12 @@ class RagService:
         self.corpus = []
         
         # 1. Base Knowledge (Schemes)
-        self.schemes = [
-            {
-                "id": "pm-kisan",
-                "title": "PM-KISAN Samman Nidhi",
-                "text": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi): Provides ₹6,000 per year income support to all landholding farmer families in three equal installments of ₹2,000 each. Launched on 1st December 2018. Eligibility: All landholding farmers. Documents: Aadhaar, bank account, land records. Apply at pmkisan.gov.in or nearest CSC. Helpline: 155261.",
-                "keywords": ["kisan", "farmer", "money", "6000", "pm kisan", "agriculture", "farming", "crop", "land", "kisaan"],
-                "link": "https://pmkisan.gov.in",
-                "benefit": "₹6,000/year Income Support",
-                "ministry": "Ministry of Agriculture",
-                "category": "agriculture",
-                "related": ["fasal-bima", "kisan-credit", "soil-health"]
-            },
-            {
-                "id": "ayushman",
-                "title": "Ayushman Bharat - PMJAY",
-                "text": "Ayushman Bharat (PM Jan Arogya Yojana): Provides health insurance coverage of ₹5 Lakh per family per year for secondary and tertiary care hospitalization. Covers 1,393 procedures including surgery, medical care, and diagnostics. Eligibility: Based on SECC 2011 deprivation criteria. No premium required. Apply via pmjay.gov.in or Ayushman Mitra at empanelled hospitals.",
-                "keywords": ["health", "insurance", "medical", "hospital", "ayushman", "treatment", "disease", "doctor", "medicine", "surgery", "bimari"],
-                "link": "https://pmjay.gov.in",
-                "benefit": "₹5 Lakh Free Health Cover",
-                "ministry": "Ministry of Health",
-                "category": "health",
-                "related": ["matru-vandana", "jan-aushadhi"]
-            },
-            {
-                "id": "fasal-bima",
-                "title": "PM Fasal Bima Yojana (PMFBY)",
-                "text": "Pradhan Mantri Fasal Bima Yojana (PMFBY): Crop insurance scheme providing financial support to farmers suffering crop loss from unforeseen events like drought, flood, hailstorm, cyclone, pest attack. Premium: 2% for Kharif, 1.5% for Rabi, 5% for commercial/horticultural crops. Claim within 72 hours of crop damage. Apply via bank, CSC, or pmfby.gov.in.",
-                "keywords": ["crop", "damage", "bima", "insurance", "loss", "cyclone", "flood", "drought", "fasal", "weather"],
-                "link": "https://pmfby.gov.in",
-                "benefit": "Crop Loss Insurance",
-                "ministry": "Ministry of Agriculture",
-                "category": "agriculture",
-                "related": ["pm-kisan", "kisan-credit"]
-            },
-            {
-                "id": "awas",
-                "title": "PM Awas Yojana (PMAY)",
-                "text": "Pradhan Mantri Awas Yojana: Housing for All by providing affordable housing. Gramin (Rural): Up to ₹1.30 lakh in plains, ₹1.50 lakh in hilly areas for construction of pucca house. Urban: Interest subsidy of 6.5% on home loans for EWS/LIG. Eligibility: No pucca house anywhere in India. Apply via gram panchayat (rural) or ULB (urban).",
-                "keywords": ["house", "awas", "ghar", "home", "housing", "construction", "build", "rent", "shelter", "makan"],
-                "link": "https://pmaymis.gov.in/",
-                "benefit": "₹1.30-2.67 Lakh Housing Aid",
-                "ministry": "Ministry of Housing",
-                "category": "housing",
-                "related": ["jandhan", "saubhagya-bijli"]
-            },
-            {
-                "id": "mudra",
-                "title": "PM MUDRA Yojana",
-                "text": "Pradhan Mantri MUDRA Yojana: Provides loans up to ₹10 lakh for non-corporate, non-farm small/micro enterprises. Three categories: Shishu (up to ₹50,000), Kishore (₹50,000 to ₹5 lakh), Tarun (₹5 lakh to ₹10 lakh). No collateral required. Apply at any bank, NBFC, or MFI. No processing fee for Shishu loans.",
-                "keywords": ["loan", "mudra", "business", "money", "enterprise", "shop", "startup", "self-employed", "vyapaar", "dukaan"],
-                "link": "https://www.mudra.org.in/",
-                "benefit": "Loans up to ₹10 Lakh",
-                "ministry": "Ministry of Finance",
-                "category": "financial",
-                "related": ["svanidhi", "skill-india"]
-            },
-            {
-                "id": "sukanya",
-                "title": "Sukanya Samriddhi Yojana",
-                "text": "Sukanya Samriddhi Yojana: Savings scheme for girl child. Interest rate 8.2% p.a. (highest among small savings). Minimum deposit ₹250/year, maximum ₹1.5 lakh/year. Account opens from birth to age 10. Matures at 21 years. 50% withdrawal allowed at age 18 for education. Tax-free under Section 80C.",
-                "keywords": ["girl", "daughter", "beti", "education", "savings", "sukanya", "ladki", "bachchi", "school", "college"],
-                "link": "https://www.nsiindia.gov.in/",
-                "benefit": "8.2% Interest Girl Child Savings",
-                "ministry": "Ministry of Finance",
-                "category": "education",
-                "related": ["matru-vandana", "jandhan"]
-            },
-            {
-                "id": "pm-vishwakarma",
-                "title": "PM Vishwakarma Yojana",
-                "text": "PM Vishwakarma: Support scheme for traditional artisans and craftspeople working with hands and tools. Covers 18 trades including carpenter, blacksmith, goldsmith, potter, tailor, washerman. Benefits: Recognition (PM Vishwakarma certificate), skill upgradation, toolkit incentive of ₹15,000, collateral-free credit up to ₹3 lakh at 5% interest.",
-                "keywords": ["artisan", "craft", "carpenter", "blacksmith", "tailor", "potter", "vishwakarma", "karigar", "mistri", "darzi", "lohar"],
-                "link": "https://pmvishwakarma.gov.in/",
-                "benefit": "₹15K Toolkit + ₹3 Lakh Loan",
-                "ministry": "Ministry of MSME",
-                "category": "employment",
-                "related": ["mudra", "skill-india"]
-            },
-            {
-                "id": "matru-vandana",
-                "title": "PM Matru Vandana Yojana",
-                "text": "Pradhan Mantri Matru Vandana Yojana (PMMVY): Cash incentive of ₹11,000 for first child and ₹6,000 for second child (girl only) for pregnant women and lactating mothers. Compensation for wage loss during pregnancy. Eligibility: All pregnant women for first living child. Apply at nearest Anganwadi Centre or health facility.",
-                "keywords": ["pregnant", "mother", "baby", "child", "maternity", "birth", "delivery", "garbhwati", "maa", "bachcha"],
-                "link": "https://wcd.nic.in/",
-                "benefit": "₹6,000-11,000 Maternity Benefit",
-                "ministry": "Ministry of Women & Child",
-                "category": "health",
-                "related": ["ayushman", "jandhan"]
-            },
-            {
-                "id": "jandhan",
-                "title": "PM Jan Dhan Yojana",
-                "text": "Pradhan Mantri Jan Dhan Yojana: Financial inclusion scheme providing zero-balance bank accounts with RuPay debit card and ₹2 lakh accident insurance. Overdraft facility of ₹10,000 for eligible accounts. Life cover of ₹30,000 for accounts opened before Jan 2015. Apply at any bank branch with Aadhaar/voter ID.",
-                "keywords": ["bank", "account", "jan dhan", "debit card", "insurance", "zero balance", "khata", "paisa"],
-                "link": "https://pmjdy.gov.in/",
-                "benefit": "Zero Balance Bank Account + Insurance",
-                "ministry": "Ministry of Finance",
-                "category": "financial",
-                "related": ["mudra", "awas"]
-            },
-            {
-                "id": "skill-india",
-                "title": "Skill India Mission",
-                "text": "Skill India Mission: Provides free skill training in 40+ sectors to Indian youth. Includes PMKVY, NAPS, and Jan Shikshan Sansthan. Linkage to employment and entrepreneurship.",
-                "keywords": ["training", "skill", "job", "career", "employment", "learning"],
-                "link": "https://skillindia.gov.in",
-                "benefit": "Certified Skill Training",
-                "ministry": "Ministry of Skill Development",
-                "category": "employment",
-                "related": ["mudra", "pm-vishwakarma"]
-            },
-            {
-                "id": "svanidhi",
-                "title": "PM SVANidhi",
-                "text": "Micro-credit facility for street vendors to restart their livelihoods. Loans up to ₹50,000 with interest subsidy and digital repayment incentives.",
-                "keywords": ["vendor", "street", "loan", "thela", "hawker"],
-                "link": "https://pmsvanidhi.mohua.gov.in",
-                "benefit": "₹10,000-50,000 Working Capital Loan",
-                "ministry": "Ministry of Housing",
-                "category": "financial",
-                "related": ["mudra", "jandhan"]
-            }
-        ]
+        self.schemes = []
+        try:
+            # Lazy load from DB later to avoid import cycles
+            pass
+        except Exception as e:
+            logger.error(f"DB Scheme Load Error: {e}")
 
         # 3. Load Uploaded Docs (Local RAG for Citizen Docs)
         self.upload_dir = os.path.join(os.getcwd(), 'uploads')
@@ -168,10 +52,46 @@ class RagService:
 
         # 4. Initialize Vector Indexing
         if HAS_SKLEARN:
+            # Load initial schemes from DB if empty
+            if not self.schemes:
+                self._load_schemes_from_db()
             self.refresh_vector_index()
     
         # Mocking AWS parts
         self.use_aws = False
+
+    def _load_schemes_from_db(self):
+        """Load schemes from SQLite database."""
+        try:
+            from app.models.models import Scheme
+            
+            # If app_context is available, use it (for service init)
+            if self.app_context:
+                with self.app_context:
+                    self._query_schemes(Scheme)
+            else:
+                # If running within a request, db session is already active
+                try:
+                    self._query_schemes(Scheme)
+                except Exception:
+                     # Fallback if no context at all
+                     pass
+
+        except Exception as e:
+            # Silently fail if app context not ready (will retry on first request)
+            pass 
+            
+    def _query_schemes(self, Scheme):
+        schemes = Scheme.query.all()
+        if schemes:
+            self.schemes = [s.to_dict() for s in schemes]
+            print(f"Loaded {len(self.schemes)} schemes from DB.")
+        else:
+            print("No schemes in DB.") 
+        
+    def set_app_context(self, app_context):
+        self.app_context = app_context
+        self._load_schemes_from_db()
 
     def _load_uploaded_docs(self):
         """Read .txt files from uploads/ and add them to the knowledge base."""
@@ -223,17 +143,23 @@ class RagService:
     # HYBRID SEARCH (Vector + Graph)
     # ============================================================
 
-    def retrieve(self, query):
+    def retrieve(self, query, language='hi', user_profile=None, user_docs=None):
         """Standard retrieval interface — Hybrid: Kendra (Global) + Local (Citizen Docs)."""
         all_matches = []
         
+        # Add user documents to temporary search context
+        if user_docs:
+            for doc in user_docs:
+                all_matches.append(f"User Document ({doc['type']}): {doc['filename']} is available.")
+
         # 1. Kendra Search (Production Global schemes)
         if self.kendra and self.kendra_index_id != 'mock-index':
             kendra_results = self._kendra_search(query)
             all_matches.extend(kendra_results)
             
         # 2. Local Hybrid Search (Mock Schemes + Citizen Uploads)
-        scored_docs = self._hybrid_search(query)
+        # Personalized filtering logic
+        scored_docs = self._hybrid_search(query, user_profile=user_profile)
         for doc, _ in scored_docs:
             all_matches.append(f"{doc['text']} [Source: {doc['link']}]")
             
@@ -307,15 +233,19 @@ class RagService:
             
         return final_results
 
-    def _hybrid_search(self, query, top_k=5, threshold=0.45):
+    def _hybrid_search(self, query, top_k=5, threshold=0.45, user_profile=None):
         """
         Combines TF-IDF Semantic similarity with Keyword overlap.
-        Uses a threshold to filter out weak matches (false positives).
+        Enriched with User Profile boosting for personalization.
         """
         if not query: return []
         
         query_lower = str(query).lower()
         results_map = {} # id -> (doc, score)
+
+        # Profile-based Category Boost
+        user_cat = user_profile.get('occupation_category') if user_profile else None
+        location = user_profile.get('location') if user_profile else None
 
         # 1. Vector Search (Semantic)
         if HAS_SKLEARN and self.vectorizer is not None and self.vector_matrix is not None:
@@ -345,6 +275,13 @@ class RagService:
             title = str(doc.get('title', '')).lower()
             if title in query_lower:
                 k_score += 0.7
+
+            # PERSONALIZATION BOOST
+            if user_cat and doc.get('category') == user_cat:
+                k_score += 0.5 # Substantial boost for matching category
+            
+            if location and location.lower() in str(doc.get('text', '')).lower():
+                k_score += 0.3 # Boost for local relevance
 
             if k_score > 0:
                 did = doc['id']

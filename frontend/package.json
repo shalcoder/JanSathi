@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.10.3",
+    "@clerk/themes": "^2.4.52",
+    "@ducanh2912/next-pwa": "^10.2.9",
     "axios": "^1.13.4",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.0",
@@ -17,7 +19,8 @@
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "workbox-window": "^7.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

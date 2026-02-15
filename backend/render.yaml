@@ -1,7 +1,7 @@
 services:
   - type: web
     name: jansathi-backend
-    env: docker
+    runtime: docker
     region: singapore
     plan: free
     envVars:

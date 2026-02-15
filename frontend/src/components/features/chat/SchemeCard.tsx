@@ -10,9 +10,23 @@ interface SchemeCardProps {
     benefit: string;
     logo?: string;
     related?: string[];
+    onApply?: (title: string) => void;
 }
 
-const SchemeCard: React.FC<SchemeCardProps> = ({ title, description, link, benefit, logo, related }) => {
+const SchemeCard: React.FC<SchemeCardProps> = ({ title, description, link, benefit, logo, related, onApply }) => {
+    const [isApplying, setIsApplying] = React.useState(false);
+
+    const handleApply = async (e: React.MouseEvent) => {
+        if (onApply) {
+            e.preventDefault();
+            setIsApplying(true);
+            try {
+                await onApply(title);
+            } finally {
+                setIsApplying(false);
+            }
+        }
+    };
     return (
         <div
             className="flex flex-col bg-card rounded-2xl border border-border overflow-hidden transition-all duration-300 group shadow-sm hover:shadow-md"
@@ -80,15 +94,26 @@ const SchemeCard: React.FC<SchemeCardProps> = ({ title, description, link, benef
                     </div>
                 </div>
 
-                <a
-                    href={link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 text-xs font-bold text-white bg-primary rounded-xl transition-all shadow-md hover:opacity-90 gap-3"
-                >
-                    <span>Apply Now</span>
-                    <ArrowUpRight className="w-5 h-5" />
-                </a>
+                {onApply ? (
+                    <button
+                        onClick={handleApply}
+                        disabled={isApplying}
+                        className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 text-xs font-bold text-white bg-primary rounded-xl transition-all shadow-md hover:opacity-90 gap-3 disabled:opacity-50"
+                    >
+                        <span>{isApplying ? "Applying..." : "Apply Now"}</span>
+                        {isApplying ? <Activity className="w-5 h-5 animate-spin" /> : <ArrowUpRight className="w-5 h-5" />}
+                    </button>
+                ) : (
+                    <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 text-xs font-bold text-white bg-primary rounded-xl transition-all shadow-md hover:opacity-90 gap-3"
+                    >
+                        <span>Apply Now</span>
+                        <ArrowUpRight className="w-5 h-5" />
+                    </a>
+                )}
             </div>
         </div>
     );

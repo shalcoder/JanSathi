@@ -85,6 +85,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-success: var(--success);
+  --color-muted-foreground: var(--secondary-foreground);
 
   --animate-mesh: mesh 12s ease infinite;
   --animate-text-shimmer: text-shimmer 4s ease infinite;

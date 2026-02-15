@@ -30,7 +30,7 @@
 - **FR-002**: Voice output support (Text-to-Speech)
 - **FR-003**: Text-based chat interface
 - **FR-004**: Document upload and analysis capability
-- **FR-005**: Multi-language support (Hindi, English, Kannada, Tamil, Telugu, Bengali)
+- **FR-005**: Multi-language support (Hindi, English, Kannada, Tamil, Telugu, Bengali, Marathi, Gujarati, Punjabi)
 
 #### 2. Government Scheme Information
 - **FR-006**: Query processing for government schemes (PM Kisan, Ayushman Bharat, etc.)
@@ -51,11 +51,14 @@
 - **FR-017**: Crop insurance scheme guidance
 - **FR-018**: Subsidy information and application process
 
-#### 5. User Management
+#### 5. User Management & Agentic Actions
 - **FR-019**: User session management
 - **FR-020**: Conversation history storage
 - **FR-021**: User preference settings
 - **FR-022**: Multi-device synchronization
+- **FR-023**: One-Click Application Submission (Directly from Chat/Cards)
+- **FR-024**: Deterministic Eligibility Verification (Ground-truth policy checks)
+- **FR-025**: Personal Document RAG (AI learns from uploaded .txt files)
 
 ---
 
@@ -65,12 +68,13 @@
 
 #### Backend Requirements
 - **TR-001**: Python Flask REST API
-- **TR-002**: AWS Bedrock integration for AI responses
+- **TR-002**: AWS Bedrock integration (Claude 3.5 Sonnet)
 - **TR-003**: AWS Polly for text-to-speech synthesis
 - **TR-004**: AWS Transcribe for speech-to-text conversion
 - **TR-005**: AWS S3 for audio file storage
-- **TR-006**: SQLite database for conversation history
-- **TR-007**: RAG (Retrieval Augmented Generation) system for government data
+- **TR-006**: SQLite database for history and application tracking
+- **TR-007**: Advanced Hybrid RAG (Semantic + Keyword) with profile boosting
+- **TR-019**: Deterministic Python Rules Engine for policy compliance
 
 #### Frontend Requirements
 - **TR-008**: Next.js 16 with TypeScript
@@ -180,7 +184,7 @@
 
 ### AWS Budget Constraints
 - **CR-001**: Monthly AWS costs < $10 USD
-- **CR-002**: Bedrock usage optimization (Claude 3 Haiku)
+- **CR-002**: Bedrock usage optimization (Claude 3.5 Sonnet)
 - **CR-003**: S3 storage lifecycle management
 - **CR-004**: Free tier service prioritization
 - **CR-005**: Cost monitoring and alerting

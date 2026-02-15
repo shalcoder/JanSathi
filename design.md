@@ -15,9 +15,9 @@
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   PWA Cache     │    │   SQLite DB     │    │   CloudWatch    │
-│   (Service      │    │   (Conversations│    │   (Monitoring)  │
-│    Worker)      │    │    & History)   │    │                 │
+│   PWA Cache     │    │   SQLite DB     │    │   Trust Engine  │
+│   (Service      │    │ (Applications,  │    │  (Deterministic │
+│    Worker)      │    │  User Data)     │    │   Rules Engine) │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -117,25 +117,29 @@ backend/
 #### Service Responsibilities
 
 **BedrockService**
-- AI model interaction (Claude 3 Haiku)
-- Prompt engineering and optimization
-- Response formatting and validation
-- Cost monitoring and limits
+- Multi-Agent Orchestration (Intent Parsing, Reasoning, Auditing)
+- AI model interaction (Claude 3.5 Sonnet)
+- Composite confidence scoring (Rules + LLM)
 - Fallback to mock responses
 
 **PollyService**
 - Text-to-speech synthesis
-- Multi-language voice selection
-- Audio file generation and storage
+- Multi-language voice selection (Hindi, English, Kannada, Tamil, Telugu, Bengali)
 - S3 integration for audio hosting
-- Caching for repeated phrases
+
+**TranscribeService**
+- Speech-to-text conversion for voice queries
+- Real-time transcription processing
+
+**RulesEngine**
+- Deterministic eligibility checking
+- Code-based policy verification
+- Detailed logic breakdown for users
 
 **RAGService**
-- Government scheme data retrieval
-- Context-aware search
-- Document similarity matching
-- Structured response formatting
-- Mock data fallback
+- Government scheme data retrieval (Hybrid Search)
+- Personalized document indexing (.txt document reading)
+- User-profile-aware score boosting (Occupation, Income, State)
 
 ---
 
@@ -180,7 +184,7 @@ backend/
    └── Size optimization
    ↓
 3. Backend processing
-   ├── Image analysis (Claude 3 Vision)
+   ├── Image analysis (Claude 3.5 Sonnet)
    ├── Text extraction
    ├── Document type identification
    └── Next steps generation

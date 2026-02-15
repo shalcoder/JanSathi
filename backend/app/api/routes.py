@@ -140,10 +140,31 @@ def list_applications():
 @bp.route('/history', methods=['GET'])
 def get_user_history():
     """Get conversation history."""
-    user_id = request.args.get('user_id', 'demo-user')
-    from app.models.models import Conversation
-    history = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.desc()).limit(50).all()
-    return jsonify([h.to_dict() for h in history])
+    try:
+        user_id = request.args.get('user_id', 'demo-user')
+        from app.models.models import Conversation
+        history = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.desc()).limit(50).all()
+        return jsonify([h.to_dict() for h in history])
+    except Exception as e:
+        logger.error(f"History Query Error: {e}")
+        return jsonify([])
+
+# ============================================================
+# ADMIN / SEEDING
+# ============================================================
+@bp.route('/admin/seed', methods=['POST'])
+def seed_database():
+    """Trigger DB population logic (Admin only)."""
+    try:
+        from populate_db import populate_schemes, populate_community_posts
+        from app.models.models import db
+        db.create_all()
+        populate_schemes()
+        populate_community_posts()
+        return jsonify({"status": "success", "message": "Production database seeded successfully."})
+    except Exception as e:
+        logger.error(f"Seeding Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # ============================================================
 # DOCUMENT MANAGEMENT

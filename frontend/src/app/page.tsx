@@ -106,7 +106,7 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="text-lg md:text-xl text-secondary-foreground/80 max-w-2xl mb-12 leading-relaxed font-medium"
         >
-          A "Voice-First" AI Assistant that bridges the gap. Ask in your native language and instant access to government schemes. <span className="text-foreground font-semibold">Transforming complex portals into simple conversations.</span>
+          A {'"Voice-First"'} AI Assistant that bridges the gap. Ask in your native language and instant access to government schemes. <span className="text-foreground font-semibold">Transforming complex portals into simple conversations.</span>
         </motion.p>
 
         <motion.div

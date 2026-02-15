@@ -6,8 +6,17 @@ import { BarChart3, Users, IndianRupee, Map, ArrowUpRight, Activity } from 'luci
 import OutreachSimulator from '@/components/features/chat/OutreachSimulator';
 import ModerationLoop from '@/components/features/chat/ModerationLoop';
 
+interface AdminStats {
+    activeUsers: number;
+    totalQueries: number;
+    avgResponseTime: string;
+    schemesCovered: number;
+    dropouts: Array<{ scheme: string; rate: string; percentage: number }>;
+    regions: Array<{ name: string; queries: number; schemes: number }>;
+}
+
 const AdminDashboard = () => {
-    const [stats, setStats] = useState<any>(null);
+    const [stats, setStats] = useState<AdminStats | null>(null);
 
     useEffect(() => {
         fetch('http://localhost:5000/api/stats')
@@ -71,7 +80,7 @@ const AdminDashboard = () => {
                         Scheme Dropout Analysis
                     </h3>
                     <div className="space-y-6">
-                        {stats.dropouts.map((d: any, idx: number) => (
+                        {stats.dropouts.map((d: { scheme: string; rate: string; percentage: number }, idx: number) => (
                             <div key={idx} className="space-y-2">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-white/70 font-medium">{d.scheme}</span>
@@ -106,7 +115,7 @@ const AdminDashboard = () => {
     );
 };
 
-const StatCard = ({ title, value, sub, icon }: any) => (
+const StatCard = ({ title, value, sub, icon }: { title: string; value: string | number; sub: string; icon: React.ReactNode }) => (
     <div className="bg-white/5 border border-white/10 rounded-3xl p-6 hover:bg-white/[0.07] transition-colors group">
         <div className="flex justify-between items-start mb-4">
             <div className="p-2 rounded-xl bg-white/5 border border-white/10 group-hover:scale-110 transition-transform">

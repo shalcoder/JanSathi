@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
   // Environment variables available in browser
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000",
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_mock_key_for_build_verification_only",
   },
 
   // Rewrites only work in dev mode (not with static export)

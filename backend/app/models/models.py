@@ -97,6 +97,8 @@ class Scheme(db.Model):
     link = db.Column(db.String(500))
     keywords = db.Column(db.JSON) # List of strings
     category = db.Column(db.String(50))
+    rules = db.Column(db.JSON) # Structured eligibility rules
+    version = db.Column(db.String(20), default='1.0.0') # Schema version
     
     def to_dict(self):
         return {
@@ -107,7 +109,9 @@ class Scheme(db.Model):
             "ministry": self.ministry,
             "link": self.link,
             "keywords": self.keywords,
-            "category": self.category
+            "category": self.category,
+            "rules": self.rules,
+            "version": self.version
         }
 
 class UserDocument(db.Model):

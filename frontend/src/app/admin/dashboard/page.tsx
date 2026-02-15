@@ -7,12 +7,26 @@ import OutreachSimulator from '@/components/features/chat/OutreachSimulator';
 import ModerationLoop from '@/components/features/chat/ModerationLoop';
 
 const AdminDashboard = () => {
-    const [stats, setStats] = useState<any>(null);
+    interface ImpactStats {
+        total_benefits_claimed: number;
+        active_users: number;
+        success_rate: string;
+        top_district: string;
+    }
+    interface Dropout {
+        scheme: string;
+        rate: string; // Or number, checking usage below it seems to be used as width which needs string or number, but "rate" text implies string "12%"? No, used in animate width. Assuming string like "45%".
+    }
+    interface Stats {
+        impact: ImpactStats;
+        dropouts: Dropout[];
+    }
+    const [stats, setStats] = useState<Stats | null>(null);
 
     useEffect(() => {
         fetch('http://localhost:5000/api/stats')
             .then(res => res.json())
-            .then(data => setStats(data));
+            .then((data: Stats) => setStats(data));
     }, []);
 
     if (!stats) return <div className="p-12 text-white/50 text-center uppercase tracking-widest text-xs">Loading Telemetry...</div>;
@@ -71,7 +85,7 @@ const AdminDashboard = () => {
                         Scheme Dropout Analysis
                     </h3>
                     <div className="space-y-6">
-                        {stats.dropouts.map((d: any, idx: number) => (
+                        {stats.dropouts.map((d: Dropout, idx: number) => (
                             <div key={idx} className="space-y-2">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-white/70 font-medium">{d.scheme}</span>
@@ -106,7 +120,14 @@ const AdminDashboard = () => {
     );
 };
 
-const StatCard = ({ title, value, sub, icon }: any) => (
+interface StatCardProps {
+    title: string;
+    value: string | number;
+    sub: string;
+    icon: React.ReactNode;
+}
+
+const StatCard = ({ title, value, sub, icon }: StatCardProps) => (
     <div className="bg-white/5 border border-white/10 rounded-3xl p-6 hover:bg-white/[0.07] transition-colors group">
         <div className="flex justify-between items-start mb-4">
             <div className="p-2 rounded-xl bg-white/5 border border-white/10 group-hover:scale-110 transition-transform">

@@ -27,8 +27,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Security: CORS
-    CORS(app, resources={r"/*": {"origins": Config.ALLOWED_ORIGINS}})
+    # Security: CORS - Allow all origins for deployment testing
+    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
     
     # Talisman only in non-Lambda mode (API Gateway handles HTTPS)
     if not USE_DYNAMODB:

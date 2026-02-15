@@ -10,10 +10,12 @@ class AgentService:
     For the hackathon, we simulate the 'Bedrock Agent' flow with deterministic steps.
     """
 
-    def __init__(self, bedrock_service, rag_service, polly_service):
+    def __init__(self, bedrock_service, rag_service, polly_service, rules_engine=None):
         self.bedrock_service = bedrock_service
         self.rag_service = rag_service
         self.polly_service = polly_service
+        from app.services.rules_engine import RulesEngine
+        self.rules_engine = rules_engine or RulesEngine()
 
     def orchestrate_query(self, user_query, language='en', user_id=None):
         """
@@ -49,24 +51,57 @@ class AgentService:
             # This uses the real Claude 3.5 Sonnet request with specific instructions for Explainability
             steps_log.append({"step": "policy_verification", "status": "started"})
             
-            # Construct a specialized prompt for the Reasoning Agent
-            reasoning_response = self._reason_with_bedrock(user_query, context_docs, language, intent, user_profile=user_profile)
+            # DETERMINISTIC UPGRADE: Run Rules Engine for each retrieved tool/scheme
+            deterministic_results = []
+            if user_profile:
+                schemes = self.rag_service.get_structured_sources(user_query)
+                for s in schemes:
+                    if 'rules' in s and s['rules']:
+                        eligible, breakdown, engine_score = self.rules_engine.evaluate(user_profile, s['rules'])
+                        deterministic_results.append({
+                            "scheme": s['title'],
+                            "eligible": eligible,
+                            "logic": breakdown,
+                            "engine_score": engine_score
+                        })
+            
+            # Construct a specialized prompt for the Reasoning Agent, including deterministic checks
+            reasoning_response = self._reason_with_bedrock(user_query, context_docs, language, intent, user_profile=user_profile, engine_verification=deterministic_results)
             
             answer = reasoning_response.get('answer', "I'm sorry, I couldn't process that request.")
-            confidence = reasoning_response.get('confidence', 0.85)
-            matching_criteria = reasoning_response.get('matching_criteria', ["Query Context Analysis"])
+            confidence_llm = reasoning_response.get('confidence', 0.85)
+            
+            # COMPOSITE CONFIDENCE SCORE: 60% Rules Matching + 40% LLM Confidence
+            engine_agg_score = sum(r['engine_score'] for r in deterministic_results) / len(deterministic_results) if deterministic_results else 1.0
+            composite_confidence = (engine_agg_score * 0.6) + (confidence_llm * 0.4)
+            
+            matching_criteria = reasoning_response.get('matching_criteria', [])
+            if deterministic_results:
+                # Append deterministic logic to matching criteria
+                for dr in deterministic_results:
+                    matching_criteria.extend(dr['logic'])
             
             # Extract structured sources if available
-            structured_sources = self._extract_sources(context_docs)
+            structured_sources = self.rag_service.get_structured_sources(user_query)
+            # Attach deterministic verification to sources
+            for s in structured_sources:
+                 for dr in deterministic_results:
+                     if s['title'] == dr['scheme']:
+                         s['verified_eligible'] = dr['eligible']
+                         s['logic_breakdown'] = dr['logic']
+
             provenance = self._determine_provenance(context_docs)
             
-            steps_log.append({"step": "policy_verification", "status": "completed", "confidence": confidence})
+            steps_log.append({"step": "policy_verification", "status": "completed", "confidence": composite_confidence})
 
             # Step 4: Explainability & Privacy (Audit Agent)
             explainability = {
-                "confidence": confidence,
+                "confidence": composite_confidence,
+                "engine_score": engine_agg_score,
+                "llm_score": confidence_llm,
                 "matching_criteria": matching_criteria,
-                "privacy_protocol": "Flowers-FL-v4 (Federated Privacy)"
+                "privacy_protocol": "Flowers-FL-v4 (Federated Privacy)",
+                "deterministic_verification": deterministic_results
             }
 
             return {
@@ -124,13 +159,18 @@ class AgentService:
         
         profile_context = ""
         if user_profile:
-            profile_context = f"\nUser Profile: {json.dumps(user_profile)}"
+            profile_context = f"\nUser Profile Data: {json.dumps(user_profile)}"
+
+        verification_context = ""
+        if kwargs.get('engine_verification'):
+            verification_context = f"\nDeterministic Eligibility Verification (Ground Truth): {json.dumps(kwargs.get('engine_verification'))}"
 
         prompt = f"""
-        System: You are the JanSathi Reasoning Engine. Your task is to answer the user query based on the context provided.
-        CRITICAL: You must also explain your reasoning (Explainable AI) and consider the citizen's profile for eligibility.
+        System: You are the JanSathi Reasoning Engine. Your task is to answer the user query based on the context and ground-truth verification provided.
+        CRITICAL: The 'Deterministic Eligibility Verification' is GROUND TRUTH based on official rules. You MUST prioritize it in your answer.
         
         {profile_context}
+        {verification_context}
         Context: {context_text}
         Query: {query}
         Language: {language}
@@ -139,7 +179,7 @@ class AgentService:
         Output JSON format ONLY:
         {{
             "answer": "The final answer in {language}",
-            "confidence": <float between 0.0 and 1.0>,
+            "confidence": <float between 0.0 and 1.0 based on how well context covers the query>,
             "matching_criteria": ["Reason 1", "Reason 2", "Reason 3"]
         }}
         """

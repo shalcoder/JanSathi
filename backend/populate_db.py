@@ -24,7 +24,14 @@ def populate_schemes():
                 "link": "https://pmkisan.gov.in",
                 "benefit": "₹6,000/year Income Support",
                 "ministry": "Ministry of Agriculture",
-                "category": "agriculture"
+                "category": "agriculture",
+                "version": "1.1.0",
+                "rules": {
+                    "mandatory": [
+                        { "field": "occupation", "operator": "in", "value": ["Farmer", "Kisan"], "label": "Landholding Farmer" },
+                        { "field": "location_state", "operator": "ne", "value": "", "label": "Indian Citizen" }
+                    ]
+                }
             },
             {
                 "id": "ayushman",
@@ -34,7 +41,13 @@ def populate_schemes():
                 "link": "https://pmjay.gov.in",
                 "benefit": "₹5 Lakh Free Health Cover",
                 "ministry": "Ministry of Health",
-                "category": "health"
+                "category": "health",
+                "version": "1.0.0",
+                "rules": {
+                    "mandatory": [
+                        { "field": "income_bracket", "operator": "in", "value": ["EWS", "Lower Class", "Poor"], "label": "Financial Eligibility (SECC 2011)" }
+                    ]
+                }
             },
             {
                 "id": "fasal-bima",
@@ -132,7 +145,6 @@ def populate_schemes():
     for s_data in schemes_data:
         existing = Scheme.query.get(s_data['id'])
         if not existing:
-            print(f"Adding {s_data['id']}")
             scheme = Scheme(
                 id=s_data['id'],
                 title=s_data['title'],
@@ -141,9 +153,15 @@ def populate_schemes():
                 ministry=s_data.get('ministry'),
                 link=s_data.get('link'),
                 keywords=s_data.get('keywords'),
-                category=s_data.get('category')
+                category=s_data.get('category'),
+                rules=s_data.get('rules'),
+                version=s_data.get('version', '1.0.0')
             )
             db.session.add(scheme)
+        else:
+            # Update existing if needed
+            existing.rules = s_data.get('rules')
+            existing.version = s_data.get('version', '1.0.0')
     db.session.commit()
     print("Schemes populated.")
 

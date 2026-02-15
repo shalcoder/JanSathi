@@ -51,15 +51,13 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
                     setIsListening(false);
                 };
 
-                const initializeRecognition = () => setRecognition(recognitionInstance);
-                initializeRecognition();
+                queueMicrotask(() => setRecognition(recognitionInstance));
 
                 return () => {
                     recognitionInstance.abort();
                 };
             } else {
-                const showError = () => setError('Voice input not supported in this browser.');
-                showError();
+                queueMicrotask(() => setError('Voice input not supported in this browser.'));
             }
         }
     }, []);

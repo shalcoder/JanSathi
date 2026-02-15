@@ -12,7 +12,7 @@ export default function FederatedLearningStatus() {
         setIsTraining(false);
         setProgress(100);
         setRound(prev => prev + 1);
-        setPrivacyBudget(prev => Math.max(0, prev - 0.5)); // Consumpte privacy budget
+        setPrivacyBudget(prev => Math.max(0, prev - 0.5)); // Consume privacy budget
         setLastContribution(new Date().toLocaleTimeString());
     };
 

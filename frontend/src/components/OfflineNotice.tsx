@@ -14,11 +14,8 @@ export default function OfflineNotice() {
         const handleOnline = () => setIsOffline(false);
         const handleOffline = () => setIsOffline(true);
 
-        // Check initial state - wrapped in a function
-        const checkInitialState = () => {
-            setIsOffline(!navigator.onLine);
-        };
-        checkInitialState();
+        // Check initial state asynchronously to avoid cascading renders
+        queueMicrotask(() => setIsOffline(!navigator.onLine));
 
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);

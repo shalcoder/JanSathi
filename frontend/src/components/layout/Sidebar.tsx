@@ -53,8 +53,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     };
 
     useEffect(() => {
-        const initLoad = () => loadSessions();
-        initLoad();
+        queueMicrotask(() => loadSessions());
         const handleUpdate = () => loadSessions();
         window.addEventListener('chat-storage-update', handleUpdate);
         return () => window.removeEventListener('chat-storage-update', handleUpdate);

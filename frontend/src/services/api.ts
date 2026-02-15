@@ -31,7 +31,7 @@ export interface QueryRequest {
     userId?: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://jansathi.onrender.com';
 
 const apiClient = axios.create({
     baseURL: BASE_URL,

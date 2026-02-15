@@ -131,8 +131,9 @@ class AgentService:
         User Query: {query}
         """
         try:
-            # Direct Bedrock Call (Simulated via generate_response for brevity, but logically distinct)
-            response, _ = self.bedrock_service.generate_response(query, "", "en", intent="ROUTER")
+            # Direct Bedrock Call
+            result = self.bedrock_service.generate_response(query, "", "en", intent="ROUTER")
+            response = result['text']
             parsed = response.strip().lower()
             valid_intents = ["application_submission", "status_check", "document_query", "general_info"]
             for v in valid_intents:
@@ -188,7 +189,8 @@ class AgentService:
             # We use the existing service but force JSON structure via prompt
             # In a full impl, we'd use 'invoke_model' with 'anthropic.claude-3-5-sonnet' directly
             # For this hackathon code base, we piggyback on generate_response but guide it
-            response_text, _ = self.bedrock_service.generate_response(query, context_text, language, intent="REASONING_JSON")
+            result = self.bedrock_service.generate_response(query, context_text, language, intent="REASONING_JSON")
+            response_text = result['text']
             
             # Attempt to parse JSON from the response
             # If the model chatters, try to find the JSON block

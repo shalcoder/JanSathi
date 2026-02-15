@@ -47,9 +47,13 @@ export default function RootLayout({
     </html>
   );
 
-  // Wrap with Clerk if a key is provided
+  // Ensure ClerkProvider is always present to prevent "SignedIn outside Provider" errors.
+  // Use a fallback key for build time if the environment variable is missing.
+  // This is critical for static generation where secrets might not be present.
+  const finalKey = PUBLISHABLE_KEY || "pk_test_placeholder_for_build_verification";
+
   if (!PUBLISHABLE_KEY) {
-    return content;
+    console.warn("Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY. Using placeholder for build.");
   }
 
   return (

@@ -22,6 +22,13 @@ JanSathi works seamlessly in:
 ### Scenario Highlights
 - 🎙️ **Voice queries** (Speech-to-Text)
 - 🖥️ **Vision AI** (Extract Scheme info from Ration/Caste cards)
+- 👆 **One-Click Apply** (Agentic Form Filling)
+
+---
+
+## 🏆 Hackathon Judges
+**[>>> Click here for the detailed HACKATHON SUBMISSION GUIDE <<<](docs/HACKATHON_SUBMISSION.md)**
+*Detailed mapping of features to Technical Excellence, Innovation, Impact, and Completeness criteria.*
 
 ---
 

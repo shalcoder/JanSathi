@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import { TrendingUp, Users, Clock, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { seedDatabase } from '@/services/api';
 
 export default function OverviewPage({ onNavigate }: { onNavigate: (page: string) => void }) {
     const stats = [
@@ -23,8 +24,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (page: string
                         onClick={async () => {
                             if (confirm("This will populate the production database with schemes and forum data. Proceed?")) {
                                 try {
-                                    const res = await fetch('/api/admin/seed', { method: 'POST' });
-                                    const data = await res.json();
+                                    const data = await seedDatabase();
                                     alert(data.message || "Database seeded!");
                                     window.location.reload();
                                 } catch (e) {

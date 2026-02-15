@@ -122,3 +122,43 @@ export const getMarketRates = async (): Promise<MarketRate[]> => {
         return [];
     }
 };
+
+export const getSchemes = async (): Promise<any> => {
+    try {
+        const response = await apiClient.get('/schemes');
+        return response.data;
+    } catch (error: unknown) {
+        console.error('Schemes API Error:', error);
+        return { schemes: [], count: 0 };
+    }
+};
+
+export const seedDatabase = async (): Promise<any> => {
+    try {
+        const response = await apiClient.post('/admin/seed');
+        return response.data;
+    } catch (error: unknown) {
+        console.error('Seed API Error:', error);
+        throw error;
+    }
+};
+
+export const applyForScheme = async (user_id: string, scheme_name: string): Promise<any> => {
+    try {
+        const response = await apiClient.post('/apply', { user_id, scheme_name });
+        return response.data;
+    } catch (error: unknown) {
+        console.error('Apply API Error:', error);
+        throw error;
+    }
+};
+
+export const getApplications = async (user_id: string = 'demo-user'): Promise<any[]> => {
+    try {
+        const response = await apiClient.get(`/applications?user_id=${user_id}`);
+        return response.data;
+    } catch (error: unknown) {
+        console.error('Applications API Error:', error);
+        return [];
+    }
+};

@@ -42,7 +42,7 @@ const ModerationLoop = () => {
                                     <span className="text-[10px] font-bold text-white/40 uppercase tracking-tighter">{item.flag}</span>
                                     <span className="text-[10px] font-black text-red-400">{(100 - (item.confidence * 100)).toFixed(0)}% Risk</span>
                                 </div>
-                                <p className="text-xs font-medium text-white/80 italic">"{item.query}"</p>
+                                <p className="text-xs font-medium text-white/80 italic">{'"'}{item.query}{'"'}</p>
                                 <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Citizen: {item.user}</p>
                             </div>
 

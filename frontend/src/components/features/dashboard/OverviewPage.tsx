@@ -16,7 +16,7 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (page: string
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight text-foreground">Dashboard</h1>
-                    <p className="text-secondary-foreground font-medium mt-1">Welcome back, here's what's happening today.</p>
+                    <p className="text-secondary-foreground font-medium mt-1">{"Welcome back, here's what's happening today."}</p>
                 </div>
                 <button
                     onClick={() => onNavigate('assistant')}

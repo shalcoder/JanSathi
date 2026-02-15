@@ -51,7 +51,8 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
                     setIsListening(false);
                 };
 
-                setRecognition(recognitionInstance);
+                const initializeRecognition = () => setRecognition(recognitionInstance);
+                initializeRecognition();
 
                 return () => {
                     recognitionInstance.abort();

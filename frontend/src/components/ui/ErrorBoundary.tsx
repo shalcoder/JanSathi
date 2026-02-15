@@ -30,7 +30,7 @@ class ErrorBoundary extends Component<Props, State> {
                     <div className="glass-panel p-8 rounded-3xl border border-red-500/20 text-center max-w-md">
                         <h1 className="text-2xl font-bold text-white mb-4">Something went wrong</h1>
                         <p className="text-slate-400 mb-6">
-                            We encountered an unexpected error. Don't worry, your data is safe.
+                            We encountered an unexpected error. {"Don't"} worry, your data is safe.
                         </p>
                         <button
                             onClick={() => window.location.reload()}

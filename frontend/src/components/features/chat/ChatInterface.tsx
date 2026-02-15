@@ -23,7 +23,8 @@ const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => voi
 
     useEffect(() => {
         index.current = 0;
-        setDisplayedText('');
+        const resetText = () => setDisplayedText('');
+        resetText();
         const intervalId = setInterval(() => {
             index.current += 3;
             if (index.current > text.length) index.current = text.length;

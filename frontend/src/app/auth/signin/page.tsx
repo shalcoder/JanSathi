@@ -125,7 +125,7 @@ export default function SignIn() {
                 </div>
 
                 <div className="bg-secondary/30 p-4 text-center">
-                    <p className="text-sm text-secondary-foreground">Don't have an account? <Link href="/auth/signup" className="text-primary font-bold hover:underline">Sign Up</Link></p>
+                    <p className="text-sm text-secondary-foreground">{"Don't"} have an account? <Link href="/auth/signup" className="text-primary font-bold hover:underline">Sign Up</Link></p>
                 </div>
             </motion.div>
         </div>

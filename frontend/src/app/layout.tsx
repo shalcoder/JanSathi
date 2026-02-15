@@ -48,6 +48,7 @@ export default function RootLayout({
   );
 
   // Wrap with Clerk if a key is provided
+  // Note: key is guaranteed by next.config.ts fallback for build, and real env for deploy
   if (!PUBLISHABLE_KEY) {
     return content;
   }

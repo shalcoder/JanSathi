@@ -1,0 +1,32 @@
+
+> frontend@0.1.0 build
+> next build --webpack
+
+Γû▓ Next.js 16.1.6 (webpack)
+- Environments: .env.local
+
+ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+ Γ£ô (pwa) Compiling for server...
+ Γ£ô (pwa) Compiling for server...
+ Γ£ô (pwa) Compiling for client (static)...
+ Γùï (pwa) Service worker: E:\JanSathi\frontend\public\sw.js
+ Γùï (pwa)   URL: /sw.js
+ Γùï (pwa)   Scope: /
+Γ£ô Compiled successfully in 4.1s
+  Running TypeScript ...
+Failed to compile.
+
+./src/components/layout/Sidebar.tsx:46:63
+Type error: Argument of type '(a: ChatSession, b: ChatSession) => number' is not assignable to parameter of type '(a: unknown, b: unknown) => number'.
+  Types of parameters 'a' and 'a' are incompatible.
+    Type 'unknown' is not assignable to type 'ChatSession'.
+
+  44 |                 if (stored) {
+  45 |                     const parsed = JSON.parse(stored);
+> 46 |                     const sorted = Object.values(parsed).sort((a: ChatSession, b: ChatSession) =>
+     |                                                               ^
+  47 |                         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  48 |                     ) as ChatSession[];
+  49 |                     setSessions(sorted);
+Next.js build worker exited with code: 1 and signal: null

@@ -89,7 +89,7 @@ export default function Documentation() {
                                     </p>
                                     <ol className="list-decimal pl-5 space-y-2 text-sm font-medium">
                                         <li>Navigate to the <strong>Sign In</strong> page.</li>
-                                        <li>Click the yellow <strong>"Use Judge Demo Login"</strong> button.</li>
+                                        <li>Click the yellow <strong>&quot;Use Judge Demo Login&quot;</strong> button.</li>
                                         <li>System auto-fills credentials: <code>judge@jansathi.in</code></li>
                                         <li>Instant access to the Dashboard with pre-populated dummy data.</li>
                                     </ol>
@@ -104,7 +104,7 @@ export default function Documentation() {
                                 <h2 className="text-3xl font-bold text-foreground">Voice Capabilities</h2>
                             </div>
                             <p className="text-secondary-foreground mb-6 leading-relaxed">
-                                Our "Matrubhasha Core" engine enables seamless voice interaction in Indian languages. It uses the Web Speech API for low-latency input and processes intent locally before querying the knowledge base.
+                                Our &quot;Matrubhasha Core&quot; engine enables seamless voice interaction in Indian languages. It uses the Web Speech API for low-latency input and processes intent locally before querying the knowledge base.
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FeatureCard title="Hindi (Hi-IN)" desc="Native speech recognition with dialect support." />

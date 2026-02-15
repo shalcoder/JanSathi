@@ -4,9 +4,18 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingBag, TrendingUp, TrendingDown, MapPin, Search, Calendar, RefreshCw } from 'lucide-react';
 import { getMarketRates } from '@/services/api';
 
+interface MarketPrice {
+    crop: string;
+    market: string;
+    price: string;
+    unit: string;
+    change: string;
+    trend: 'up' | 'down';
+}
+
 const MarketPrices = () => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [prices, setPrices] = useState<any[]>([]);
+    const [prices, setPrices] = useState<MarketPrice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchRates = async () => {

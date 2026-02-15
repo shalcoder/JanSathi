@@ -54,7 +54,7 @@ export default function ImpactStats() {
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                        <p className="text-[10px] text-foreground font-medium italic opacity-80">Village 'A' secured 15 Ayushman cards today.</p>
+                        <p className="text-[10px] text-foreground font-medium italic opacity-80">Village &apos;A&apos; secured 15 Ayushman cards today.</p>
                     </div>
                 </div>
                 <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>

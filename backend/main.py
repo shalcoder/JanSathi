@@ -41,7 +41,9 @@ def create_app():
     # Database: SQLite only for local dev
     if not USE_DYNAMODB:
         from app.models.models import db
+        from flask_migrate import Migrate
         db.init_app(app)
+        Migrate(app, db)
 
     # Rate Limiting (memory storage for Lambda, file for local)
     limiter = Limiter(

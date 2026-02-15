@@ -10,7 +10,9 @@ import SchemeCard from './SchemeCard';
 import { useSettings } from '@/hooks/useSettings';
 import DocumentScorecard from './DocumentScorecard';
 import ExplainabilityCard from './ExplainabilityCard';
+import MultiAgentThoughtProcess from './MultiAgentThoughtProcess';
 import { Languages, Globe } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
     const [displayedText, setDisplayedText] = useState('');
@@ -64,11 +66,13 @@ const SUGGESTIONS = [
 const SESSIONS_KEY = 'jansathi_chat_sessions';
 
 export default function ChatInterface() {
+    const { user } = useUser();
     const { settings } = useSettings();
     const [messages, setMessages] = useState<Message[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isThinking, setIsThinking] = useState(false);
     const [language, setLanguage] = useState(settings.language);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -121,7 +125,11 @@ export default function ChatInterface() {
                 setSelectedImage(null); setImagePreview(null);
                 setMessages(prev => [...prev, { id: 'ai_' + Date.now(), role: 'assistant', text: data.analysis.text, audio: data.analysis.audio, timestamp: new Date(), isTyping: true }]);
             } else {
-                const data: QueryResponse = await sendQuery({ text_query: text, language });
+                const data: QueryResponse = await sendQuery({
+                    text_query: text,
+                    language,
+                    userId: user?.id || 'anonymous'
+                });
                 setMessages(prev => [...prev, {
                     id: 'ai_' + Date.now(),
                     role: 'assistant',
@@ -185,33 +193,33 @@ export default function ChatInterface() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-5xl mx-auto py-10"
+                            className="flex flex-col items-center justify-center min-h-[45vh] text-center max-w-5xl mx-auto py-6"
                         >
-                            <div className="space-y-6 w-full px-4">
-                                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 text-emerald-600 text-[10px] font-bold uppercase tracking-widest">
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                            <div className="space-y-4 w-full px-4">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 text-emerald-600 text-[9px] font-bold uppercase tracking-widest">
+                                    <CheckCircle2 className="w-3 h-3" />
                                     Verified Assistant
                                 </div>
 
-                                <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
+                                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
                                     Hello! <br />
                                     How can <span className="text-primary">JanSathi</span> help?
                                 </h1>
 
-                                <p className="text-base text-secondary-foreground max-w-lg mx-auto font-medium opacity-60 leading-relaxed">
+                                <p className="text-sm text-secondary-foreground max-w-lg mx-auto font-medium leading-relaxed">
                                     Ask me anything about government schemes, documents, or your benefits.
                                 </p>
 
-                                {/* Suggestions - More breathing room */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12 max-w-4xl mx-auto px-2 pb-10">
+                                {/* Suggestions - Compacted */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-8 max-w-4xl mx-auto px-2 pb-4">
                                     {SUGGESTIONS.map((s, i) => (
                                         <button
                                             key={i}
                                             onClick={() => handleSend(s.title)}
-                                            className="bg-card border border-border/50 p-5 text-left rounded-xl hover:border-primary/30 transition-colors shadow-sm flex flex-col justify-center"
+                                            className="bg-card border border-border/50 p-4 text-left rounded-xl hover:border-primary/30 transition-colors shadow-sm flex flex-col justify-center"
                                         >
                                             <p className="text-sm font-bold text-foreground mb-1">{s.title}</p>
-                                            <p className="text-[10px] font-bold text-secondary-foreground opacity-40 uppercase tracking-wider">{s.desc}</p>
+                                            <p className="text-[9px] font-bold text-secondary-foreground opacity-60 uppercase tracking-wider">{s.desc}</p>
                                         </button>
                                     ))}
                                 </div>
@@ -232,6 +240,14 @@ export default function ChatInterface() {
                                             ? 'max-w-[85%] sm:max-w-[70%] bg-primary text-white'
                                             : 'w-full sm:max-w-[90%] bg-card border border-border/50 text-foreground'}
                                      `}>
+
+                                        {/* User Federated Learning Badge */}
+                                        {msg.role === 'user' && (
+                                            <div className="absolute -top-3 right-4 bg-background border border-border/50 shadow-sm px-2 py-1 rounded-full flex items-center gap-1.5 z-10">
+                                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">FL-Node Active</span>
+                                            </div>
+                                        )}
                                         {msg.role === 'assistant' && msg.isTyping ? (
                                             <div className="font-bold text-base leading-relaxed">
                                                 <Typewriter text={msg.text} onComplete={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isTyping: false } : m))} />
@@ -260,12 +276,19 @@ export default function ChatInterface() {
                                                 )}
                                                 <p className="whitespace-pre-wrap leading-relaxed font-bold text-base tracking-normal">{msg.text}</p>
 
+                                                {/* Explainability Section */}
                                                 {msg.explainability && (
-                                                    <ExplainabilityCard
-                                                        confidence={msg.explainability.confidence}
-                                                        criteria={msg.explainability.matching_criteria}
-                                                        protocol={msg.explainability.privacy_protocol}
-                                                    />
+                                                    <div className="mt-4 pt-4 border-t border-border/10">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                                                            <Shield className="w-3 h-3 text-emerald-500" />
+                                                            Trust & Provenance
+                                                        </h4>
+                                                        <ExplainabilityCard
+                                                            confidence={msg.explainability.confidence}
+                                                            criteria={msg.explainability.matching_criteria}
+                                                            protocol={msg.explainability.privacy_protocol}
+                                                        />
+                                                    </div>
                                                 )}
 
                                                 {msg.structured_sources && msg.structured_sources.length > 0 && (
@@ -316,14 +339,22 @@ export default function ChatInterface() {
 
                                         {msg.audio && <div className="mt-6 pt-6 border-t border-border/10"><AudioPlayer src={msg.audio} /></div>}
 
-                                        <div className={`text-[9px] font-bold uppercase tracking-wider mt-4 opacity-30 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                                        <div className={`text-[9px] font-bold uppercase tracking-wider mt-4 opacity-50 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                                             {msg.role === 'user' ? 'Sent' : 'Verified Information'}
                                         </div>
                                     </div>
                                 </motion.div>
                             ))}
-                            {isLoading && (
-                                <div className="flex justify-start">
+                            {/* Thinking State */}
+                            {isThinking && (
+                                <div className="flex justify-start px-2">
+                                    <MultiAgentThoughtProcess />
+                                </div>
+                            )}
+
+                            {/* Loading State (fallback) */}
+                            {isLoading && !isThinking && (
+                                <div className="flex justify-start px-2">
                                     <div className="flex items-center gap-3 p-3 px-5 bg-secondary/30 rounded-full border border-border">
                                         <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
                                         <span className="text-[10px] text-foreground font-bold uppercase tracking-wider">JanSathi is thinking...</span>
@@ -393,7 +424,7 @@ export default function ChatInterface() {
                         </div>
                     </div>
 
-                    <div className="flex justify-center items-center gap-3 mt-4 opacity-30">
+                    <div className="flex justify-center items-center gap-3 mt-4 opacity-60">
                         <div className="h-px w-8 bg-foreground"></div>
                         <p className="text-[9px] font-bold uppercase tracking-widest text-foreground">Verified Information • Secure Helper</p>
                         <div className="h-px w-8 bg-foreground"></div>

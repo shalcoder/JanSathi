@@ -1,6 +1,7 @@
 # JanSathi Sequence Diagram - Voice Query
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#ffffff', 'mainBkg': '#ffffff', 'clusterBkg': '#ffffff', 'nodeBorder': '#000000', 'clusterBorder': '#000000', 'lineColor': '#000000'}}}%%
 sequenceDiagram
     actor User as Ramesh (Farmer)
     participant Client as Mobile App

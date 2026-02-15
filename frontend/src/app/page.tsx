@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Mic, ShieldCheck, Languages, Bot, Globe, Cpu, Server, Database, ChevronRight, Activity, Zap, Users, AlertTriangle, CheckCircle2, Cloud, Radio, Lock } from "lucide-react";
 import BackendStatus from "@/components/BackendStatus";
 import ImpactStats from "@/components/features/community/ImpactStats";
+import { SignedIn, SignedOut, UserButton, SignOutButton } from "@clerk/nextjs";
 
 export default function LandingPage() {
   return (
@@ -37,13 +38,28 @@ export default function LandingPage() {
                 </a>
               ))}
             </div>
-            <Link
-              href="/auth/signin"
-              className="px-6 py-2.5 bg-foreground text-background dark:bg-white dark:text-black rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
-            >
-              Sign In
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+
+            <SignedOut>
+              <Link
+                href="/sign-in"
+                className="px-6 py-2.5 bg-foreground text-background dark:bg-white dark:text-black rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
+              >
+                Sign In
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </SignedOut>
+
+            <SignedIn>
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/dashboard"
+                  className="px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
+                >
+                  Dashboard
+                </Link>
+                <UserButton afterSignOutUrl="/" />
+              </div>
+            </SignedIn>
           </div>
         </div>
       </nav>
@@ -99,16 +115,31 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.5 }}
           className="flex flex-col sm:flex-row gap-4 items-center w-full justify-center"
         >
-          <Link
-            href="/auth/signin"
-            className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-            <span className="relative flex items-center justify-center gap-2">
-              Start Chat
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </span>
-          </Link>
+          <SignedOut>
+            <Link
+              href="/sign-in"
+              className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <span className="relative flex items-center justify-center gap-2">
+                Start Chat
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+          </SignedOut>
+
+          <SignedIn>
+            <Link
+              href="/dashboard"
+              className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <span className="relative flex items-center justify-center gap-2">
+                Go to Dashboard
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+          </SignedIn>
 
           <a
             href="#mission"

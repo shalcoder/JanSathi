@@ -19,13 +19,120 @@ JanSathi works seamlessly in:
 - 🔌 Intermittent connectivity
 - 👥 For users unfamiliar with complex apps
 
-### Supported Features
+### Scenario Highlights
 - 🎙️ **Voice queries** (Speech-to-Text)
-- ⌨️ **Text queries**
-- 🌐 **Web interface** (primary)
-- 📴 **Offline fallback** (cached FAQs)
-- 🌍 **Multilingual support** (Hindi, English, Kannada, Tamil)
-- 📱 **Mobile-first design**
+- 🖥️ **Vision AI** (Extract Scheme info from Ration/Caste cards)
+
+---
+
+## 📐 System Design & Diagrams
+
+### 🏗️ Architecture diagram of the proposed solution:
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'mainBkg': '#ffffff', 'background': '#ffffff' }}}%%
+graph TD
+    %% Styling
+    classDef user fill:#f97316,stroke:#fff,stroke-width:2px,color:#fff
+    classDef fe fill:#3b82f6,stroke:#fff,stroke-width:2px,color:#fff
+    classDef be fill:#10b981,stroke:#fff,stroke-width:2px,color:#fff
+    classDef ai fill:#6366f1,stroke:#fff,stroke-width:2px,color:#fff
+    classDef trust fill:#ef4444,stroke:#fff,stroke-width:2px,color:#fff
+    classDef db fill:#f59e0b,stroke:#fff,stroke-width:2px,color:#fff
+
+    User((fa:fa-user Citizen)):::user -- "fa:fa-microphone Voice/Text Query" --> Frontend[fa:fa-laptop Next.js 15 UI]:::fe
+    
+    subgraph "🔐 Privacy & Edge (FL)"
+        Frontend -- "fa:fa-puzzle-piece Model Updates" --> FL[fa:fa-project-diagram Federated Learning - Flower]:::ai
+    end
+
+    subgraph "🌐 Access Layer"
+        Frontend -- "fa:fa-wifi API Req" --> Flask[fa:fa-server Flask Backend]:::be
+        Flask -- "fa:fa-key Auth" --> Clerk[fa:fa-lock Clerk Security]:::be
+    end
+
+    subgraph "🤖 Multi-Agent Orchestration"
+        Flask -- "fa:fa-cogs Step Functions" --> Agents[fa:fa-robot Bedrock Agents / LangGraph]:::ai
+        Agents -- "fa:fa-search RAG" --> Kendra[fa:fa-book AWS Kendra]:::ai
+        Agents -- "fa:fa-brain Reasoning" --> Bedrock[fa:fa-cloud Claude 3.5 Sonnet]:::ai
+    end
+
+    subgraph "🛡️ Explainable AI (XAI)"
+        Bedrock -- "fa:fa-search-plus Provenance" --> XAI[fa:fa-balance-scale SageMaker Clarify / Audit]:::trust
+        XAI -- "fa:fa-file-alt Cite" --> Flask
+    end
+
+    subgraph "💾 Persistence"
+        Flask -- "fa:fa-save Save" --> DB[(fa:fa-database PostgreSQL / SQLite)]:::db
+        DB -- "fa:fa-history History" --> Flask
+    end
+
+    Flask -- "fa:fa-envelope Response" --> Frontend
+    Frontend -- "fa:fa-volume-up Voice" --> User
+```
+
+### 🔄 Process flow diagram or Use-case diagram:
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'edgeLabelBackground':'#ffffff', 'tertiaryColor': '#ffffff', 'mainBkg': '#ffffff', 'clusterBkg': '#ffffff', 'nodeBorder': '#333333', 'clusterBorder': '#333333', 'lineColor': '#333333', 'fontFamily': 'arial', 'fontSize': '14px'}}}%%
+graph LR
+    %% Styles
+    classDef start fill:#dcfce7,stroke:#166534,stroke-width:2px,color:#000
+    classDef process fill:#dbeafe,stroke:#1e40af,stroke-width:2px,color:#000
+    classDef decision fill:#ffedd5,stroke:#c2410c,stroke-width:2px,color:#000,shape:rhombus
+    classDef ai fill:#f3e8ff,stroke:#6b21a8,stroke-width:2px,color:#000
+    classDef storage fill:#fef9c3,stroke:#a16207,stroke-width:2px,color:#000
+    classDef endnode fill:#fee2e2,stroke:#b91c1c,stroke-width:2px,color:#000
+
+    %% Nodes
+    A[👤 Citizen Login / Dashboard]:::start
+    B[🎙️ Voice Query / Upload]:::start
+    C[🌐 Speech-to-Text]:::process
+    D{Intent Analysis?}:::decision
+    
+    %% Semantic Search Flow
+    E[📚 Kendra Retrieval]:::ai
+    F[🧠 Bedrock LLM Reasoner]:::ai
+    G[🔊 Polly TTS]:::process
+    
+    %% Eligibility Flow
+    H[📄 Vision OCR]:::ai
+    I{Document Valid?}:::decision
+    J[🧮 Criteria Matching]:::process
+    K[🌸 Federated Learning Update]:::ai
+    L[⚖️ XAI Explanation]:::process
+
+    %% Database
+    DB[(�️ User History)]:::storage
+    
+    %% Connections
+    A --> B
+    B --> C
+    C --> D
+    
+    %% Branch 1: Search
+    D -- "General Query" --> E
+    E --> F
+    F --> G
+    
+    %% Branch 2: Eligibility Check
+    D -- "Check Eligibility" --> H
+    H --> I
+    I -- "Yes" --> J
+    I -- "No" --> B
+    J --> K
+    J --> L
+    L --> F
+    
+    %% Final Output
+    G --> End[📱 App Response]:::endnode
+    F --> DB
+```
+
+### 🛠️ Advanced Tech Stack Taxonomy:
+| **🛸 Orchestration & FL** | **⚖️ Trust & XAI** | **🏗️ Core Services** |
+| :---: | :---: | :---: |
+| ![Flower](https://img.shields.io/badge/Flower-Federated_Learning-f47721?style=flat-square&logo=flower&logoColor=white) | ![SageMaker](https://img.shields.io/badge/Amazon-SageMaker_Clarify-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) | ![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=next.js&logoColor=white) |
+| ![StepFunctions](https://img.shields.io/badge/AWS-Step_Functions-E7157B?style=flat-square&logo=amazon-aws&logoColor=white) | ![BedrockTrace](https://img.shields.io/badge/Amazon-Bedrock_Trace-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) | ![Flask](https://img.shields.io/badge/Python-Flask-000000?style=flat-square&logo=flask&logoColor=white) |
+| ![LangGraph](https://img.shields.io/badge/LangGraph-Agents-1C1C1C?style=flat-square&logo=python&logoColor=white) | ![Provenance](https://img.shields.io/badge/JanSathi-Provenance_Engine-10b981?style=flat-square) | ![Bedrock](https://img.shields.io/badge/AWS-Bedrock-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) |
 
 ---
 
@@ -45,32 +152,61 @@ Citizens struggle with:
 
 ---
 
-## 🚀 Tech Stack
+## �️ Advanced Tech Stack Taxonomy
 
-### Frontend (Website)
-- **Framework**: Next.js 16 (React, TypeScript)
-- **Styling**: Tailwind CSS with custom design system
-- **UI/UX**: Glassmorphism, Aurora gradients, Premium animations
-- **Speech**: Web Speech API (browser-based STT)
-- **Audio**: HTML5 `<audio>` for playback
-- **State Management**: React Hooks + localStorage
-- **Mobile**: Fully responsive (320px - 4K)
+JanSathi is built using a decentralized, high-availability architecture that balances premium modern web capabilities with robust, low-latency AI orchestration.
 
-### Backend
-- **Framework**: Python Flask
-- **Architecture**: Clean Architecture (API → Services → Core)
-- **Database**: SQLite with SQLAlchemy ORM
-- **Server**: Gunicorn with async workers
-- **Security**: Talisman, CORS, Rate Limiting
-- **Logging**: JSON-based structured logging
+### 🌐 Frontend Ecosystem
+| Category | Technology | Usage in JanSathi |
+| :--- | :--- | :--- |
+| **Framework** | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js) | Server-Side Rendering (SSR), App Router, ISR for instant scheme loads. |
+| **Language** | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) | End-to-end type safety for mission-critical reliability. |
+| **Styling** | ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) | Utility-first styling for glassmorphic and responsive UI. |
+| **Animations** | ![Framer Motion](https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white) | Premium micro-interactions and smooth layout transitions. |
+| **Auth** | ![Clerk](https://img.shields.io/badge/Clerk-6C47FF?style=flat-square&logo=clerk&logoColor=white) | Multi-factor authentication, Google SSO, and user session management. |
+| **PWA** | ![Workbox](https://img.shields.io/badge/Workbox-33b5e5?style=flat-square&logo=webbox&logoColor=white) | Offline-first service worker for rural/low-connectivity caching. |
+| **Speech** | **Web Speech API** | Browser-native Speech-to-Text and Text-to-Speech for low latency. |
+| **Icons** | **Lucide React** | Consistent, high-fidelity iconography. |
 
-### AI / Cloud Services
-- **Transcription**: AWS Transcribe (Speech-to-Text)
-- **LLM**: AWS Bedrock (Claude/Titan models)
-- **TTS**: AWS Polly (Neural voices)
-- **Search**: AWS Kendra (RAG retrieval)
-- **Observability**: AWS X-Ray (Tracing), CloudWatch (Metrics/Logs), Model Monitor (AI Quality)
-- **Fallback**: Local mock mode when AWS unavailable
+### ⚙️ Backend & Orchestration
+| Category | Technology | Usage in JanSathi |
+| :--- | :--- | :--- |
+| **Runtime** | ![Python 3.12](https://img.shields.io/badge/Python_3.12-3776AB?style=flat-square&logo=python&logoColor=white) | Core logic, AI service integration, and data processing. |
+| **Web Framework** | ![Flask](https://img.shields.io/badge/Flask-000000?style=flat-square&logo=flask&logoColor=white) | High-performance REST API with blueprint modularity. |
+| **Orchestrator** | ![AWS Step Functions](https://img.shields.io/badge/AWS_Step_Functions-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Complex state management for scheme application workflows. |
+| **Server** | **Gunicorn + Async workers** | Production-grade WSGI server with concurrency support. |
+| **Security** | **Flask-Talisman / CORS** | Automated security headers and cross-origin protection. |
+
+### 🤖 Artificial Intelligence & Machine Learning
+| Category | Technology | Usage in JanSathi |
+| :--- | :--- | :--- |
+| **Reasoning** | ![AWS Bedrock](https://img.shields.io/badge/AWS_Bedrock-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Orchestrating Claude 3.5 Sonnet for conversational logic. |
+| **RAG Engine** | ![AWS Kendra](https://img.shields.io/badge/AWS_Kendra-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Semantic search and retrieval over official government corpus. |
+| **Speech Processing** | ![AWS Transcribe](https://img.shields.io/badge/AWS_Transcribe-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Real-time multi-lingual speech-to-text for 12+ Indian dialects. |
+| **Voice Synthesis** | ![AWS Polly](https://img.shields.io/badge/AWS_Polly-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Neural TTS (Aditi/Raveena) for human-like voice response. |
+| **Privacy ML** | ![Flower](https://img.shields.io/badge/Flower-000000?style=flat-square&logo=flower) | Federated Learning for on-device dialect adaptation. |
+| **XAI** | ![SageMaker Clarify](https://img.shields.io/badge/SageMaker_Clarify-FF9900?style=flat-square&logo=amazon-aws&logoColor=white) | Explainable AI metrics for bias detection and citation audit. |
+
+### ☁️ Cloud Infrastructure (AWS Native)
+| Service | Purpose | Specific Implementation |
+| :--- | :--- | :--- |
+| **API Gateway** | Entry Point | Managed REST endpoints with throttling and WAF protection. |
+| **Lambda** | Compute | Serverless horizontal scaling with sub-second cold starts. |
+| **S3** | Storage | High-durability storage for audio caches and document uploads. |
+| **DynamoDB** | Database | High-scale NoSQL persistence for chat sessions (20%+ read hits). |
+| **CloudFront** | Edge Delivery | Global CDN for static asset distribution and edge-side auth. |
+| **EventBridge** | Event Bus | Decoupling agent actions from telemetry and notification services. |
+| **Secret Manager** | Security | Dynamic rotation of API keys and AWS credentials. |
+
+### 📊 Observability & DevOps
+| Category | Tool | Function |
+| :--- | :--- | :--- |
+| **Tracing** | **AWS X-Ray** | Distributed request tracing across Lambda, Bedrock, and Kendra. |
+| **Logging** | **CloudWatch Logs** | Centralized, encrypted JSON-structured logging. |
+| **Analytics** | **QuickSight** | Executive BI dashboards for government outreach impact. |
+| **CI/CD** | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white) | Automated testing, linting, and multi-region AWS deployment. |
+| **IaC** | **AWS CDK** | Infrastructure-as-Code for 100% reproducible environments. |
+| **Containerization** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) | Multi-stage builds for consistent local and cloud execution. |
 
 ---
 
@@ -109,12 +245,17 @@ JanSathi/
 │   ├── Dockerfile                  # Production Next.js container
 │   └── package.json
 │
-├── docs/
+├── docs/                           # Consolidated Documentation & Guides
 │   ├── AUTHENTICATION_GUIDE.md    # Auth integration guide
-│   ├── AUTH_PAGES_README.md       # Auth pages documentation
-│   └── MOBILE_FIXES_SUMMARY.md    # Mobile optimization log
+│   ├── HACKATHON_SUBMISSION.md    # Hackathon-ready project overview
+│   ├── AWS_SETUP_GUIDE.md         # AWS infrastructure setup guide
+│   ├── KENDRA_SETUP_GUIDE.md      # Detailed Kendra RAG integration
+│   ├── design.md                  # Detailed system design & schemas
+│   └── requirements.md            # Business & technical requirements
 │
-└── README.md                       # This file
+├── infrastructure/                 # Infrastructure-as-Code (AWS CDK)
+├── scripts/                        # Setup, Monitoring & Testing utilities
+└── README.md                       # Main Entry Point
 ```
 
 ---
@@ -181,6 +322,7 @@ flowchart TD
 ```
 
 ### Technical Infrastructure Details
+> **Implementation Note**: The following diagrams represent the transition towards the full [AWS Production Architecture](docs/AWS_PRODUCTION_ARCHITECTURE.md) implemented in v2.5.
 
 #### **Backend Production Pipeline**
 ```mermaid
@@ -438,7 +580,7 @@ FLASK_ENV=development
 - Perfect for testing and prototyping
 
 ### Production Ready Options
-Refer to `AUTHENTICATION_GUIDE.md` for detailed integration guides:
+Refer to `docs/AUTHENTICATION_GUIDE.md` for detailed integration guides:
 - **Clerk** (Recommended - easiest setup)
 - **NextAuth.js** (Free, open-source)
 - **Firebase Auth** (Google's solution)
@@ -489,43 +631,34 @@ Refer to `AUTHENTICATION_GUIDE.md` for detailed integration guides:
 
 ---
 
-## 🔄 Recent Updates (v2.0)
-
-### Latest Changes (Feb 2026)
-1. ✨ **Authentication System**
-   - Created professional sign-in and sign-up pages
-   - Added Google OAuth buttons (demo)
-   - Implemented sign-out functionality
-   - Created useAuth hook for state management
-
-2. ✨ **Mobile Responsiveness**
-   - Fixed vertical alignment across all pages
-   - Responsive text sizing (mobile → desktop)
-   - Adaptive grid layouts
-   - Touch-friendly button sizing
-   - Horizontal scroll for tables on mobile
-
-3. ✨ **UI Improvements**
-   - Fixed "Government" typo on landing page
-   - Updated navbar with Sign In/Sign Up buttons
-   - Improved chat message bubble widths
-   - Better spacing on mobile devices
-   - Enhanced welcome screen
-
-4. ✨ **Code Quality**
-   - Removed Clerk dependencies (shifted to demo mode)
-   - Cleaned up imports and unused code
-   - Added comprehensive documentation
-   - Created authentication integration guide
+### v2.5 - Production Hardening (Current)
+1. 🛡️ **Advanced Security Suite**
+   - **Shield**: Multi-layer Prompt Injection defense patterns
+   - **Privacy**: Automated PII masking & HMAC anonymization for Aadhaar/Phone
+   - **Safety**: Content moderation logic for government service compliance
+2. 📡 **Enterprise Observability**
+   - **Tracing**: End-to-end request lifecycle visibility
+   - **Quality**: AI confidence scoring and human-in-the-loop flagging
+   - **Audit**: Local auditing system for AI explainability
+3. 📊 **JanSathi Pulse (Stakeholder Layer)**
+   - **Analytics**: Benefit Gap analysis for government admins
+   - **Outreach**: Simulated IVR and WhatsApp citizen engagement flows
+   - **Moderation**: Dedicated dashboard for auditing flagged AI responses
+4. 🎨 **Premium Aesthetic Polish**
+   - **Design**: High-fidelity glassmorphism and aurora gradient refactor
+   - **Visuals**: High-density Mermaid ecosystem workflows
+   - **UX**: Dynamic initials-based profile loading and zero-state optimizations
 
 ---
 
 ## 📚 Documentation
 
-- **`AUTHENTICATION_GUIDE.md`** - How to integrate real authentication providers
-- **`AUTH_PAGES_README.md`** - Quick reference for auth pages and features
-- **`MOBILE_FIXES_SUMMARY.md`** - Summary of mobile optimization work
-- **`HACKATHON_SUBMISSION.md`** - Hackathon-ready project overview
+- **`docs/AUTHENTICATION_GUIDE.md`** - How to integrate real authentication providers
+- **`docs/HACKATHON_SUBMISSION.md`** - Hackathon-ready project overview
+- **`docs/AWS_SETUP_GUIDE.md`** - AWS infrastructure setup guide
+- **`docs/KENDRA_SETUP_GUIDE.md`** - Detailed Kendra RAG integration
+- **`docs/COST_OPTIMIZATION.md`** - Strategy for $0/mo development
+- **`docs/failure_mode_analysis.md`** - Resilience and error handling strategy
 
 ---
 
@@ -596,6 +729,22 @@ schemes based on family composition.
 2. SMS fallback for feature phones
 3. State-specific customization
 4. Integration with official government portals
+
+## 🔮 Future Enhancements & Scalability
+
+JanSathi is designed to evolve from a web assistant to a ubiquitous democratic infrastructure.
+
+### 1. Multi-Channel Accessibility (In-Progress)
+*   **📞 Enterprise IVR Integration**: A fully voice-driven interface accessible via basic feature phones without internet. Integrated with **AWS Connect** and **Twilio**.
+*   **💬 WhatsApp AI Concierge**: Official JanSathi WhatsApp Business API that allows users to send document photos (OCR) and query schemes via messaging.
+
+### 2. Privacy-Preserving Federated Learning (FL)
+We are implementing **Federated Learning** to improve model accuracy while maintaining 100% data residency:
+*   **The Problem**: Government queries contain sensitive PII (Personal Identifiable Information).
+*   **The Solution**: Instead of centralizing user data, we train small *local* intent models on the edge (device/gateway).
+*   **IVR/WhatsApp Application**:
+    *   **Dialect Learning**: The IVR system learns local slang and accents directly at the regional server level.
+    *   **Privacy**: Only weight updates (gradients) are sent to the central JanSathi node, ensuring zero raw data leakage.
 
 ---
 

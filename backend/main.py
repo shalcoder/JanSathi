@@ -55,6 +55,10 @@ def create_app():
 
     # Register Blueprints
     app.register_blueprint(api_bp)
+    
+    # Register Agent Blueprint (New Architectural Layer)
+    from app.agent import agent_bp
+    app.register_blueprint(agent_bp, url_prefix='/agent')
 
     # Create SQLite tables only in local dev mode
     if not USE_DYNAMODB:

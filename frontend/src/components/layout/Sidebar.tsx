@@ -19,6 +19,8 @@ import {
     PlayCircle,
     AlertTriangle,
     ShieldCheck,
+    Phone,
+    Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton, SignOutButton } from '@clerk/nextjs';
@@ -67,11 +69,13 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
             title: "10-Layer Demo Flow",
             items: [
                 { id: 'overview', label: '1. Admin Command Center', icon: LayoutDashboard, color: 'text-indigo-500' },
-                { id: 'simulator', label: '2. Call Simulator (Inject)', icon: PlayCircle, color: 'text-rose-500' },
-                { id: 'ivr-console', label: '3. IVR Control Room', icon: Radio, color: 'text-amber-500' },
-                { id: 'hitl', label: '4. HITL Verifier Queue', icon: AlertTriangle, color: 'text-red-500' },
-                { id: 'receipts', label: '5. Benefit Action / SMS', icon: FileText, color: 'text-blue-500' },
-                { id: 'security', label: '6. DPDP Security Hash', icon: ShieldCheck, color: 'text-emerald-500' },
+                { id: 'phone-emulator', label: '2. Web Phone Emulator', icon: Phone, color: 'text-emerald-500' },
+                { id: 'simulator', label: '3. Call Simulator (Inject)', icon: PlayCircle, color: 'text-rose-500' },
+                { id: 'ivr-console', label: '4. IVR Control Room', icon: Radio, color: 'text-amber-500' },
+                { id: 'hitl', label: '5. HITL Verifier Queue', icon: AlertTriangle, color: 'text-red-500' },
+                { id: 'receipts', label: '6. Benefit Action / SMS', icon: FileText, color: 'text-blue-500' },
+                { id: 'security', label: '7. DPDP Security Hash', icon: ShieldCheck, color: 'text-emerald-500' },
+                { id: 'impact', label: '8. Impact Dashboard', icon: Zap, color: 'text-primary' },
             ]
         },
         {

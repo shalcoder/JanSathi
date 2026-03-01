@@ -1,1 +1,402 @@
-{}
+{
+  "test-kisan-1": {
+    "current_state": "START",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "state",
+        "land_hectares",
+        "income_annual",
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      }
+    }
+  },
+  "test-grv-1": {
+    "current_state": "START",
+    "data": {
+      "grievance_id": "GRV-184572",
+      "grievance_draft": "To,\nThe District Grievance Officer,\nApplicant'S District District\n\nSubject: Grievance Regarding Government Scheme Payment \u2014 Ref: GRV-184572\n\nRespected Sir/Madam,\n\nI am writing to formally register a grievance regarding: mera paisa nahi aaya. Despite fulfilling all eligibility criteria, I have not received the entitled benefit. I respectfully request an urgent review and resolution of this matter.\n\nGrievance Reference No.: GRV-184572\n\nYours faithfully,\n[Applicant Name]"
+    }
+  },
+  "test-awas-1": {
+    "current_state": "START",
+    "data": {
+      "_scheme": "pm_awas_urban",
+      "_pending_slots": [
+        "state",
+        "income_annual",
+        "has_pucca_house",
+        "is_first_time_buyer"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in?",
+          "type": "string",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual household income in rupees?",
+          "type": "float",
+          "required": true
+        },
+        "has_pucca_house": {
+          "key": "has_pucca_house",
+          "prompt": "Do you currently own a pucca (permanent) house? (yes/no)",
+          "type": "boolean",
+          "dtmf_prompt": "Press 1 for Yes, 2 for No",
+          "dtmf_map": {
+            "1": true,
+            "2": false
+          },
+          "required": true
+        },
+        "is_first_time_buyer": {
+          "key": "is_first_time_buyer",
+          "prompt": "Is this your first time applying for government housing? (yes/no)",
+          "type": "boolean",
+          "dtmf_prompt": "Press 1 for Yes, 2 for No",
+          "dtmf_map": {
+            "1": true,
+            "2": false
+          },
+          "required": true
+        }
+      }
+    }
+  },
+  "test-kisan-debug": {
+    "current_state": "START",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "state",
+        "land_hectares",
+        "income_annual",
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      }
+    }
+  },
+  "test-debug-99": {
+    "current_state": "START",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "state",
+        "land_hectares",
+        "income_annual",
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      }
+    }
+  },
+  "test-k1": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "state",
+        "land_hectares",
+        "income_annual",
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      }
+    }
+  },
+  "test-g1": {
+    "current_state": "START",
+    "data": {
+      "grievance_id": "GRV-060993",
+      "grievance_draft": "To,\nThe District Grievance Officer,\nApplicant'S District District\n\nSubject: Grievance Regarding Government Scheme Payment \u2014 Ref: GRV-060993\n\nRespected Sir/Madam,\n\nI am writing to formally register a grievance regarding: mera paisa nahi aaya hai. Despite fulfilling all eligibility criteria, I have not received the entitled benefit. I respectfully request an urgent review and resolution of this matter.\n\nGrievance Reference No.: GRV-060993\n\nYours faithfully,\n[Applicant Name]"
+    }
+  },
+  "test-a1": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_awas_urban",
+      "_pending_slots": [
+        "state",
+        "income_annual",
+        "has_pucca_house",
+        "is_first_time_buyer"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in?",
+          "type": "string",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual household income in rupees?",
+          "type": "float",
+          "required": true
+        },
+        "has_pucca_house": {
+          "key": "has_pucca_house",
+          "prompt": "Do you currently own a pucca (permanent) house? (yes/no)",
+          "type": "boolean",
+          "dtmf_prompt": "Press 1 for Yes, 2 for No",
+          "dtmf_map": {
+            "1": true,
+            "2": false
+          },
+          "required": true
+        },
+        "is_first_time_buyer": {
+          "key": "is_first_time_buyer",
+          "prompt": "Is this your first time applying for government housing? (yes/no)",
+          "type": "boolean",
+          "dtmf_prompt": "Press 1 for Yes, 2 for No",
+          "dtmf_map": {
+            "1": true,
+            "2": false
+          },
+          "required": true
+        }
+      }
+    }
+  },
+  "test-k1b": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "state",
+        "land_hectares",
+        "income_annual",
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      }
+    }
+  },
+  "test-g2": {
+    "current_state": "START",
+    "data": {
+      "grievance_id": "GRV-745707",
+      "grievance_draft": "To,\nThe District Grievance Officer,\nApplicant'S District District\n\nSubject: Grievance Regarding Government Scheme Payment \u2014 Ref: GRV-745707\n\nRespected Sir/Madam,\n\nI am writing to formally register a grievance regarding: mera paisa nahi aaya. Despite fulfilling all eligibility criteria, I have not received the entitled benefit. I respectfully request an urgent review and resolution of this matter.\n\nGrievance Reference No.: GRV-745707\n\nYours faithfully,\n[Applicant Name]"
+    }
+  },
+  "test-a2": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_awas_urban",
+      "_pending_slots": [
+        "state",
+        "income_annual",
+        "has_pucca_house",
+        "is_first_time_buyer"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in?",
+          "type": "string",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual household income in rupees?",
+          "type": "float",
+          "required": true
+        },
+        "has_pucca_house": {
+          "key": "has_pucca_house",
+          "prompt": "Do you currently own a pucca (permanent) house? (yes/no)",
+          "type": "boolean",
+          "dtmf_prompt": "Press 1 for Yes, 2 for No",
+          "dtmf_map": {
+            "1": true,
+            "2": false
+          },
+          "required": true
+        },
+        "is_first_time_buyer": {
+          "key": "is_first_time_buyer",
+          "prompt": "Is this your first time applying for government housing? (yes/no)",
+          "type": "boolean",
+          "dtmf_prompt": "Press 1 for Yes, 2 for No",
+          "dtmf_map": {
+            "1": true,
+            "2": false
+          },
+          "required": true
+        }
+      }
+    }
+  }
+}

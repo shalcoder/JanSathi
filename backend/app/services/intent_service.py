@@ -35,10 +35,16 @@ class BaseIntentClassifier:
 class RuleBasedIntentClassifier(BaseIntentClassifier):
     """Fast keyword-based fallback classifier (no cloud dependency)."""
 
+    SCHEME_APPLY_KEYWORDS = [
+        "kisan", "किसान", "pm kisan", "pmkisan", "samman nidhi",
+        "awas", "आवास", "pm awas", "housing scheme", "makaan",
+        "shram", "श्रम", "e shram", "eshram", "labour card",
+    ]
     APPLY_KEYWORDS = [
         "apply", "application", "आवेदन", "अप्लाई", "register", "sign up",
         "enroll", "eligible", "eligibility", "पात्रता", "yojana apply",
-        "scheme apply", "want to get", "how to get", "kisan", "किसान",
+        "scheme apply", "want to get", "how to get", "check eligibility",
+        "patrata", "labh", "लाभ", "benefit check",
     ]
     INFO_KEYWORDS = [
         "what is", "tell me", "explain", "how does", "क्या है", "बताइए",
@@ -48,25 +54,39 @@ class RuleBasedIntentClassifier(BaseIntentClassifier):
     GRIEVANCE_KEYWORDS = [
         "grievance", "complaint", "शिकायत", "problem", "issue", "not received",
         "pending", "rejected", "wrong", "error", "correction",
+        "payment nahi", "paisa nahi", "पैसे नहीं", "नहीं आया",
+        "haven't received", "didn't receive",
     ]
     TRACK_KEYWORDS = [
-        "track", "status", "स्थिति", "check", "application status",
-        "case status", "where is my", "case id",
+        "track", "status", "स्थिति", "application status",
+        "case status", "where is my", "case id", "check status",
+        "mera status", "meri application",
     ]
 
     def classify(self, query: str, language: str = "hi") -> dict:
         msg = query.lower()
 
-        if any(k in msg for k in self.TRACK_KEYWORDS):
-            return {"intent": "track", "confidence": 0.85, "language_detected": language}
-        if any(k in msg for k in self.GRIEVANCE_KEYWORDS):
-            return {"intent": "grievance", "confidence": 0.82, "language_detected": language}
-        if any(k in msg for k in self.APPLY_KEYWORDS):
-            return {"intent": "apply", "confidence": 0.80, "language_detected": language}
-        if any(k in msg for k in self.INFO_KEYWORDS):
-            return {"intent": "info", "confidence": 0.78, "language_detected": language}
+        # Scheme-specific apply keywords take HIGHEST priority
+        if any(k in msg for k in self.SCHEME_APPLY_KEYWORDS):
+            # Detect which scheme
+            if any(k in msg for k in ("kisan", "किसान", "samman nidhi", "pmkisan")):
+                return {"intent": "apply", "confidence": 0.90, "language_detected": language, "scheme_hint": "pm_kisan"}
+            if any(k in msg for k in ("awas", "आवास", "housing")):
+                return {"intent": "apply", "confidence": 0.90, "language_detected": language, "scheme_hint": "pm_awas_urban"}
+            if any(k in msg for k in ("shram", "श्रम", "labour")):
+                return {"intent": "apply", "confidence": 0.90, "language_detected": language, "scheme_hint": "e_shram"}
+            return {"intent": "apply", "confidence": 0.85, "language_detected": language, "scheme_hint": "unknown"}
 
-        return {"intent": "info", "confidence": 0.60, "language_detected": language}
+        if any(k in msg for k in self.GRIEVANCE_KEYWORDS):
+            return {"intent": "grievance", "confidence": 0.85, "language_detected": language, "scheme_hint": "unknown"}
+        if any(k in msg for k in self.TRACK_KEYWORDS):
+            return {"intent": "track", "confidence": 0.82, "language_detected": language, "scheme_hint": "unknown"}
+        if any(k in msg for k in self.APPLY_KEYWORDS):
+            return {"intent": "apply", "confidence": 0.80, "language_detected": language, "scheme_hint": "unknown"}
+        if any(k in msg for k in self.INFO_KEYWORDS):
+            return {"intent": "info", "confidence": 0.78, "language_detected": language, "scheme_hint": "unknown"}
+
+        return {"intent": "info", "confidence": 0.60, "language_detected": language, "scheme_hint": "unknown"}
 
 
 class BedrockIntentClassifier(BaseIntentClassifier):

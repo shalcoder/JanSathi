@@ -144,3 +144,16 @@ class NotifyService:
         elif not phone.startswith("+"):
             phone = "+91" + phone
         return phone
+
+    def log_event(self, session_id: str, event_type: str, data: dict = None) -> None:
+        """
+        Log a workflow terminal event (no phone required).
+        Used by execution.py to record eligibility / grievance outcomes.
+        Falls back to console in local mode.
+        """
+        payload = {
+            "session_id": session_id,
+            "event_type": event_type,
+            "data": data or {},
+        }
+        logger.info(f"[NotifyService] Event logged: {payload}")

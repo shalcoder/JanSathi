@@ -19,7 +19,11 @@ import CallSimulator from "@/components/features/dashboard/CallSimulator";
 import HITLQueue from "@/components/features/dashboard/HITLQueue";
 import BenefitReceiptViewer from "@/components/features/dashboard/BenefitReceiptViewer";
 import SecurityAuditPanel from "@/components/features/dashboard/SecurityAuditPanel";
-import { Menu, Sun, Moon, Search, Bell, PhoneCall, LayoutDashboard, FileText, Settings, User, Users, HelpCircle } from 'lucide-react';
+import PhoneEmulatorPage from "@/components/features/dashboard/PhoneEmulatorPage";
+import ImpactMode from "@/components/features/dashboard/ImpactMode";
+import FederatedLearningStatus from "@/components/features/dashboard/FederatedLearningStatus";
+import MarketPrices from "@/components/features/dashboard/MarketPrices";
+import { Menu, Sun, Moon, Search, Bell } from 'lucide-react';
 import { useUser, useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { buildClient } from '@/services/api';
@@ -168,6 +172,14 @@ export default function Home() {
         return <BenefitReceiptViewer />;
       case 'security':
         return <SecurityAuditPanel />;
+      case 'phone-emulator':
+        return <PhoneEmulatorPage />;
+      case 'impact':
+        return <ImpactMode />;
+      case 'federated-learning':
+        return <FederatedLearningStatus />;
+      case 'market-prices':
+        return <MarketPrices />;
       default:
         return <OverviewPage onNavigate={setActivePage} />;
     }

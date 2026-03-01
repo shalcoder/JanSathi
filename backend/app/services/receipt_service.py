@@ -90,11 +90,18 @@ class ReceiptService:
         verdict_text  = "ELIGIBLE" if eligible else "NOT ELIGIBLE"
         verdict_color = "#16a34a" if eligible else "#dc2626"
 
-        # Build rules rows
-        rules_rows = "".join(
-            f"<tr><td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{r}</td></tr>"
-            for r in rules_trace
-        )
+        # Build rules rows — handles both dict (new) and string (legacy) entries
+        def _rule_row(r):
+            if isinstance(r, dict):
+                icon = "✅" if r.get("pass") else "❌"
+                label = r.get("label", r.get("rule", ""))
+                user_val = r.get("user_value", "")
+                req_val = r.get("required_value", "")
+                detail = f" (yours: {user_val}, required: {req_val})" if user_val is not None else ""
+                return f"<tr><td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{icon} {label}{detail}</td></tr>"
+            return f"<tr><td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{r}</td></tr>"
+
+        rules_rows = "".join(_rule_row(r) for r in rules_trace)
 
         # Build checklist items
         checklist_items = "".join(

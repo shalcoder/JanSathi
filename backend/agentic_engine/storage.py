@@ -1,10 +1,14 @@
 import json
 import os
+import time
 import logging
 from abc import ABC, abstractmethod
 
 # Configure local logger for storage
 logger = logging.getLogger(__name__)
+
+# TTL for sessions: 24 hours by default (configurable via env)
+_SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", str(60 * 60 * 24)))
 
 class BaseSessionStorage(ABC):
     """
@@ -57,6 +61,15 @@ class LocalJSONStorage(BaseSessionStorage):
 class DynamoDBStorage(BaseSessionStorage):
     """
     Production-ready DynamoDB implementation of session storage.
+
+    DynamoDB Table Schema:
+      - PK: session_id (String) — partition key
+      - expires_at (Number)    — TTL attribute (set in DynamoDB table settings)
+      - data (Map)             — full session payload
+
+    TTL Configuration:
+      Enable TTL on the table with attribute name: expires_at
+      Sessions auto-delete after SESSION_TTL_SECONDS (default: 86400 = 24h)
     """
     def __init__(self, table_name: str, region_name: str = "us-east-1"):
         if not table_name:
@@ -98,26 +111,55 @@ class DynamoDBStorage(BaseSessionStorage):
         except Exception as e:
             raise RuntimeError(f"DynamoDB Initialization Failed: {str(e)}")
 
-    def load(self) -> dict:
+    def put_session(self, session_id: str, session_data: dict):
         """
-        Placeholder load logic. 
-        In JanSathi v2, session data is stored as items where PK is session_id.
-        This base class implementation currently handles 'all data' dicts for Phase 1 compatibility.
+        Write a single session item to DynamoDB with TTL.
+        The expires_at field enables automatic cleanup via DynamoDB TTL.
         """
         if self.table is None:
             self.initialize()
-            
-        # For Phase 1 compatibility where we expect a single dict of all sessions:
-        # We would scan or fetch a specific key. 
-        # Note: In production, we should avoid Scans.
-        raise NotImplementedError("DynamoDBStorage.load() for full dict not optimized for production. Use session-specific loads.")
+        expires_at = int(time.time()) + _SESSION_TTL_SECONDS
+        self.table.put_item(Item={
+            "session_id": session_id,
+            "data": session_data,
+            "expires_at": expires_at,  # DynamoDB TTL attribute
+        })
+        logger.debug(f"[DynamoDBStorage] Session {session_id} written, TTL={expires_at}")
+
+    def get_session(self, session_id: str) -> dict:
+        """
+        Read a single session item from DynamoDB.
+        Returns None if not found or expired.
+        """
+        if self.table is None:
+            self.initialize()
+        response = self.table.get_item(Key={"session_id": session_id})
+        item = response.get("Item")
+        if not item:
+            return None
+        # Guard: local expiry check (DynamoDB TTL can lag up to 48h)
+        expires_at = item.get("expires_at", 0)
+        if expires_at and int(time.time()) > expires_at:
+            logger.info(f"[DynamoDBStorage] Session {session_id} locally expired (TTL={expires_at})")
+            return None
+        return item.get("data", {})
+
+    def load(self) -> dict:
+        """
+        Full-table load — intentionally NOT supported in production.
+        Use get_session(session_id) for per-session access.
+        """
+        raise NotImplementedError(
+            "DynamoDBStorage.load() for full dict not optimized for production. "
+            "Use get_session(session_id) instead."
+        )
 
     def save(self, data: dict):
         """
-        Placeholder save logic.
+        Full-table save — intentionally NOT supported in production.
+        Use put_session(session_id, data) instead.
         """
-        if self.table is None:
-            self.initialize()
-        
-        # Similar to load, Phase 1 logic expects full data persistence.
-        raise NotImplementedError("DynamoDBStorage.save() for full dict not optimized for production.")
+        raise NotImplementedError(
+            "DynamoDBStorage.save() for full dict not optimized for production. "
+            "Use put_session(session_id, data) instead."
+        )

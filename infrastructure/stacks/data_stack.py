@@ -11,6 +11,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_kendra as kendra,
     aws_iam as iam,
+    aws_sns as sns,
 )
 from constructs import Construct
 
@@ -18,15 +19,42 @@ from constructs import Construct
 class DataStack(Stack):
     """
     Creates:
-    - DynamoDB: Conversations table (UserId HASH, Timestamp RANGE, TTL 90 days)
+    - DynamoDB: Users table (UserId HASH, with GSI on Phone)
+    - DynamoDB: Conversations table (UserId HASH, Timestamp RANGE)
     - DynamoDB: CacheEntries table (QueryHash HASH, TTL for cache expiry)
     - S3: Audio bucket (lifecycle: 30d → Glacier → 90d delete)
     - S3: Uploads bucket (document storage)
+    - SNS: Topic for Layer 7 Notification Dispatch
     - Kendra: Search index for government schemes and documents
     """
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        # ============================================================
+        # DynamoDB: User Profiles Table
+        # ============================================================
+        self.users_table = dynamodb.Table(
+            self, "UserProfilesTable",
+            table_name="JanSathi-Users",
+            partition_key=dynamodb.Attribute(
+                name="UserId",  # Maps to Clerk ID
+                type=dynamodb.AttributeType.STRING
+            ),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.RETAIN,
+            point_in_time_recovery=True,
+        )
+
+        # GSI: Quick lookup via E.164 phone number for the IVR Trigger
+        self.users_table.add_global_secondary_index(
+            index_name="PhoneIndex",
+            partition_key=dynamodb.Attribute(
+                name="PhoneE164",
+                type=dynamodb.AttributeType.STRING
+            ),
+            projection_type=dynamodb.ProjectionType.ALL
+        )
 
         # ============================================================
         # DynamoDB: Conversations Table
@@ -176,8 +204,20 @@ class DataStack(Stack):
         )
 
         # ============================================================
+        # SNS: Notifications Topic (Layer 7)
+        # ============================================================
+        self.notifications_topic = sns.Topic(
+            self, "NotificationsTopic",
+            topic_name="JanSathi-Notifications",
+            display_name="JanSathi Delivery Receipts"
+        )
+
+        # ============================================================
         # Outputs
         # ============================================================
+        cdk.CfnOutput(self, "UsersTableName",
+                       value=self.users_table.table_name,
+                       description="DynamoDB Users table name")
         cdk.CfnOutput(self, "ConversationsTableName",
                        value=self.conversations_table.table_name,
                        description="DynamoDB Conversations table name")
@@ -193,3 +233,6 @@ class DataStack(Stack):
         cdk.CfnOutput(self, "KendraIndexId",
                        value=self.kendra_index.attr_id,
                        description="Kendra search index ID")
+        cdk.CfnOutput(self, "NotificationTopicArn",
+                       value=self.notifications_topic.topic_arn,
+                       description="SNS Topic ARN for outbound SMS")

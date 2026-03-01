@@ -113,17 +113,18 @@ export default function ApplicationsPage() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.1 }}
-                                className="bg-card border border-border/50 rounded-2xl p-6 hover:shadow-lg transition-all group"
+                                className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(234,88,12,0.1)] hover:border-primary/30 transition-all group relative overflow-hidden"
                             >
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
 
                                     {/* Icon & Title */}
                                     <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-secondary rounded-xl">
-                                            <FileText className="w-6 h-6 text-foreground" />
+                                        <div className="p-3 bg-secondary/80 rounded-2xl border border-border/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-colors">
+                                            <FileText className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-lg text-foreground">{app.title}</h3>
+                                            <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">{app.title}</h3>
                                             <p className="text-xs text-secondary-foreground font-medium mt-1">ID: {app.id} • Submitted on {app.date}</p>
                                         </div>
                                     </div>

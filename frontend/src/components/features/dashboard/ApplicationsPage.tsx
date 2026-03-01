@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, CheckCircle, XCircle, FileText, ChevronRight } from 'lucide-react';
-import { getApplications } from '@/services/api';
+import { getApplications, getApplicationsBySession } from '@/services/api';
 import { useUser } from '@clerk/nextjs';
+import { useSession } from '@/hooks/useSession';
 
 interface Application {
     id: number;
@@ -17,30 +18,57 @@ export default function ApplicationsPage() {
     const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
     const { user } = useUser();
+    const { sessionId, token } = useSession();
     const userId = user?.id || 'demo-user';
+
+    const statusToStep = (status: string) => {
+        const s = (status || '').toLowerCase();
+        if (s === 'disbursed') return 4;
+        if (s === 'approved') return 3;
+        if (s === 'verified') return 2;
+        return 1;
+    };
 
     useEffect(() => {
         const fetchApps = async () => {
             setLoading(true);
             try {
+                // Try new unified endpoint first (session-based)
+                if (sessionId) {
+                    const data = await getApplicationsBySession(sessionId, token ?? undefined);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const mappedApps: Application[] = data.map((a: any) => ({
+                        id: a.case_id ?? a.id,
+                        title: a.scheme_name ?? `Case ${a.case_id}`,
+                        date: a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A',
+                        status: a.status ?? 'queued',
+                        step: statusToStep(a.status),
+                        totalSteps: 4
+                    }));
+                    setApplications(mappedApps);
+                    return;
+                }
+                // Fallback to legacy user-based endpoint
                 const data = await getApplications(userId);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const mappedApps: Application[] = data.map((a: any) => ({
                     id: a.id,
                     title: a.scheme_name,
                     date: new Date(a.updated_at).toLocaleDateString(),
                     status: a.status,
-                    step: a.status === 'Approved' ? 3 : (a.status === 'Verified' ? 2 : 1),
+                    step: statusToStep(a.status),
                     totalSteps: 4
                 }));
                 setApplications(mappedApps);
             } catch (error) {
-                console.error("Failed to fetch applications:", error);
+                console.error('Failed to fetch applications:', error);
             } finally {
                 setLoading(false);
             }
         };
         fetchApps();
-    }, [userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionId, userId]);
 
     const getStatusColor = (status: string) => {
         switch (status) {

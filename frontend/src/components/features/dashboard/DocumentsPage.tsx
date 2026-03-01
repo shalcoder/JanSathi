@@ -140,11 +140,11 @@ const DocumentsPage = () => {
 
     const getThemeStyles = (theme: string) => {
         switch (theme) {
-            case 'orange': return { icon: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-500/10', border: 'border-orange-200 dark:border-orange-500/20' };
-            case 'blue': return { icon: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-200 dark:border-blue-500/20' };
-            case 'emerald': return { icon: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-200 dark:border-emerald-500/20' };
-            case 'purple': return { icon: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-500/10', border: 'border-purple-200 dark:border-purple-500/20' };
-            default: return { icon: 'text-foreground', bg: 'bg-secondary/50', border: 'border-border' };
+            case 'orange': return { icon: 'text-orange-500', bg: 'bg-orange-500/5', border: 'border-orange-500/20 hover:border-orange-500/40' };
+            case 'blue': return { icon: 'text-blue-500', bg: 'bg-blue-500/5', border: 'border-blue-500/20 hover:border-blue-500/40' };
+            case 'emerald': return { icon: 'text-emerald-500', bg: 'bg-emerald-500/5', border: 'border-emerald-500/20 hover:border-emerald-500/40' };
+            case 'purple': return { icon: 'text-purple-500', bg: 'bg-purple-500/5', border: 'border-purple-500/20 hover:border-purple-500/40' };
+            default: return { icon: 'text-foreground', bg: 'bg-secondary/20', border: 'border-border/50 hover:border-border/80' };
         }
     };
 
@@ -200,9 +200,10 @@ const DocumentsPage = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="p-8 rounded-2xl bg-card border border-border/50 relative overflow-hidden shadow-lg"
+                        className="p-8 rounded-2xl bg-card/60 backdrop-blur-xl border border-primary/20 relative overflow-hidden shadow-[0_8px_30px_rgba(234,88,12,0.15)] group"
                     >
-                        <button onClick={() => setVisionResult(null)} className="absolute top-4 right-4 p-2 text-foreground/40 hover:text-foreground">
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-50 pointer-events-none"></div>
+                        <button onClick={() => setVisionResult(null)} className="absolute top-4 right-4 p-2 text-foreground/40 hover:text-foreground relative z-10 transition-colors">
                             <X className="w-5 h-5" />
                         </button>
                         <div className="flex items-center gap-2 mb-4 text-primary">
@@ -226,14 +227,15 @@ const DocumentsPage = () => {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.05 }}
-                            className={`p-8 rounded-2xl border shadow-sm flex flex-col justify-between min-h-[240px] transition-all hover:shadow-md ${styles.bg} ${styles.border}`}
+                            className={`p-8 rounded-2xl border shadow-[0_4px_20px_rgb(0,0,0,0.02)] flex flex-col justify-between min-h-[240px] transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur-xl relative overflow-hidden group ${styles.bg} ${styles.border}`}
                         >
-                            <div className="flex items-start justify-between mb-6">
-                                <div className="w-12 h-12 rounded-xl bg-background flex items-center justify-center border border-border">
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                            <div className="flex items-start justify-between mb-6 relative z-10">
+                                <div className="w-12 h-12 rounded-xl bg-background/80 backdrop-blur-md flex items-center justify-center border border-border group-hover:scale-110 transition-transform">
                                     <FileText className={`w-6 h-6 ${styles.icon}`} />
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
-                                    <div className="px-3 py-1 rounded-full bg-background border border-border shadow-xs">
+                                    <div className="px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-xs">
                                         <span className="text-[9px] font-bold text-foreground opacity-60 tracking-wider flex items-center gap-1">
                                             <ShieldCheck className="w-3 h-3" /> {doc.status}
                                         </span>
@@ -281,7 +283,7 @@ const DocumentsPage = () => {
                     )}
                 </div>
 
-                <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+                <div className="bg-card/60 backdrop-blur-xl rounded-2xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
                     <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-secondary/40 text-[10px] font-bold uppercase tracking-widest text-secondary-foreground opacity-60 border-b border-border">

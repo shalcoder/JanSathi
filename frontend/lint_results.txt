@@ -1,0 +1,178 @@
+
+> frontend@0.1.0 lint
+> eslint
+
+
+E:\JanSathi\frontend\next.config.ts
+  4:7  warning  'withPWA' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\public\sw.js
+  1:156  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:209  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:626  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+E:\JanSathi\frontend\public\workbox-c2c0676f.js
+  1:49     warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:87     warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:211    warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:257    warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:298    warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:381    warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:642    warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:813    warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:989    warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:1093   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:1738   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:2263   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:3058   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:3102   warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:3598   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:3727   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:7052   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:7234   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:7954   warning  'i' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:7962   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:8066   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:8368   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:9440   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:9550   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:9566   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:9627   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:9962   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:10038  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:10065  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:10081  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:10163  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:10963  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:11007  warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:11122  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:11194  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:11301  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:11382  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:11623  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:11941  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:12060  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:12464  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:12684  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:13012  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:13272  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:13319  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:13367  warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:14423  warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:14555  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:14599  warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:15097  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:15191  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:15404  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:15514  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:16025  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:16057  warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:16165  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:16591  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:16958  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:17076  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:17178  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:17458  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:17719  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:17903  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:19089  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:20040  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:20129  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:20260  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:20317  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:20514  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:20635  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:20768  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:20988  warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:21080  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:21657  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:21768  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:21988  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:22227  warning  'e' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:22385  warning  's' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:22450  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:22748  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:22962  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  1:23349  warning  't' is defined but never used                                          @typescript-eslint/no-unused-vars
+  1:23479  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+E:\JanSathi\frontend\src\app\dashboard\page.tsx
+  22:41   warning  'PhoneCall' is defined but never used        @typescript-eslint/no-unused-vars
+  22:52   warning  'LayoutDashboard' is defined but never used  @typescript-eslint/no-unused-vars
+  22:69   warning  'FileText' is defined but never used         @typescript-eslint/no-unused-vars
+  22:79   warning  'Settings' is defined but never used         @typescript-eslint/no-unused-vars
+  22:89   warning  'User' is defined but never used             @typescript-eslint/no-unused-vars
+  22:95   warning  'Users' is defined but never used            @typescript-eslint/no-unused-vars
+  22:102  warning  'HelpCircle' is defined but never used       @typescript-eslint/no-unused-vars
+  95:21   error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+
+E:\JanSathi\frontend\src\app\layout.tsx
+  8:8  warning  'Script' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\auth\CustomAuth.tsx
+  5:22  warning  'LogIn' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\BenefitReceipt.tsx
+  19:13  warning  '_turnId' is defined but never used     @typescript-eslint/no-unused-vars
+  20:16  warning  '_sessionId' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\DocumentScorecard.tsx
+  5:10  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+  5:61  warning  'Info' is defined but never used          @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\ModerationLoop.tsx
+  13:38  warning  'approved' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\MultiAgentThoughtProcess.tsx
+   2:18  warning  'AnimatePresence' is defined but never used                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  27:8   warning  React Hook useEffect has a missing dependency: 'onComplete'. Either include it or remove the dependency array. If 'onComplete' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+E:\JanSathi\frontend\src\components\features\chat\OutreachSimulator.tsx
+  5:32  warning  'Send' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\chat\SchemeCard.tsx
+   4:10  warning  'ExternalLink' is defined but never used                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   4:37  warning  'ShieldCheck' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   4:50  warning  'Award' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  40:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+E:\JanSathi\frontend\src\components\features\dashboard\CommunityPage.tsx
+  3:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\dashboard\DocumentsPage.tsx
+    7:5   warning  'Download' is defined but never used      @typescript-eslint/no-unused-vars
+    8:5   warning  'Eye' is defined but never used           @typescript-eslint/no-unused-vars
+    9:5   warning  'Clock' is defined but never used         @typescript-eslint/no-unused-vars
+   16:5   warning  'Search' is defined but never used        @typescript-eslint/no-unused-vars
+   17:5   warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+   18:5   warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+  334:45  warning  'i' is defined but never used             @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\dashboard\FederatedLearningStatus.tsx
+   2:18  warning  'AnimatePresence' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  43:8   warning  React Hook useEffect has a missing dependency: 'startTrainingRound'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\JanSathi\frontend\src\components\features\dashboard\HelpPage.tsx
+  2:10  warning  'HelpCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\dashboard\SecurityAuditPanel.tsx
+  2:63  warning  'RefreshCw' is defined but never used              @typescript-eslint/no-unused-vars
+  9:21  warning  'setIsPolling' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\features\dashboard\SettingsPage.tsx
+  5:10  warning  'Globe' is defined but never used     @typescript-eslint/no-unused-vars
+  5:59  warning  'Bell' is defined but never used      @typescript-eslint/no-unused-vars
+  5:65  warning  'Database' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\layout\Navbar.tsx
+  4:10  warning  'Ghost' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\layout\TelemetryPanel.tsx
+  13:24  warning  'prev' is defined but never used  @typescript-eslint/no-unused-vars
+  14:25  warning  'prev' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\JanSathi\frontend\src\components\ui\ErrorBoundary.tsx
+  18:44  warning  '_' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 129 problems (1 error, 128 warnings)
+

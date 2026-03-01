@@ -13,9 +13,12 @@ import {
     HelpCircle,
     Shield,
     Sparkles,
-    ChevronRight,
     Home,
     LogOut,
+    Radio,
+    PlayCircle,
+    AlertTriangle,
+    ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton, SignOutButton } from '@clerk/nextjs';
@@ -61,32 +64,32 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
 
     const navGroups = [
         {
-            title: "General",
+            title: "10-Layer Demo Flow",
             items: [
-                { id: 'overview', label: 'Overview', icon: LayoutDashboard, color: 'text-indigo-500' },
-                { id: 'assistant', label: 'AI Assistant', icon: Sparkles, color: 'text-primary' },
+                { id: 'overview', label: '1. Admin Command Center', icon: LayoutDashboard, color: 'text-indigo-500' },
+                { id: 'simulator', label: '2. Call Simulator (Inject)', icon: PlayCircle, color: 'text-rose-500' },
+                { id: 'ivr-console', label: '3. IVR Control Room', icon: Radio, color: 'text-amber-500' },
+                { id: 'hitl', label: '4. HITL Verifier Queue', icon: AlertTriangle, color: 'text-red-500' },
+                { id: 'receipts', label: '5. Benefit Action / SMS', icon: FileText, color: 'text-blue-500' },
+                { id: 'security', label: '6. DPDP Security Hash', icon: ShieldCheck, color: 'text-emerald-500' },
             ]
         },
         {
-            title: "Services",
+            title: "Supporting Systems",
             items: [
-                { id: 'schemes', label: 'Schemes', icon: Shield, color: 'text-emerald-500' },
-                { id: 'applications', label: 'Applications', icon: CheckCircle, color: 'text-amber-500' },
-                { id: 'documents', label: 'Documents', icon: FileText, color: 'text-blue-500' },
+                { id: 'assistant', label: 'JanSathi AI Copilot', icon: Sparkles, color: 'text-primary' },
+                { id: 'schemes', label: 'Available Schemes', icon: Shield, color: 'text-emerald-500' },
+                { id: 'applications', label: 'My Applications', icon: CheckCircle, color: 'text-amber-500' },
+                { id: 'documents', label: 'Locker Documents', icon: FileText, color: 'text-blue-500' },
             ]
         },
         {
-            title: "Community",
+            title: "Community & Account",
             items: [
                 { id: 'community', label: 'Local Forum', icon: Users, color: 'text-purple-500' },
-            ]
-        },
-        {
-            title: "Account",
-            items: [
-                { id: 'profile', label: 'Profile', icon: User, color: 'text-slate-500' },
-                { id: 'settings', label: 'Settings', icon: Settings, color: 'text-slate-500' },
-                { id: 'help', label: 'Help & Support', icon: HelpCircle, color: 'text-rose-500' },
+                { id: 'profile', label: 'Citizen Profile', icon: User, color: 'text-slate-500' },
+                { id: 'settings', label: 'Preferences', icon: Settings, color: 'text-slate-500' },
+                { id: 'help', label: 'Support', icon: HelpCircle, color: 'text-rose-500' },
             ]
         }
     ];
@@ -126,18 +129,21 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                                         key={item.id}
                                         onClick={() => onPageChange(item.id)}
                                         className={`
-                                            w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group relative font-medium
+                                            w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative font-medium overflow-hidden
                                             ${activePage === item.id
-                                                ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm'
-                                                : 'text-secondary-foreground hover:bg-secondary/40 hover:text-foreground border border-transparent'}
+                                                ? 'bg-primary/10 text-primary border border-primary/30 shadow-[0_0_15px_rgba(234,88,12,0.15)] dark:bg-primary/20 dark:shadow-[0_0_20px_rgba(234,88,12,0.2)]'
+                                                : 'text-secondary-foreground hover:bg-secondary/60 hover:text-foreground border border-transparent hover:border-border/50'}
                                         `}
                                     >
-                                        <item.icon className={`w-4 h-4 ${activePage === item.id ? item.color : 'opacity-50 group-hover:opacity-100 group-hover:text-foreground transition-opacity'}`} />
-                                        <span className="text-sm tracking-tight">{item.label}</span>
+                                        {activePage === item.id && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-50"></div>
+                                        )}
+                                        <item.icon className={`w-4 h-4 relative z-10 ${activePage === item.id ? item.color : 'opacity-60 group-hover:opacity-100 group-hover:text-foreground transition-all duration-300 group-hover:scale-110'}`} />
+                                        <span className={`text-sm tracking-tight relative z-10 ${activePage === item.id ? 'font-bold' : ''}`}>{item.label}</span>
                                         {activePage === item.id && (
                                             <motion.div
                                                 layoutId="active-pill"
-                                                className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
+                                                className="ml-auto w-1.5 h-6 rounded-full bg-primary relative z-10 shadow-[0_0_10px_rgba(234,88,12,0.8)]"
                                             />
                                         )}
                                     </button>

@@ -38,8 +38,18 @@ class SmsNotifier:
         logger.info(f"Dispatching SMS to {phone_number}: '{message}'", 
                     layer="7_Notification", session_id=session_id)
                     
-        # Normally this would be boto3 sns publish:
-        # sns = boto3.client('sns', region_name='ap-south-1')
-        # sns.publish(PhoneNumber=phone_number, Message=message)
+        import boto3
+        import os
         
-        return True
+        try:
+            # Send via AWS SNS using the region specified in the environment
+            region = os.getenv("AWS_REGION", "ap-south-1")
+            sns = boto3.client('sns', region_name=region)
+            sns.publish(PhoneNumber=phone_number, Message=message)
+            logger.info(f"Successfully dispatched real SMS via SNS to {phone_number}", 
+                        layer="7_Notification", session_id=session_id)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to dispatch real SMS via SNS to {phone_number}: {e}", 
+                        layer="7_Notification", session_id=session_id)
+            return False

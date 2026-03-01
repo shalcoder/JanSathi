@@ -6,12 +6,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
 from app.core.utils import setup_logging
-from app.api.routes import bp as api_bp
 from app.core.config import Config
+from app.core.middleware import register_middleware
 
 # Setup Logging Early
 setup_logging()
@@ -30,31 +28,54 @@ def create_app():
     # Security: CORS - Allow all origins for deployment testing
     CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
     
-    # Talisman only in non-Lambda mode (API Gateway handles HTTPS)
-    if not USE_DYNAMODB:
-        try:
-            from flask_talisman import Talisman
-            Talisman(app, content_security_policy=None)
-        except ImportError:
-            pass
-
     # Database: SQLite only for local dev
     if not USE_DYNAMODB:
         from app.models.models import db
-        from flask_migrate import Migrate
-        db.init_app(app)
-        Migrate(app, db)
+        try:
+            from flask_migrate import Migrate
+            db.init_app(app)
+            Migrate(app, db)
+        except ImportError:
+            db.init_app(app)
 
     # Rate Limiting (memory storage for Lambda, file for local)
-    limiter = Limiter(
-        get_remote_address,
-        app=app,
-        default_limits=[Config.RATELIMIT_DEFAULT],
-        storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
-    )
+    try:
+        from flask_limiter import Limiter
+        from flask_limiter.util import get_remote_address
+        limiter = Limiter(
+            get_remote_address,
+            app=app,
+            default_limits=[Config.RATELIMIT_DEFAULT],
+            storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
+        )
+        # Expose limiter on app so blueprints can reference it
+        app.limiter = limiter
+    except ImportError:
+        pass
 
-    # Register Blueprints
-    app.register_blueprint(api_bp)
+    # Register correlation-ID + lifecycle logging middleware
+    register_middleware(app)
+
+    # Register Agent Blueprint (New Architectural Layer)
+    try:
+        from app.agent import agent_bp
+        app.register_blueprint(agent_bp, url_prefix='/agent')
+    except ImportError:
+        pass
+
+    # Register API Blueprints
+    try:
+        from app.api.v1_routes import v1 as v1_bp
+        app.register_blueprint(v1_bp)
+    except ImportError:
+        pass
+
+    try:
+        from app.api.profile_routes import profile_bp
+        app.register_blueprint(profile_bp)
+    except ImportError:
+        pass
+
 
     # Create SQLite tables only in local dev mode
     if not USE_DYNAMODB:

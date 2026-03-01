@@ -1,0 +1,221 @@
+{
+  "Comment": "JanSathi Apply Workflow – Hybrid IVR Apply State Machine",
+  "StartAt": "CollectSlots",
+  "States": {
+    "CollectSlots": {
+      "Type": "Task",
+      "Comment": "Calls IVR slot-collection Lambda; returns collected slots or partial state",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-collect-slots",
+      "Parameters": {
+        "session_id.$": "$.session_id",
+        "scheme_name.$": "$.scheme_name",
+        "language.$": "$.language"
+      },
+      "ResultPath": "$.slot_result",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "ValidateSlots"
+    },
+    "ValidateSlots": {
+      "Type": "Task",
+      "Comment": "Validates collected slots (type checks, range checks) using rules config",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-validate-slots",
+      "Parameters": {
+        "session_id.$": "$.session_id",
+        "scheme_name.$": "$.scheme_name",
+        "slots.$": "$.slot_result.collected"
+      },
+      "ResultPath": "$.validation",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "CheckValidation"
+    },
+    "CheckValidation": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.validation.valid",
+          "BooleanEquals": false,
+          "Next": "CollectSlots"
+        }
+      ],
+      "Default": "EligibilityCheck"
+    },
+    "EligibilityCheck": {
+      "Type": "Task",
+      "Comment": "Deterministic rules engine — no LLM",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-eligibility",
+      "Parameters": {
+        "session_id.$": "$.session_id",
+        "scheme_name.$": "$.scheme_name",
+        "user_profile.$": "$.slot_result.collected"
+      },
+      "ResultPath": "$.eligibility",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "Verifier"
+    },
+    "Verifier": {
+      "Type": "Choice",
+      "Comment": "Low confidence → HITL. Ineligible → NotifyIneligible. Eligible → Submit.",
+      "Choices": [
+        {
+          "Variable": "$.eligibility.confidence",
+          "NumericLessThan": 0.8,
+          "Next": "EnqueueHITL"
+        },
+        {
+          "Variable": "$.eligibility.eligible",
+          "BooleanEquals": false,
+          "Next": "NotifyIneligible"
+        }
+      ],
+      "Default": "Submit"
+    },
+    "EnqueueHITL": {
+      "Type": "Task",
+      "Comment": "Write HITL ticket to DynamoDB + SQS; notify user of manual review",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-enqueue-hitl",
+      "Parameters": {
+        "session_id.$": "$.session_id",
+        "turn_id.$": "$.turn_id",
+        "transcript.$": "$.transcript",
+        "slots.$": "$.slot_result.collected",
+        "confidence.$": "$.eligibility.confidence",
+        "benefit_receipt.$": "$.eligibility.benefit_receipt"
+      },
+      "ResultPath": "$.hitl",
+      "Next": "NotifyHITL"
+    },
+    "NotifyHITL": {
+      "Type": "Task",
+      "Comment": "Send SMS: 'Your application is under review. Case ID: X'",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-notify",
+      "Parameters": {
+        "type": "hitl_queued",
+        "phone.$": "$.slot_result.collected.mobile",
+        "scheme_name.$": "$.scheme_name",
+        "case_id.$": "$.hitl.case_id"
+      },
+      "End": true
+    },
+    "Submit": {
+      "Type": "Task",
+      "Comment": "Call gov API stub or enqueue to submission queue",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-submit",
+      "Parameters": {
+        "session_id.$": "$.session_id",
+        "scheme_name.$": "$.scheme_name",
+        "user_profile.$": "$.slot_result.collected",
+        "benefit_receipt.$": "$.eligibility.benefit_receipt"
+      },
+      "ResultPath": "$.submission",
+      "Retry": [
+        {
+          "ErrorEquals": ["GovAPIUnavailableError"],
+          "IntervalSeconds": 30,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "Comment": "Gov API down – queue submission with retry"
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["GovAPIUnavailableError"],
+          "Next": "QueueForRetry",
+          "ResultPath": "$.error"
+        },
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "Notify"
+    },
+    "Notify": {
+      "Type": "Task",
+      "Comment": "Send submission confirmation SMS with case ID and receipt URL",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-notify",
+      "Parameters": {
+        "type": "submission",
+        "phone.$": "$.slot_result.collected.mobile",
+        "scheme_name.$": "$.scheme_name",
+        "case_id.$": "$.submission.case_id"
+      },
+      "End": true
+    },
+    "NotifyIneligible": {
+      "Type": "Task",
+      "Comment": "Inform user they are not eligible and suggest alternatives",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-notify",
+      "Parameters": {
+        "type": "rejected",
+        "phone.$": "$.slot_result.collected.mobile",
+        "scheme_name.$": "$.scheme_name",
+        "case_id": "N/A"
+      },
+      "End": true
+    },
+    "QueueForRetry": {
+      "Type": "Task",
+      "Comment": "Gov API down — queue to SQS for async retry; send holding SMS",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-queue-retry",
+      "Parameters": {
+        "session_id.$": "$.session_id",
+        "scheme_name.$": "$.scheme_name",
+        "user_profile.$": "$.slot_result.collected"
+      },
+      "End": true
+    },
+    "HandleError": {
+      "Type": "Task",
+      "Comment": "Log error + notify user of system issue",
+      "Resource": "arn:aws:lambda:ap-south-1:ACCOUNT_ID:function:jansathi-handle-error",
+      "Parameters": {
+        "session_id.$": "$.session_id",
+        "error.$": "$.error"
+      },
+      "End": true
+    }
+  }
+}

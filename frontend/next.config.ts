@@ -51,10 +51,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Avoid PWA plugin in development to prevent Turbopack conflicts
-if (process.env.NODE_ENV === "development") {
-  module.exports = nextConfig;
-} else {
-  module.exports = withPWA(nextConfig);
-}
-
+export default nextConfig;

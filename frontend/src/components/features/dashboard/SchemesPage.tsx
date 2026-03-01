@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, ArrowRight, Landmark, Sprout, Building2, GraduationCap, HeartPulse, CheckCircle } from 'lucide-react';
+import { Search, Filter, ArrowRight, Landmark, Sprout, Building2, GraduationCap, HeartPulse } from 'lucide-react';
 import { getSchemes } from '@/services/api';
 
 interface Scheme {
@@ -31,8 +31,8 @@ export default function SchemesPage() {
         const fetchSchemesData = async () => {
             setLoading(true);
             try {
-                const data = await getSchemes();
-                if (data.schemes && data.schemes.length > 0) {
+                const data = await getSchemes() as { schemes?: Scheme[] };
+                if (data?.schemes && Array.isArray(data.schemes) && data.schemes.length > 0) {
                     setSchemes(data.schemes);
                     setFilteredSchemes(data.schemes);
                 } else {

@@ -19,7 +19,9 @@ import {
     X,
     Camera
 } from 'lucide-react';
-import { analyzeImage } from '@/services/api';
+import { analyzeImage, getPresignedUpload } from '@/services/api';
+import { useSession } from '@/hooks/useSession';
+
 
 const HISTORY_KEY = 'jansathi_vision_history';
 
@@ -33,9 +35,12 @@ interface HistoryItem {
 
 const DocumentsPage = () => {
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [visionResult, setVisionResult] = useState<string | null>(null);
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { sessionId, token } = useSession();
+
 
     useEffect(() => {
         const stored = localStorage.getItem(HISTORY_KEY);
@@ -57,37 +62,75 @@ const DocumentsPage = () => {
     ]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setIsUploading(true);
+        if (!e.target.files?.[0]) return;
+        const file = e.target.files[0];
+        setIsUploading(true);
+        setUploadProgress(0);
+        setVisionResult(null);
+
+        try {
+            // Step 1 – Get presigned S3 URL
+            let s3Key: string | null = null;
             try {
-                const data = await analyzeImage(file, 'hi');
-                setVisionResult(data.analysis.text);
+                const presign = await getPresignedUpload(
+                    sessionId || 'anonymous',
+                    file.name,
+                    token ?? undefined
+                );
 
-                const newRecord = {
-                    id: Date.now(),
-                    name: file.name,
-                    language: 'hi',
-                    summary: data.analysis.text.substring(0, 100) + '...',
-                    date: new Date().toISOString()
+                // Step 2 – PUT file directly to S3 (or mock URL)
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', presign.url);
+                xhr.setRequestHeader('Content-Type', file.type);
+                xhr.upload.onprogress = (ev) => {
+                    if (ev.lengthComputable) {
+                        setUploadProgress(Math.round((ev.loaded / ev.total) * 80));
+                    }
                 };
-                saveHistory([newRecord, ...history]);
-
-                const newDoc = {
-                    id: Date.now(),
-                    name: file.name,
-                    date: new Date().toISOString().split('T')[0],
-                    size: (file.size / 1024 / 1024).toFixed(2) + " MB",
-                    status: "Uploaded",
-                    theme: "gray"
-                };
-                setDocuments(prev => [newDoc, ...prev]);
-            } finally {
-                setIsUploading(false);
-                if (fileInputRef.current) fileInputRef.current.value = '';
+                await new Promise<void>((resolve, reject) => {
+                    xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(`PUT failed: ${xhr.status}`)));
+                    xhr.onerror = () => reject(new Error('Network error during upload'));
+                    xhr.send(file);
+                });
+                s3Key = presign.key;
+                setUploadProgress(85);
+            } catch (uploadErr) {
+                console.warn('[DocumentsPage] S3 upload failed, continuing with local analysis:', uploadErr);
             }
+
+            // Step 3 – Analyse with Vision AI
+            setUploadProgress(90);
+            const data = await analyzeImage(file, 'hi');
+            setVisionResult(data.analysis.text);
+            setUploadProgress(100);
+
+            const newRecord = {
+                id: Date.now(),
+                name: file.name,
+                language: 'hi',
+                summary: data.analysis.text.substring(0, 100) + '...',
+                date: new Date().toISOString()
+            };
+            saveHistory([newRecord, ...history]);
+
+            const newDoc = {
+                id: Date.now(),
+                name: file.name,
+                date: new Date().toISOString().split('T')[0],
+                size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+                status: s3Key ? 'Stored in S3' : 'Uploaded',
+                theme: 'gray'
+            };
+            setDocuments(prev => [newDoc, ...prev]);
+        } catch (err) {
+            console.error('[DocumentsPage] Upload error:', err);
+        } finally {
+            setIsUploading(false);
+            setTimeout(() => setUploadProgress(null), 1500);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
+
 
     const clearHistory = () => {
         if (confirm("Clear all analysis history?")) {
@@ -127,7 +170,7 @@ const DocumentsPage = () => {
                     </p>
                 </div>
 
-                <div className="flex gap-4 w-full md:w-auto">
+                <div className="flex gap-4 w-full md:w-auto flex-col">
                     <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                     <button
                         onClick={() => fileInputRef.current?.click()}
@@ -135,9 +178,19 @@ const DocumentsPage = () => {
                         className="w-full md:w-auto px-8 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-3"
                     >
                         {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                        <span>{isUploading ? 'Uploading...' : 'Upload Document'}</span>
+                        <span>{isUploading ? (uploadProgress !== null ? `Uploading… ${uploadProgress}%` : 'Analyzing…') : 'Upload Document'}</span>
                     </button>
+                    {/* Upload progress bar */}
+                    {uploadProgress !== null && (
+                        <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                            <div
+                                className="h-full bg-primary transition-all duration-300"
+                                style={{ width: `${uploadProgress}%` }}
+                            />
+                        </div>
+                    )}
                 </div>
+
             </motion.div>
 
             {/* Analysis Result */}

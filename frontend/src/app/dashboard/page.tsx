@@ -13,16 +13,21 @@ import SchemesPage from "@/components/features/dashboard/SchemesPage";
 import ApplicationsPage from "@/components/features/dashboard/ApplicationsPage";
 import CommunityPage from "@/components/features/dashboard/CommunityPage";
 import HelpPage from "@/components/features/dashboard/HelpPage";
-
-import BackendStatus from "@/components/BackendStatus";
-import FederatedLearningStatus from "@/components/features/dashboard/FederatedLearningStatus";
-import { Menu, Sun, Moon, Search, Bell, Activity } from 'lucide-react';
+import IVRMonitor from "@/components/features/dashboard/IVRMonitor";
+import { Menu, Sun, Moon, Search, Bell, PhoneCall, LayoutDashboard, FileText, Settings, User, Users, HelpCircle } from 'lucide-react';
+import { useUser, useAuth, UserButton } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { buildClient } from '@/services/api';
 
 export default function Home() {
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const [activePage, setActivePage] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   // Semantic notification types
   const [notifications, setNotifications] = useState([
@@ -66,8 +71,29 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Initialize theme and user from storage
-  const [userInitials, setUserInitials] = useState('JD');
+  // Initialize and check user
+  useEffect(() => {
+    async function checkProfile() {
+      if (!isLoaded || !user) return;
+      
+      try {
+        const token = await getToken();
+        if (!token) return;
+        
+        const api = buildClient(token);
+        const res = await api.get('/v1/profile');
+        if (res.data?.profile?.profile_complete === false) {
+           router.push('/onboarding');
+        } else {
+           setIsLoadingProfile(false);
+        }
+      } catch (err) {
+        console.error("Failed to check profile status:", err);
+        setIsLoadingProfile(false);
+      }
+    }
+    checkProfile();
+  }, [isLoaded, user, router, getToken]);
 
   useEffect(() => {
     const initializeTheme = () => {
@@ -80,18 +106,6 @@ export default function Home() {
       } else {
         root.classList.remove('dark');
         setIsDarkMode(false);
-      }
-
-      // Get user name for initials
-      const userStr = localStorage.getItem('jansathi_user');
-      if (userStr) {
-        try {
-          const userData = JSON.parse(userStr);
-          const userName = userData.name || userData.email?.split('@')[0] || 'User';
-          setUserInitials(userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
-        } catch (e) {
-          console.error("Failed to parse user data", e);
-        }
       }
     };
     initializeTheme();
@@ -131,10 +145,20 @@ export default function Home() {
         return <SettingsPage />;
       case 'help':
         return <HelpPage />;
+      case 'ivr':
+        return <IVRMonitor />;
       default:
         return <OverviewPage onNavigate={setActivePage} />;
     }
   };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <main className="h-screen w-full flex bg-background text-foreground overflow-hidden relative selection:bg-primary/20 transition-colors">
@@ -264,11 +288,9 @@ export default function Home() {
               </AnimatePresence>
             </div>
 
-            {/* User Identity - Simplified */}
+            {/* User Identity - Clerk Avatar */}
             <div className="hidden sm:block">
-              <div className="h-10 w-10 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                {userInitials}
-              </div>
+               <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 shadow-sm" } }} />
             </div>
           </div>
         </header>

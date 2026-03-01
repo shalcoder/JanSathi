@@ -1,46 +1,41 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Clock, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
-import { seedDatabase } from '@/services/api';
+import { TrendingUp, Clock, CheckCircle, ArrowRight, PhoneCall } from 'lucide-react';
+import BackendStatus from '@/components/BackendStatus';
 
 export default function OverviewPage({ onNavigate }: { onNavigate: (page: string) => void }) {
     const stats = [
-        { label: "Active Applications", value: "3", icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
-        { label: "Schemes Eligible", value: "12", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-        { label: "Community Posts", value: "28", icon: Users, color: "text-purple-500", bg: "bg-purple-500/10" },
-        { label: "Completion Rate", value: "85%", icon: TrendingUp, color: "text-amber-500", bg: "bg-amber-500/10" },
+        { label: "Phone Linked", value: "Yes", icon: PhoneCall, color: "text-blue-500", bg: "bg-blue-500/10" },
+        { label: "Schemes Matched", value: "8", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+        { label: "Active Applications", value: "1", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+        { label: "Profile Completion", value: "100%", icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
     ];
 
     return (
         <div className="space-y-8 p-6 lg:p-10 max-w-7xl mx-auto">
+            {/* API Connection Status */}
+            <div className="mb-2">
+                 <BackendStatus />
+            </div>
+
             {/* Welcome Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-foreground">Dashboard</h1>
-                    <p className="text-secondary-foreground font-medium mt-1">Welcome back, here&apos;s what&apos;s happening today.</p>
+                    <h1 className="text-3xl font-black tracking-tight text-foreground">Overview</h1>
+                    <p className="text-secondary-foreground font-medium mt-1">Your personalized government scheme dashboard.</p>
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={async () => {
-                            if (confirm("This will populate the production database with schemes and forum data. Proceed?")) {
-                                try {
-                                    const data = await seedDatabase();
-                                    alert(data.message || "Database seeded!");
-                                    window.location.reload();
-                                } catch (e) {
-                                    alert("Seeding failed. Check console.");
-                                }
-                            }
-                        }}
+                        onClick={() => onNavigate('schemes')}
                         className="px-6 py-3 bg-secondary/50 hover:bg-secondary text-foreground rounded-xl font-bold transition-all border border-border flex items-center gap-2"
                     >
-                        <span>Sync Database</span>
+                        <span>View All Schemes</span>
                     </button>
                     <button
                         onClick={() => onNavigate('assistant')}
                         className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold transition-all shadow-lg active:scale-95 flex items-center gap-2"
                     >
-                        <span>Ask Assistant</span>
+                        <span>Ask Agent</span>
                         <ArrowRight className="w-4 h-4" />
                     </button>
                 </div>
@@ -60,7 +55,6 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (page: string
                             <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} transition-transform group-hover:scale-110`}>
                                 <stat.icon className="w-6 h-6" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-secondary-foreground opacity-50">This Week</span>
                         </div>
                         <h3 className="text-3xl font-black text-foreground mb-1">{stat.value}</h3>
                         <p className="text-sm font-semibold text-secondary-foreground">{stat.label}</p>

@@ -60,6 +60,11 @@ def create_app():
     from app.agent import agent_bp
     app.register_blueprint(agent_bp, url_prefix='/agent')
 
+    # Register v1 unified API blueprint (frontend integration layer)
+    from app.api.v1_routes import v1 as v1_bp
+    app.register_blueprint(v1_bp)
+
+
     # Create SQLite tables only in local dev mode
     if not USE_DYNAMODB:
         with app.app_context():

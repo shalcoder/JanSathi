@@ -1,82 +1,42 @@
-# Professional FL status (lazy loaded)
-FLWR_AVAILABLE = None
-fl = None
-np = None
+"""
+fl_service.py — DEPRECATED / OUT OF SCOPE
 
-def _lazy_load_fl_deps():
-    global FLWR_AVAILABLE, fl, np
-    if FLWR_AVAILABLE is not None:
-        return FLWR_AVAILABLE
-    try:
-        import flwr as fl
-        import numpy as np
-        FLWR_AVAILABLE = True
-    except ImportError:
-        FLWR_AVAILABLE = False
-    return FLWR_AVAILABLE
+Federated Learning (Flower/flwr) was removed from JanSathi architecture.
 
-from typing import List, Tuple, Dict, Optional
-from app.core.utils import logger, log_event
+From agents.md § "What You DO NOT Need Now":
+  ❌ Federated learning agent
+  ❌ Multi-agent reasoning drama
+
+This stub is kept only to avoid import errors in legacy routes
+that still reference it. No new code should import this.
+
+For model telemetry & analytics use telemetry_service.py.
+"""
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 class FederatedLearningService:
-    """
-    Federated Learning Aggregator Service using Flower (flwr).
-    Handles:
-    1. Server Strategy (FedAvg)
-    2. Model Aggregation
-    3. Differential Privacy (DP) Integration (Custom Strategy)
-    """
+    """Deprecated — returns mock metrics for backward compat only."""
 
-    def __init__(self, min_clients=2, round_timeout=300):
-        if not _lazy_load_fl_deps():
-            logger.warning("Flower (flwr) not available - FL service running in mock mode")
-            self.mock_mode = True
-            self.min_clients = min_clients
-            self.current_round = 1
-            return
-            
-        self.mock_mode = False
-        self.min_clients = min_clients
-        self.round_timeout = round_timeout
-        self.current_round = 1
-        
-        # Define Strategy
-        self.strategy = fl.server.strategy.FedAvg(
-            fraction_fit=1.0,  # Sample 100% of available clients
-            fraction_evaluate=0.5,
-            min_fit_clients=self.min_clients,
-            min_evaluate_clients=self.min_clients,
-            min_available_clients=self.min_clients,
-            evaluate_metrics_aggregation_fn=self.weighted_average,
+    def __init__(self, *args, **kwargs):
+        logger.warning(
+            "[FLService] FederatedLearningService is deprecated and OUT OF SCOPE. "
+            "Use telemetry_service.TelemetryService for metrics."
         )
+        self.mock_mode = True
+        self.current_round = 0
 
-    def weighted_average(self, metrics: List[Tuple[int, Dict[str, float]]]) -> Dict[str, float]:
-        """Aggregation function for evaluation metrics."""
-        accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
-        examples = [num_examples for num_examples, _ in metrics]
-        return {"accuracy": sum(accuracies) / sum(examples)}
+    def start_server(self, *args, **kwargs):
+        logger.warning("[FLService] start_server() called on deprecated stub — no-op.")
 
-    def start_server(self, port=8080):
-        """Starts the Flower server."""
-        if getattr(self, 'mock_mode', True):
-            logger.info("FL Server running in mock mode (flwr not available)")
-            return
-            
-        logger.info(f"Starting Flower Server on port {port}")
-        try:
-            fl.server.start_server(
-                server_address=f"0.0.0.0:{port}",
-                config=fl.server.ServerConfig(num_rounds=3),
-                strategy=self.strategy,
-            )
-        except Exception as e:
-            logger.error(f"Failed to start Flower server: {e}")
-
-    # Legacy/Simulation methods for API compatibility if needed
     def get_metrics(self):
         return {
             "current_round": self.current_round,
-            "active_clients": self.min_clients,
-            "status": "Mock Mode" if getattr(self, 'mock_mode', True) else "Flower Server Running"
+            "status": "DEPRECATED — not in JanSathi scope",
+            "active_clients": 0,
         }
 
+    def weighted_average(self, metrics):
+        return {}

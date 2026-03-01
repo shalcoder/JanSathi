@@ -14,6 +14,11 @@ import ApplicationsPage from "@/components/features/dashboard/ApplicationsPage";
 import CommunityPage from "@/components/features/dashboard/CommunityPage";
 import HelpPage from "@/components/features/dashboard/HelpPage";
 import IVRMonitor from "@/components/features/dashboard/IVRMonitor";
+import IVRConsole from "@/components/features/dashboard/IVRConsole";
+import CallSimulator from "@/components/features/dashboard/CallSimulator";
+import HITLQueue from "@/components/features/dashboard/HITLQueue";
+import BenefitReceiptViewer from "@/components/features/dashboard/BenefitReceiptViewer";
+import SecurityAuditPanel from "@/components/features/dashboard/SecurityAuditPanel";
 import { Menu, Sun, Moon, Search, Bell, PhoneCall, LayoutDashboard, FileText, Settings, User, Users, HelpCircle } from 'lucide-react';
 import { useUser, useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
@@ -87,8 +92,14 @@ export default function Home() {
         } else {
            setIsLoadingProfile(false);
         }
-      } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
         console.error("Failed to check profile status:", err);
+        // If profile doesn't exist (404) or there is an issue fetching it for a new user, redirect to onboarding directly
+        if (err.response?.status === 404 || err.response?.status === 400 || (err.response && err.response.data && String(err.response.data.detail).includes('not found'))) {
+           router.push('/onboarding');
+           return; // Keep loading state true to prevent flashing while routing
+        }
         setIsLoadingProfile(false);
       }
     }
@@ -147,6 +158,16 @@ export default function Home() {
         return <HelpPage />;
       case 'ivr':
         return <IVRMonitor />;
+      case 'ivr-console':
+        return <IVRConsole />;
+      case 'simulator':
+        return <CallSimulator />;
+      case 'hitl':
+        return <HITLQueue />;
+      case 'receipts':
+        return <BenefitReceiptViewer />;
+      case 'security':
+        return <SecurityAuditPanel />;
       default:
         return <OverviewPage onNavigate={setActivePage} />;
     }

@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { useSignIn, useSignUp } from "@clerk/nextjs";
-import { Mail, Lock, LogIn } from "lucide-react";
+import { Mail, Lock, LogIn, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import Link from 'next/link';
 
 // Brand Icons
 const GoogleIcon = () => (
@@ -61,51 +63,70 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
     // But aligning with the image request:
 
     return (
-        <div className="w-full max-w-sm mx-auto flex flex-col gap-3">
+        <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="w-full max-w-sm mx-auto flex flex-col gap-4 p-8 rounded-[2rem] bg-card/80 backdrop-blur-2xl border border-border/50 shadow-2xl relative overflow-hidden"
+        >
+            {/* Decorative Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-primary/5 pointer-events-none -z-10"></div>
+            
             {/* Header */}
-            <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold text-foreground">
+            <div className="text-center mb-4 relative z-10">
+                <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-orange-500/20 mb-4">JS</div>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
                     {mode === "signUp" ? "Create an account" : "Welcome back"}
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                    {mode === "signUp" ? "Enter your email to sign up for this app" : "Access your dashboard"}
+                <p className="text-sm text-secondary-foreground font-medium">
+                    {mode === "signUp" ? "Enter your email to sign up for this app" : "Access your Agentic dashboard"}
                 </p>
             </div>
 
             {/* Social Buttons */}
-            <button
+            <div className="space-y-3 relative z-10">
+            <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => handleOAuth("oauth_google")}
-                className="flex items-center justify-center gap-3 w-full bg-[#2F2F2F] hover:bg-[#3F3F3F] text-white py-2.5 rounded-lg border border-[#404040] transition-all font-medium text-sm"
+                className="flex items-center justify-center gap-3 w-full bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm shadow-sm"
             >
                 <GoogleIcon />
                 <span>{mode === "signUp" ? "Sign up with Google" : "Continue with Google"}</span>
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => handleOAuth("oauth_microsoft")}
-                className="flex items-center justify-center gap-3 w-full bg-[#2F2F2F] hover:bg-[#3F3F3F] text-white py-2.5 rounded-lg border border-[#404040] transition-all font-medium text-sm"
+                className="flex items-center justify-center gap-3 w-full bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm shadow-sm"
             >
                 <MicrosoftIcon />
                 <span>{mode === "signUp" ? "Sign up with Microsoft" : "Continue with Microsoft"}</span>
-            </button>
+            </motion.button>
 
             {/* Split Row: Email & SSO */}
-            <div className="grid grid-cols-2 gap-3">
-                <button
+            <div className="grid grid-cols-2 gap-3 mt-2">
+                <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={handleEmailClick}
-                    className="flex items-center justify-center gap-2 bg-[#2F2F2F] hover:bg-[#3F3F3F] text-white py-2.5 rounded-lg border border-[#404040] transition-all font-medium text-sm"
+                    className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm"
                 >
-                    <Mail className="w-4 h-4" />
+                    <Mail className="w-4 h-4 text-secondary-foreground" />
                     <span>Email</span>
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => router.push(mode === "signIn" ? "/sign-in/sso" : "/sign-up/sso")}
-                    className="flex items-center justify-center gap-2 bg-[#2F2F2F] hover:bg-[#3F3F3F] text-white py-2.5 rounded-lg border border-[#404040] transition-all font-medium text-sm"
+                    className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm"
                 >
-                    <Lock className="w-4 h-4" />
+                    <Lock className="w-4 h-4 text-secondary-foreground" />
                     <span>SSO</span>
-                </button>
+                </motion.button>
+            </div>
             </div>
 
             {/* Divider / Spacer */}
@@ -114,23 +135,25 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
             {/* Footer Action */}
             <button
                 onClick={() => router.push(mode === "signUp" ? "/sign-in" : "/sign-up")}
-                className="flex items-center justify-center gap-2 w-full bg-transparent hover:bg-[#2F2F2F] text-muted-foreground hover:text-white py-2.5 rounded-lg border border-transparent hover:border-[#404040] transition-all font-bold text-sm uppercase tracking-wide"
+                className="flex items-center justify-center gap-2 w-full bg-transparent hover:bg-secondary/50 text-secondary-foreground hover:text-foreground py-3 rounded-xl border border-transparent hover:border-border/50 transition-all font-bold text-sm tracking-wide group"
             >
                 {mode === "signUp" ? (
                     <>
-                        <span>Log In</span>
+                        <span>Log in instead</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </>
                 ) : (
                     <>
                         <span>Create Account</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </>
                 )}
             </button>
 
             {/* Terms */}
-            <p className="text-[10px] text-center text-muted-foreground mt-4 px-4">
-                By clicking continue, you agree to our <a href="#" className="underline hover:text-white">Terms of Service</a> and <a href="#" className="underline hover:text-white">Privacy Policy</a>.
+            <p className="text-[11px] text-center text-gray-500 mt-4 px-4 font-medium">
+                By clicking continue, you agree to our <Link href="/terms" className="underline hover:text-white transition-colors">Terms of Service</Link> and <Link href="/privacy" className="underline hover:text-white transition-colors">Privacy Policy</Link>.
             </p>
-        </div>
+        </motion.div>
     );
 }

@@ -15,12 +15,16 @@ import {
     Plus,
     Save,
     Fingerprint,
-    Activity
+    Activity,
+    ArrowRight,
+    User
 } from 'lucide-react';
 import { useUser, useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { buildClient } from '@/services/api';
 
 const ProfilePage = () => {
+    const router = useRouter();
     const { user, isLoaded } = useUser();
     const { getToken } = useAuth();
     
@@ -93,16 +97,23 @@ const ProfilePage = () => {
                         kycStatus: data.has_aadhaar ? 'KYC Completed' : 'Pending Verification'
                     }));
                 }
-            } catch (err) {
+            } catch (err: unknown) {
                 console.error("Failed to load profile", err);
-                setError("Failed to load your profile data.");
+                const error = err as { response?: { status?: number, data?: { detail?: string } } };
+                if (error.response?.status === 404 || error.response?.status === 400 || (error.response && error.response.data && String(error.response.data.detail).includes('not found'))) {
+                    // Profile doesn't exist, redirect to onboarding or show empty state
+                    router.push('/onboarding');
+                    setError("missing_profile"); // Special flag
+                } else {
+                    setError("Failed to load your profile data.");
+                }
             } finally {
                 setIsLoading(false);
             }
         };
 
         loadProfile();
-    }, [isLoaded, user, getToken]);
+    }, [isLoaded, user, getToken, router]);
 
     // 2. Save profile to backend
     const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -167,13 +178,6 @@ const ProfilePage = () => {
         setIsFamilyModalOpen(false);
     };
 
-    const languageMap: Record<string, string> = {
-        'hi': 'Hindi (हिन्दी)',
-        'en': 'English',
-        'kn': 'Kannada (ಕನ್ನಡ)',
-        'ta': 'Tamil (தமிழ்)'
-    };
-
     if (isLoading) {
         return (
             <div className="h-full flex items-center justify-center">
@@ -182,9 +186,29 @@ const ProfilePage = () => {
         );
     }
 
+    if (error === "missing_profile") {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/20">
+                    <User className="w-12 h-12 text-primary" />
+                </div>
+                <h2 className="text-3xl font-black text-foreground mb-4">Complete Your Profile</h2>
+                <p className="text-secondary-foreground max-w-md mb-8">
+                    To access personalized government schemes, notifications, and the IVR features, please complete your onboarding profile.
+                </p>
+                <button 
+                  onClick={() => router.push('/onboarding')}
+                  className="px-8 py-4 bg-primary text-white rounded-xl font-bold flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg"
+                >
+                    Start Onboarding <ArrowRight className="w-5 h-5" />
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className="h-full max-w-6xl mx-auto pb-20 relative px-4 sm:px-0">
-            {error && (
+            {error && error !== "missing_profile" && (
                 <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-sm font-medium">
                     {error}
                 </div>
@@ -386,11 +410,12 @@ const ProfilePage = () => {
                         </div>
                     </div>
 
-                    <div className="p-6 bg-secondary/20 border border-border rounded-2xl text-center">
-                        <ShieldCheck className="w-8 h-8 text-primary mx-auto mb-3 opacity-30" />
-                        <p className="text-[9px] text-secondary-foreground font-bold uppercase tracking-widest opacity-40">
-                            Securely Managed <br />
-                            by JanSathi AI
+                    <div className="p-6 bg-card border border-border shadow-sm rounded-2xl text-center relative overflow-hidden group hover:border-primary/50 transition-colors">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <ShieldCheck className="w-10 h-10 text-primary mx-auto mb-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                        <h4 className="text-sm font-black text-foreground mb-1 uppercase tracking-wider">Securely Managed</h4>
+                        <p className="text-xs text-secondary-foreground font-medium opacity-70">
+                            by JanSathi AI Security Core
                         </p>
                     </div>
                 </div>

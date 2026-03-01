@@ -1,55 +1,92 @@
 name: Deployment Pipeline
 
 on:
-    push:
-        branches: [vishal]
-    pull_request:
-        branches: [vishal]
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v3
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: 20
-                  cache: "npm"
-                  cache-dependency-path: frontend/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
-            - name: Install Frontend Deps
-              working-directory: ./frontend
-              run: npm ci
+      - name: Install Frontend Deps
+        working-directory: ./frontend
+        run: npm ci
 
-            - name: Lint Frontend
-              working-directory: ./frontend
-              run: npm run lint
+      - name: Lint Frontend
+        working-directory: ./frontend
+        run: npm run lint
 
-            - name: Build Frontend
-              working-directory: ./frontend
-              run: npm run build
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: npm run build
 
-    test:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v3
+      - name: Install Gemini CLI (Frontend Analysis)
+        run: npm install -g @google/gemini-cli
 
-            - name: Setup Python
-              uses: actions/setup-python@v4
-              with:
-                  python-version: "3.12"
-                  cache: "pip"
+      - name: Gemini Code Assist - Analyze Build
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then
+            gemini analyze "Review the frontend React Next.js code for performance bottlenecks or security anti-patterns in this generic build." || echo "Gemini review skipped or non-blocking"
+          else
+            echo "Skipping Gemini Code Assist: GEMINI_API_KEY not found in secrets."
+          fi
 
-            - name: Install Backend Deps
-              working-directory: ./backend
-              run: |
-                  pip install -r requirements.txt
-                  pip install pytest
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-            - name: Run Tests
-              working-directory: ./backend
-              run: pytest
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Backend Deps
+        working-directory: ./backend
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run Tests
+        working-directory: ./backend
+        run: pytest > pytest_output.txt || true
+
+      - name: Install Gemini CLI (Backend Diagnostics)
+        run: npm install -g @google/gemini-cli
+
+      - name: Gemini Code Assist - Analyze Test Failures
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        working-directory: ./backend
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then
+            if grep -q "FAILURES" pytest_output.txt || grep -q "ERROR" pytest_output.txt || grep -q "FAILED" pytest_output.txt; then
+              echo "Tests failed. Invoking Gemini to assist with diagnostics..."
+              cat pytest_output.txt
+              echo "--- Gemini Analysis ---"
+              gemini ask "The following python pytest output contains failures. Analyze the log and suggest a fix: $(cat pytest_output.txt | tail -n 50)"
+              exit 1 # Fail the build after Gemini analysis
+            else
+              echo "Tests passed successfully."
+            fi
+          else
+             echo "Skipping Gemini test analysis: GEMINI_API_KEY not found in secrets."
+             # Just parse normal pytest exit code
+             pytest
+          fi

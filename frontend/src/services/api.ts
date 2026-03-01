@@ -349,28 +349,7 @@ export const postTelemetry = async (
   }
 };
 
-export interface AuditLogEntry {
-  id: string;
-  session_id: string;
-  event_type: string;
-  timestamp: string;
-  user_id?: string;
-  details?: Record<string, unknown>;
-}
-
-/**
- * Fetch audit logs for a session (admin only).
- */
-export const getAuditLogs = async (
-  sessionId: string,
-  token?: string,
-): Promise<AuditLogEntry[]> => {
-  const client = buildClient(token);
-  const response = await client.get<AuditLogEntry[]>(
-    `/v1/audit?session_id=${sessionId}`,
-  );
-  return response.data;
-};
+// DEPRECATED: getAuditLogs was here
 
 export interface HealthStatus {
   status: "ok" | "degraded" | "down";
@@ -495,6 +474,95 @@ export const applyForScheme = async (
 ): Promise<unknown> => {
   const response = await apiClient.post("/apply", { user_id, scheme_name });
   return response.data;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN & DEMO: IVR Live Sync
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface IvrSession {
+  session_id: string;
+  caller_number: string;
+  start_time: string;
+  last_seen: string;
+  language: string;
+  current_state: string;
+  last_transcript: string;
+  last_audio_url: string;
+  channel: string;
+}
+
+export const getIvrSessions = async (token?: string | null): Promise<IvrSession[]> => {
+  try {
+    const api = buildClient(token || undefined);
+    const response = await api.get("/ivr/sessions");
+    return response.data;
+  } catch (err) {
+    console.error("Failed to fetch IVR sessions", err);
+    return [];
+  }
+};
+
+export const simulateIvrCall = async (payload: Record<string, unknown>, token?: string | null): Promise<Record<string, unknown>> => {
+  try {
+    const api = buildClient(token || undefined);
+    const response = await api.post("/ivr/connect-webhook", payload);
+    return response.data;
+  } catch (err) {
+    console.error("Failed to simulate IVR call", err);
+    throw err;
+  }
+};
+
+export interface HitlCase {
+  id: string;
+  session_id: string;
+  transcript: string;
+  response_text: string;
+  confidence: number;
+  status: string;
+  created_at: string;
+}
+
+export const getHitlCases = async (token?: string | null): Promise<HitlCase[]> => {
+  try {
+    const api = buildClient(token || undefined);
+    const response = await api.get("/admin/cases");
+    return response.data;
+  } catch (err) {
+    console.error("Failed to fetch HITL cases", err);
+    return [];
+  }
+};
+
+export const resolveHitlCase = async (caseId: string, action: "approve" | "reject", token?: string | null): Promise<void> => {
+  try {
+    const api = buildClient(token || undefined);
+    await api.post(`/admin/cases/${caseId}/${action}`);
+  } catch (err) {
+    console.error(`Failed to resolve HITL case ${caseId}`, err);
+    throw err;
+  }
+};
+
+export interface AuditRecord {
+  record_id: string;
+  record_type: string;
+  session_id: string;
+  ts: string;
+  payload: Record<string, unknown>;
+  integrity_hash: string;
+}
+
+export const getAuditLogs = async (token?: string | null): Promise<AuditRecord[]> => {
+  try {
+    const api = buildClient(token || undefined);
+    const response = await api.get("/admin/audit");
+    return response.data.records || [];
+  } catch (err) {
+    console.error("Failed to fetch audit records", err);
+    return [];
+  }
 };
 
 export const getApplications = async (

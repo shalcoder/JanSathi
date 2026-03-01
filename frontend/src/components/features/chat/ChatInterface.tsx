@@ -416,10 +416,13 @@ export default function ChatInterface() {
                                         <button
                                             key={i}
                                             onClick={() => handleSend(s.title)}
-                                            className="bg-card border border-border/50 p-4 text-left rounded-xl hover:border-primary/30 transition-colors shadow-sm flex flex-col justify-center"
+                                            className="bg-card/60 backdrop-blur-xl border border-border/50 p-4 text-left rounded-2xl hover:border-primary/50 transition-all shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(234,88,12,0.1)] flex flex-col justify-center group relative overflow-hidden"
                                         >
-                                            <p className="text-sm font-bold text-foreground mb-1">{s.title}</p>
-                                            <p className="text-[9px] font-bold text-secondary-foreground opacity-60 uppercase tracking-wider">{s.desc}</p>
+                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                            <div className="relative z-10">
+                                                <p className="text-sm font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{s.title}</p>
+                                                <p className="text-[9px] font-bold text-secondary-foreground/60 uppercase tracking-wider">{s.desc}</p>
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
@@ -435,10 +438,10 @@ export default function ChatInterface() {
                                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
                                     <div className={`
-                                        p-4 sm:p-5 rounded-2xl relative shadow-sm
+                                        p-4 sm:p-5 relative shadow-sm transition-all
                                         ${msg.role === 'user'
-                                            ? 'max-w-[85%] sm:max-w-[70%] bg-primary text-white'
-                                            : 'w-full sm:max-w-[95%] bg-card border border-border/50 text-foreground'}
+                                            ? 'max-w-[85%] sm:max-w-[70%] bg-primary/95 backdrop-blur-md text-white rounded-2xl rounded-tr-sm shadow-[0_4px_20px_rgba(234,88,12,0.25)] border border-primary/20'
+                                            : 'w-full sm:max-w-[95%] bg-card/70 backdrop-blur-xl border border-border/50 text-foreground rounded-2xl rounded-tl-sm hover:shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:border-border/80'}
                                     `}>
                                         {/* FL Active badge on user messages */}
                                         {msg.role === 'user' && (
@@ -652,8 +655,9 @@ export default function ChatInterface() {
                         )}
                     </AnimatePresence>
 
-                    <div className="flex items-end gap-3 p-2 bg-secondary/30 border border-border/50 rounded-[2rem] shadow-sm relative transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50">
-                        <div className="p-1.5 rounded-2xl bg-card flex-1 flex items-center gap-2 border border-border shadow-lg focus-within:border-primary transition-colors">
+                    <div className="flex items-end gap-3 p-2 bg-card/80 backdrop-blur-xl border border-border/50 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative transition-all focus-within:shadow-[0_8px_30px_rgba(234,88,12,0.15)] focus-within:border-primary/50 group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity rounded-[2rem] pointer-events-none"></div>
+                        <div className="p-1.5 rounded-[1.8rem] bg-background/50 backdrop-blur-md flex-1 flex items-center gap-2 border border-border/50 shadow-inner focus-within:border-primary/50 transition-colors relative z-10 overflow-hidden">
                             <input
                                 type="file"
                                 accept="image/*"
@@ -668,7 +672,7 @@ export default function ChatInterface() {
                             />
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className={`p-3 rounded-xl transition-all ${selectedImage ? 'bg-primary text-white' : 'hover:bg-secondary text-secondary-foreground'}`}
+                                className={`p-3 rounded-2xl transition-all ${selectedImage ? 'bg-primary text-white shadow-[0_0_15px_rgba(234,88,12,0.4)]' : 'hover:bg-secondary/80 text-secondary-foreground hover:text-foreground'}`}
                             >
                                 <Camera className="w-5 h-5" />
                             </button>
@@ -681,14 +685,14 @@ export default function ChatInterface() {
                                 onChange={(e) => setInputText(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 placeholder={selectedImage ? "Click send to analyze photo..." : "Ask your question here..."}
-                                className="flex-1 bg-transparent px-3 text-[15px] font-bold text-foreground placeholder:opacity-30 focus:outline-none"
+                                className="flex-1 bg-transparent px-3 py-2 text-[15px] font-bold text-foreground placeholder:opacity-30 focus:outline-none w-full"
                                 disabled={isLoading}
                             />
 
                             <button
                                 onClick={() => handleSend()}
                                 disabled={isLoading || (!inputText.trim() && !selectedImage)}
-                                className="p-3.5 bg-primary text-white rounded-xl shadow-md disabled:opacity-20 active:scale-95 transition-all"
+                                className="p-3.5 bg-primary text-white rounded-2xl shadow-[0_4px_15px_rgba(234,88,12,0.3)] disabled:opacity-30 active:scale-95 transition-all hover:bg-primary/90 hover:shadow-[0_4px_25px_rgba(234,88,12,0.4)]"
                             >
                                 <Send className="w-5 h-5" />
                             </button>

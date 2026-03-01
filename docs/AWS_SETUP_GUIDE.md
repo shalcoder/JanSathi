@@ -171,7 +171,7 @@ BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
 KENDRA_INDEX_ID=mock-index
 
 # App Config
-SECRET_KEY=your-super-secret-key-change-this
+SECRET_KEY=YOUR_FLASK_SECRET_KEY
 NODE_ENV=development
 ALLOWED_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
 

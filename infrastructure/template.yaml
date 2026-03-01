@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  JanSathi - AI Civic Assistant (Production)
+  Serverless Backend using Lambda + Mangum (Flask), API Gateway, DynamoDB, Bedrock.
+
+Globals:
+  Function:
+    Timeout: 29
+    MemorySize: 512
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+    Tracing: Active
+
+Resources:
+  # ============================================================
+  # API Gateway
+  # ============================================================
+  JanSathiApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'POST, GET, OPTIONS'"
+        AllowHeaders: "'Content-Type, Authorization'"
+        AllowOrigin: "'*'"
+
+  # ============================================================
+  # Lambda Function (Flask via Mangum)
+  # ============================================================
+  JanSathiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: lambda_handler.handler
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+          BEDROCK_MAX_TOKENS: "300"
+          DYNAMODB_CONVERSATIONS_TABLE: !Ref ConversationsTable
+          DYNAMODB_CACHE_TABLE: !Ref CacheTable
+          AUDIO_BUCKET: !Ref AudioBucket
+          USE_DYNAMODB: "true"
+          NODE_ENV: production
+      Events:
+        ProxyApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanSathiApi
+            Path: /{proxy+}
+            Method: ANY
+        RootApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JanSathiApi
+            Path: /
+            Method: ANY
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CacheTable
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - polly:SynthesizeSpeech
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+              Resource: "*"
+
+  # ============================================================
+  # DynamoDB Tables
+  # ============================================================
+  ConversationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: JanSathi-Conversations
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: UserId
+          AttributeType: S
+        - AttributeName: Timestamp
+          AttributeType: S
+        - AttributeName: ConversationId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: UserId
+          KeyType: HASH
+        - AttributeName: Timestamp
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: ConversationIdIndex
+          KeySchema:
+            - AttributeName: ConversationId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  CacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: JanSathi-Cache
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: QueryHash
+          AttributeType: S
+      KeySchema:
+        - AttributeName: QueryHash
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # ============================================================
+  # S3 Bucket (Audio)
+  # ============================================================
+  AudioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: MoveToGlacier
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 30
+            ExpirationInDays: 90
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${JanSathiApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+  ConversationsTableName:
+    Description: "DynamoDB Conversations table"
+    Value: !Ref ConversationsTable
+  CacheTableName:
+    Description: "DynamoDB Cache table"
+    Value: !Ref CacheTable
+  AudioBucketName:
+    Description: "S3 Audio bucket"
+    Value: !Ref AudioBucket

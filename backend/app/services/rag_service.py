@@ -1,145 +1,408 @@
-import boto3
-import json
+"""
+RAG Service — Hybrid Knowledge Mesh.
+Combines Vector (Semantic), Graph (Relational), and Intent discovery.
+"""
+
 import os
+import json
+import re
+from difflib import SequenceMatcher
 from botocore.exceptions import ClientError, NoCredentialsError
+
+# Professional local RAG status (lazy loaded)
+HAS_SKLEARN = None
+TfidfVectorizer = None
+cosine_similarity = None
+np = None
+
+def _lazy_load_sklearn():
+    global HAS_SKLEARN, TfidfVectorizer, cosine_similarity, np
+    if HAS_SKLEARN is not None:
+        return HAS_SKLEARN
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+        import numpy as np
+        HAS_SKLEARN = True
+    except ImportError:
+        HAS_SKLEARN = False
+    return HAS_SKLEARN
 
 class RagService:
     def __init__(self):
         self.kendra_index_id = os.getenv('KENDRA_INDEX_ID', 'mock-index')
         self.region = os.getenv('AWS_REGION', 'us-east-1')
+        self.app_context = None # Initialize to avoid lint error
         
+        # Initialize AWS Kendra Client
+        import boto3
         try:
-            self.kendra_client = boto3.client('kendra', region_name=self.region)
-            self.use_aws = True
-        except NoCredentialsError:
-            print("Warning: No AWS Credentials found. Using Mock RAG.")
-            self.use_aws = False
+            self.kendra = boto3.client('kendra', region_name=self.region)
+        except Exception:
+            self.kendra = None
+        
+        # Initialize attributes to avoid lint errors
+        self.vectorizer = None
+        self.vector_matrix = None
+        self.corpus = []
+        
+        # 1. Base Knowledge (Schemes)
+        self.schemes = []
+        try:
+            # Lazy load from DB later to avoid import cycles
+            pass
         except Exception as e:
-            print(f"Warning: Failed to init Kendra client: {e}. Using Mock RAG.")
-            self.use_aws = False
+            logger.error(f"DB Scheme Load Error: {e}")
 
-        # Enhanced Mock Data for Fallback (Regional & Central Schemes)
-        self.mock_data = [
-            {
-                "text": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi): Provides 6,000 INR per year in three installments to small and marginal farmers.",
-                "keywords": ["kisan", "money", "6000", "farmer", "agriculture"],
-                "link": "https://pmkisan.gov.in/"
-            },
-            {
-                "text": "Janani Suraksha Yojana (JSY): A safe motherhood intervention providing 1,400 INR for rural and 1,000 INR for urban institutional deliveries.",
-                "id": "pm-kisan",
-                "text": "PM-KISAN Scheme: Provides ₹6,000 per year income support to small farmers in 3 equal installments.",
-                "keywords": ["kisan", "farmer", "money", "fund", "6000", "pm kisan"],
-                "link": "https://pmkisan.gov.in",
-                "title": "PM-KISAN Samman Nidhi",
-                "benefit": "₹6,000/year Income Support",
-                "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/1200px-Digital_India_logo.svg.png" 
-            },
-            {
-                "id": "ayushman",
-                "text": "Ayushman Bharat: Provides health insurance coverage of ₹5 Lakh per family per year for secondary and tertiary care hospitalization.",
-                "keywords": ["health", "insurance", "medical", "hospital", "ayushman", "treatment"],
-                "link": "https://pmjay.gov.in",
-                "title": "Ayushman Bharat - PMJAY",
-                "benefit": "₹5 Lakh Free Treatment",
-                "logo": "https://pmjay.gov.in/sites/default/files/2019-02/pmjay-logo-new.png"
-            },
-            {
-                "id": "enam",
-                "text": "e-NAM (National Agriculture Market): An electronic trading portal which networks existing APMC mandis to create a unified national market for agricultural commodities.",
-                "keywords": ["mandi", "market", "price", "sell", "enam", "trading"],
-                "link": "https://enam.gov.in",
-                "title": "e-NAM (National Agriculture Market)",
-                "benefit": "Better Prices for Crops",
-                "logo": "https://enam.gov.in/web/assets/images/logo.png"
-            },
-            {
-               "id": "fasal-bima",
-               "text": "Pradhan Mantri Fasal Bima Yojana (PMFBY): Crop insurance scheme that provides financial support to farmers suffering crop loss/damage arising out of unforeseen events.",
-               "keywords": ["crop", "damage", "bima", "insurance", "loss", "cyclone"],
-               "link": "https://pmfby.gov.in",
-               "title": "PM Fasal Bima Yojana",
-               "benefit": "Crop Loss Insurance",
-               "logo": "https://pmfby.gov.in/assets/images/logo.png"
-            },
-             {
-               "id": "ujjwala",
-               "text": "PM Ujjwala Yojana: Provides clean cooking fuel (LPG connections) to poor households to prevent health hazards associated with cooking based on fossil fuel.",
-               "keywords": ["gas", "lpg", "cooking", "cylinder", "ujjwala", "fuel"],
-               "link": "https://www.pmuy.gov.in/",
-               "title": "PM Ujjwala Yojana",
-               "benefit": "Free LPG Connection",
-               "logo": "https://www.pmuy.gov.in/images/logo.png"
-            }
-        ]
+        # 3. Load Uploaded Docs (Local RAG for Citizen Docs)
+        self.upload_dir = os.path.join(os.getcwd(), 'uploads')
+        if not os.path.exists(self.upload_dir):
+            os.makedirs(self.upload_dir)
+        self._load_uploaded_docs()
 
-    def retrieve(self, query):
-        """
-        Retrieves relevant documents. 
-        Prioritizes Kendra, falls back to Mock Data.
-        """
-        print(f"Retrieving for: {query}")
-        
-        # 1. AWS Kendra Search (If configured)
-        if self.use_aws and self.kendra_index_id != 'mock-index':
-            try:
-                response = self.kendra_client.retrieve(
-                    IndexId=self.kendra_index_id,
-                    QueryText=query,
-                    PageSize=3
-                )
-                results = [item['Content'] for item in response['ResultItems']]
-                if results:
-                    return results
-            except Exception as e:
-                print(f"Kendra Error: {e}")
+        # 4. Initialize Vector Indexing
+        if _lazy_load_sklearn():
+            # Load initial schemes from DB if empty
+            if not self.schemes:
+                self._load_schemes_from_db()
+            self.refresh_vector_index()
+    
+        # Mocking AWS parts
+        self.use_aws = False
 
-        # 2. Fallback / Mock Logic
-        query_lower = query.lower()
-        mock_results = []
-        for doc in self.mock_data:
-            match = False
-            for kw in doc['keywords']:
-                if kw in query_lower:
-                    match = True
-                    break
+    def _load_schemes_from_db(self):
+        """Load schemes from SQLite database."""
+        try:
+            from app.models.models import Scheme
             
-            if match:
-                # Format as a structured JSON string so the frontend can parse it if needed, 
-                # or just plain text for LLM.
-                # For the Hybrid UI (LLM + Cards), we return the text for the LLM 
-                # AND we can append a special marker or handle the object retrieval separately.
-                # Here we simply return the rich text expecting Bedrock to use it,
-                # BUT we also tag it so the frontend could potentially extract it if we passed raw objects.
-                # For simplicity in this hackathon phase, we will return the text for the LLM.
-                
-                # However, to enable the "Scheme Card" on frontend, we need the frontend to receive this structured data.
-                # The 'retrieve' method is currently only returning strings for the LLM Context.
-                # We need to change the API response structure to send these 'sources' back.
-                # For now, let's keep this returning Text for Bedrock context.
-                # The 'Server.py' /query endpoint calls this. We will modify Server.py to also fetch 'sources'.
-                
-                entry = f"{doc['text']} [Source: {doc['link']}]"
-                mock_results.append(entry)
-        
-        # Combine results, prioritizing Kendra but adding mock if relevant
-        final_results = mock_results # Prioritize our rich mock data for the demo
-        
-        if not final_results:
-            return ["I do not have specific public data on this local query yet. Please check official portals like india.gov.in."]
+            # If app_context is available, use it (for service init)
+            if self.app_context:
+                with self.app_context:
+                    self._query_schemes(Scheme)
+            else:
+                # If running within a request, db session is already active
+                try:
+                    self._query_schemes(Scheme)
+                except Exception:
+                     # Fallback if no context at all
+                     pass
+
+        except Exception as e:
+            # Silently fail if app context not ready (will retry on first request)
+            pass 
             
-        return final_results[:5] 
+    def _query_schemes(self, Scheme):
+        schemes = Scheme.query.all()
+        if schemes:
+            self.schemes = [s.to_dict() for s in schemes]
+            print(f"Loaded {len(self.schemes)} schemes from DB.")
+        else:
+            print("No schemes in DB.") 
+        
+    def set_app_context(self, app_context):
+        self.app_context = app_context
+        self._load_schemes_from_db()
+
+    def _load_uploaded_docs(self):
+        """Read .txt files from uploads/ and add them to the knowledge base."""
+        try:
+            for filename in os.listdir(self.upload_dir):
+                if filename.endswith('.txt'):
+                    filepath = os.path.join(self.upload_dir, filename)
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        text = f.read()
+                        # Add as a scheme-like object for unified search
+                        self.schemes.append({
+                            "id": f"upload_{filename}",
+                            "title": f"Uploaded Doc: {filename}",
+                            "text": text,
+                            "keywords": filename.lower().split('.') + ["document", "upload", "my file"],
+                            "link": f"/documents/{filename}",
+                            "benefit": "Citizen Uploaded Knowledge",
+                            "ministry": "User Uploaded",
+                            "category": "user_doc",
+                            "related": []
+                        })
+        except Exception as e:
+            print(f"Error loading uploaded docs: {e}")
+
+    def refresh_vector_index(self):
+        """Update the TF-IDF matrix with current schemes + uploads."""
+        if _lazy_load_sklearn():
+            # Ensure we have some content to vectorize
+            if not self.schemes:
+                self.schemes = [{
+                    "id": "default",
+                    "title": "Government Schemes",
+                    "text": "Information about government schemes and services for citizens",
+                    "keywords": ["government", "schemes", "services", "citizens"],
+                    "link": "#",
+                    "benefit": "General Information",
+                    "ministry": "Government",
+                    "category": "general",
+                    "related": []
+                }]
+            
+            global TfidfVectorizer
+            self.vectorizer = TfidfVectorizer(stop_words='english')
+            self.corpus = [f"{s['title']} {s['text']} {' '.join(s['keywords'])}" for s in self.schemes]
+            
+            # Only fit if we have non-empty corpus
+            if self.corpus and any(doc.strip() for doc in self.corpus):
+                self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
+            else:
+                self.corpus = ["government schemes information"]
+                self.vector_matrix = self.vectorizer.fit_transform(self.corpus)
+
+    def index_uploaded_document(self, filename, text):
+        """Programmatically add a new document to the RAG memory."""
+        self.schemes.append({
+            "id": f"upload_{filename}",
+            "title": f"Document: {filename}",
+            "text": text,
+            "keywords": filename.lower().split('.') + ["document", "upload"],
+            "link": f"/documents/{filename}",
+            "benefit": "Citizen Uploaded Knowledge",
+            "ministry": "User Uploaded",
+            "category": "user_doc",
+            "related": []
+        })
+        self.refresh_vector_index()
+        return True
+
+    # ============================================================
+    # HYBRID SEARCH (Vector + Graph)
+    # ============================================================
+
+    def retrieve(self, query, language='hi', user_profile=None, user_docs=None):
+        """Standard retrieval interface — Hybrid: Kendra (Global) + Local (Citizen Docs)."""
+        all_matches = []
+        
+        # Add user documents to temporary search context
+        if user_docs:
+            for doc in user_docs:
+                all_matches.append(f"User Document ({doc['type']}): {doc['filename']} is available.")
+
+        # 1. Kendra Search (Production Global schemes)
+        if self.kendra and self.kendra_index_id != 'mock-index':
+            kendra_results = self._kendra_search(query)
+            all_matches.extend(kendra_results)
+            
+        # 2. Local Hybrid Search (Mock Schemes + Citizen Uploads)
+        # Personalized filtering logic
+        scored_docs = self._hybrid_search(query, user_profile=user_profile)
+        for doc, _ in scored_docs:
+            all_matches.append(f"{doc['text']} [Source: {doc['link']}]")
+            
+        return all_matches if all_matches else ["I do not have specific public data on this yet. Please visit india.gov.in for official details."]
+
+    def _kendra_search_raw(self, query):
+        """Perform real AWS Kendra search and return raw items."""
+        if not self.kendra or self.kendra_index_id == 'mock-index':
+            return []
+        try:
+            response = self.kendra.retrieve(
+                IndexId=self.kendra_index_id,
+                QueryText=query,
+                PageSize=3
+            )
+            return response.get('ResultItems', [])
+        except Exception as e:
+            print(f"Kendra Error: {e}")
+            return []
+
+    def _kendra_search(self, query):
+        """Standard Kendra string retrieval."""
+        raw_items = self._kendra_search_raw(query)
+        results = []
+        for item in raw_items:
+            text = item.get('Content', '')
+            source = item.get('DocumentId', 'Ref')
+            results.append(f"{text} [Source: Kendra {source}]")
+        return results
 
     def get_structured_sources(self, query):
+        """Detailed data for UI scheme cards — Merges Local + Kendra."""
+        final_results = []
+        
+        # 1. Local Hybrid Search
+        local_docs = self._hybrid_search(query)
+        for i in range(len(local_docs)):
+            if i >= 3: break
+            doc, _ = local_docs[i]
+            # Create a card from the doc item
+            card = {
+                "id": str(doc.get('id', '')),
+                "title": str(doc.get('title', '')),
+                "text": str(doc.get('text', '')),
+                "link": str(doc.get('link', '')),
+                "benefit": str(doc.get('benefit', '')),
+                "logo": str(doc.get('logo', 'https://img.icons8.com/color/96/gov-india.png')),
+                "graph_recommendations": []
+            }
+            related = doc.get('related', [])
+            rec_titles = []
+            for rid in related:
+                scheme = self._get_by_id(rid)
+                if scheme:
+                    rec_titles.append(str(scheme.get('title', '')))
+            card['graph_recommendations'] = rec_titles
+            final_results.append(card)
+
+        # 2. Kendra Results (as cards)
+        kendra_items = self._kendra_search_raw(query)
+        for i in range(len(kendra_items)):
+            item = kendra_items[i]
+            final_results.append({
+                "id": f"kendra-{i}",
+                "title": "Official Document (Kendra)",
+                "text": str(item.get('Content', ''))[:300] + "...",
+                "link": str(item.get('DocumentURI', 'https://india.gov.in')),
+                "benefit": "Verified Policy Info",
+                "logo": "https://img.icons8.com/color/96/gov-india.png"
+            })
+            
+        return final_results
+
+    def _hybrid_search(self, query, top_k=5, threshold=0.45, user_profile=None):
         """
-        New method explicitly for UI Cards.
-        Returns the full dict objects for matching schemes.
+        Combines TF-IDF Semantic similarity with Keyword overlap.
+        Enriched with User Profile boosting for personalization.
         """
-        query_lower = query.lower()
-        matches = []
-        for doc in self.mock_data:
-            for kw in doc['keywords']:
-                if kw in query_lower:
-                    matches.append(doc)
-                    break
-        return matches[:3]
+        if not query: return []
+        
+        query_lower = str(query).lower()
+        results_map = {} # id -> (doc, score)
+
+        # Profile-based Category Boost
+        user_occ = user_profile.get('occupation', '').lower() if user_profile else ''
+        user_state = user_profile.get('location_state', '').lower() if user_profile else ''
+        user_income = user_profile.get('income_bracket', '').lower() if user_profile else ''
+
+        # 1. Vector Search (Semantic)
+        if _lazy_load_sklearn() and self.vectorizer is not None and self.vector_matrix is not None:
+            try:
+                global cosine_similarity
+                # Ensure vectorizer is initialized before use
+                if not self.vectorizer:
+                    # logger.warning("Vectorizer not initialized, skipping semantic search.") # Assuming logger is defined
+                    return [] # Or handle appropriately
+
+                query_vec = self.vectorizer.transform([query_lower])
+                cos_sim = cosine_similarity(query_vec, self.vector_matrix).flatten()
+                for idx, score in enumerate(cos_sim):
+                    if score > 0.05:
+                        did = self.schemes[idx]['id']
+                        results_map[did] = (self.schemes[idx], float(score) * 2.0)
+            except Exception:
+                pass
+
+        # 2. Keyword Overlap (Manual)
+        for doc in self.schemes:
+            k_score = 0.0
+            # Check exact keyword matches
+            keywords = doc.get('keywords', [])
+            for kw in keywords:
+                kw_str = str(kw)
+                if f" {kw_str} " in f" {query_lower} ": # Full word match
+                    k_score += 0.4
+                elif kw_str in query_lower: # Substring match (weaker)
+                    k_score += 0.1
+            
+            # Boost if query contains title
+            title = str(doc.get('title', '')).lower()
+            if title in query_lower:
+                k_score += 0.7
+
+            # PERSONALIZATION BOOST
+            if user_occ and isinstance(user_occ, str):
+                if user_occ.lower() in str(doc.get('category', '')).lower() or user_occ.lower() in str(doc.get('title', '')).lower():
+                    k_score += 0.4
+            
+            if user_state and isinstance(user_state, str):
+                if user_state.lower() in str(doc.get('text', '')).lower() or user_state.lower() in str(doc.get('title', '')).lower():
+                    k_score += 0.3
+            
+            if user_income and isinstance(user_income, str):
+                u_inc_lower = user_income.lower()
+                if "below" in u_inc_lower or "low" in u_inc_lower:
+                    if "low income" in str(doc.get('text', '')).lower() or "bpl" in str(doc.get('text', '')).lower():
+                        k_score += 0.3
+
+            if k_score > 0:
+                did = doc['id']
+                if did in results_map:
+                    results_map[did] = (results_map[did][0], float(results_map[did][1]) + k_score)
+                else:
+                    results_map[did] = (doc, k_score)
+
+        # Convert map to list and filter by threshold
+        final_results = []
+        for d, s in results_map.values():
+            if float(s) >= threshold:
+                final_results.append((d, float(s)))
+        
+        # Sort and return
+        final_results.sort(key=lambda x: x[1], reverse=True)
+        
+        # Log if we are falling back to search
+        if not final_results:
+            print(f"DEBUG: [Search] No RAG matches above {threshold}. Falling back to search-based answer.")
+            
+        # Return slice safely
+        limit = min(len(final_results), top_k)
+        return final_results[:limit]
+
+    def _get_by_id(self, sid):
+        return next((s for s in self.schemes if s['id'] == sid), None)
+
+    # ============================================================
+    # INTENT DISCOVERY
+    # ============================================================
+
+    def discover_intent(self, query):
+        """Classify the user's intent to refine the prompt."""
+        q = query.lower()
+        if any(w in q for w in ['document', 'certificate', 'patra', 'proof', 'apply']):
+            return "DOCUMENTATION_AID"
+        if any(w in q for w in ['money', 'cash', 'loan', 'paisa', 'subsidy', 'interest']):
+            return "FINANCIAL_SUPPORT"
+        if any(w in q for w in ['health', 'hospital', 'medicine', 'ill', 'treatment']):
+            return "HEALTHCARE_ACCESS"
+        if any(w in q for w in ['job', 'work', 'skill', 'training', 'naukri']):
+            return "EMPLOYMENT_LIFELIKE"
+        if any(w in q for w in ['mandi', 'price', 'bhaav', 'crop', 'market']):
+            return "MARKET_ACCESS"
+        return "GENERAL_INQUIRY"
+
+    def get_market_prices(self):
+        """Mock Mandi API for Market Access feature."""
+        return [
+            {"item": "Wheat", "price": "₹2,275", "trend": "up", "demand": "High"},
+            {"item": "Mustard", "price": "₹5,400", "trend": "stable", "demand": "Medium"},
+            {"item": "Potato", "price": "₹1,200", "trend": "down", "demand": "Low"}
+        ]
+
+    def match_livelihood(self, crop_type):
+        """
+        EXTRAORDINARY FEATURE: Agentic Livelihood matching.
+        Matches a farmer's crop to local government buyers or warehouse subsidies.
+        """
+        matches = {
+            "wheat": ["FCI Local Procurement Center", "State Seed Corporation", "PM-Kisan Warehouse Subsidy"],
+            "rice": ["State Civil Supplies", "Export Grade A Hub", "Cold Storage Cluster"],
+            "mustard": ["Nafed Procurement Point", "Oilseed Cooperative", "Organic Certification Hub"]
+        }
+        return matches.get(crop_type.lower(), ["Local APMC Mandi", "Cooperative Bank Support"])
+
+    def verify_digital_signature(self, doc_type):
+        """Simulates a secure check for 'Zero-Knowledge' digital signatures."""
+        return {
+            "status": "Verified",
+            "provider": "DigiLocker / Bharat-Identity",
+            "integrity": "100%",
+            "timestamp": "2026-02-14"
+        }
+
+    def get_all_schemes(self):
+        return self.schemes

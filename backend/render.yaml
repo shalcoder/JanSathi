@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: jansathi-backend
+    runtime: python3
+    region: singapore
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://jan-sathi-five.vercel.app
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      - key: S3_BUCKET_NAME
+        value: jansathi-audio-bucket-1770462916
+      - key: BEDROCK_MODEL_ID
+        value: mock
+      - key: KENDRA_INDEX_ID
+        value: mock-index
+      - key: SECRET_KEY
+        value: jansathi-secret-key-2024-production
+      - key: DATABASE_URL
+        value: sqlite:///jansathi.db
+      - key: RATELIMIT_DEFAULT
+        value: 200 per day
+      - key: RATELIMIT_STORAGE_URL
+        value: memory://

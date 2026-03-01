@@ -22,14 +22,17 @@ export function useSettings() {
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
     useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                setSettings(JSON.parse(stored));
-            } catch (e) {
-                console.error("Failed to parse settings", e);
+        const loadSettings = () => {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    setSettings(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse settings", e);
+                }
             }
-        }
+        };
+        loadSettings();
     }, []);
 
     const updateSettings = (updates: Partial<AppSettings>) => {

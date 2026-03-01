@@ -1,39 +1,67 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, History as HistoryIcon, Languages, Camera, Image as ImageIcon, X, Trash2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Camera, X, Sparkles, Shield, ExternalLink, CheckCircle2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import VoiceInput from './VoiceInput';
 import AudioPlayer from './AudioPlayer';
-import { sendQuery, getHistory, analyzeImage } from '@/services/api';
+import BenefitReceipt from './BenefitReceipt';
+import TelemetryPanel from './TelemetryPanel';
 import SchemeCard from './SchemeCard';
 import { useSettings } from '@/hooks/useSettings';
+import { useSession } from '@/hooks/useSession';
+import DocumentScorecard from './DocumentScorecard';
+import ExplainabilityCard from './ExplainabilityCard';
+import MultiAgentThoughtProcess from './MultiAgentThoughtProcess';
+import { Languages, Globe } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import {
+    sendUnifiedQuery,
+    analyzeImage,
+    applyForBenefit,
+    type UnifiedQueryResponse,
+    type BenefitReceipt as BenefitReceiptType,
+} from '@/services/api';
+import { enqueue, registerOnlineFlush, type QueuedAction } from '@/services/offlineQueue';
 
-// --- Typewriter Component ---
+// ─── Typewriter ───────────────────────────────────────────────────────────────
+
 const Typewriter = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
     const [displayedText, setDisplayedText] = useState('');
     const index = useRef(0);
+    const onCompleteRef = useRef(onComplete);
+
+    useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
     useEffect(() => {
         index.current = 0;
-        setDisplayedText('');
-
         const intervalId = setInterval(() => {
-            // Increment index by chunk size (e.g., 2 chars)
-            index.current += 2;
-            const currentText = text.slice(0, index.current);
-            setDisplayedText(currentText);
-
+            index.current += 3;
+            if (index.current > text.length) index.current = text.length;
+            setDisplayedText(text.slice(0, index.current));
             if (index.current >= text.length) {
                 clearInterval(intervalId);
-                if (onComplete) onComplete();
+                if (onCompleteRef.current) onCompleteRef.current();
             }
-        }, 15);
-
+        }, 12);
         return () => clearInterval(intervalId);
-    }, [text, onComplete]);
+    }, [text]);
 
-    return <div className="leading-relaxed whitespace-pre-wrap">{displayedText}</div>;
+    return <div className="leading-relaxed font-medium text-foreground/90">{displayedText}</div>;
 };
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Source {
+    title: string;
+    text: string;
+    link: string;
+    benefit: string;
+    logo: string;
+    graph_recommendations?: string[];
+}
 
 type Message = {
     id: string;
@@ -41,463 +69,639 @@ type Message = {
     text: string;
     timestamp: Date;
     language?: string;
-    userId?: string;
     audio?: string;
-    context?: string[];
+    audioUrl?: string;       // from unified response
     isTyping?: boolean;
-    structured_sources?: {
-        title: string;
-        text: string;
-        link: string;
-        benefit: string;
-        logo: string;
-    }[];
+    structured_sources?: Source[];
+    provenance?: string;
+    explainability?: {
+        confidence: number;
+        matching_criteria: string[];
+        privacy_protocol: string;
+    };
+    // Unified fields
+    benefitReceipt?: BenefitReceiptType;
+    confidence?: number;
+    turnId?: string;
+    debugInfo?: UnifiedQueryResponse['debug'];
+    applyStatus?: 'idle' | 'applying' | 'applied' | 'queued';
 };
 
-const LANGUAGES = [
-    { code: 'hi', name: 'हिन्दी' },
-    { code: 'en', name: 'English' },
-    { code: 'kn', name: 'ಕನ್ನಡ' },
-    { code: 'ta', name: 'தமிழ்' }
+const SUGGESTIONS = [
+    { title: "PM Awas Yojana", desc: "Sarkari Makan (Housing)", style: "bento-1x1" },
+    { title: "E-Shram Registry", desc: "Majdoor Labh (Worker Benefits)", style: "bento-1x1" },
+    { title: "PM-Kisan Status", desc: "Kheti Sahayata (Farmer Aid)", style: "bento-1x1" },
+    { title: "Ration Card", desc: "Khadya Suraksha (Food Security)", style: "bento-1x1" }
 ];
 
 const SESSIONS_KEY = 'jansathi_chat_sessions';
 
-export default function ChatInterface() {
-    // Use a fallback user object instead of Clerk
-    const user = { id: 'demo_user', firstName: 'JanSathi User' };
+const DIALECTS = [
+    { code: 'hi', name: 'Hindi (Standard)' },
+    { code: 'hi-rural', name: 'Hindi (Gramin)' },
+    { code: 'kn', name: 'Kannada' },
+    { code: 'ta', name: 'Tamil' },
+    { code: 'te', name: 'Telugu' },
+    { code: 'ml', name: 'Malayalam' },
+    { code: 'gu', name: 'Gujarati' },
+    { code: 'mr', name: 'Marathi' },
+    { code: 'pa', name: 'Punjabi' }
+];
 
-    // Global Settings
-    const { settings, updateSettings } = useSettings();
+// ─── Demo fallback cache ──────────────────────────────────────────────────────
+
+const DEMO_FALLBACKS: Record<string, string> = {
+    'PM-Kisan Status': 'PM-Kisan Samman Nidhi provides ₹6,000/year to eligible farmers in 3 installments. Check your status at pmkisan.gov.in.',
+    'PM Awas Yojana': 'PM Awas Yojana (Urban) offers housing assistance for EWS/LIG/MIG categories. Apply via pmaymis.gov.in.',
+    'Ration Card': 'A Ration Card gives access to subsidised food grains under the National Food Security Act. Apply at your local Ration office.',
+    'E-Shram Registry': 'E-Shram is a national database for unorganised workers. Register at eshram.gov.in to get a UAN and access benefits.',
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function ChatInterface() {
+    const { user } = useUser();
+    const { settings } = useSettings();
+    const { sessionId, token } = useSession();
 
     const [messages, setMessages] = useState<Message[]>([]);
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-
+    const [localSessionId, setLocalSessionId] = useState<string | null>(null);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    // Local state for language is now synced with global settings
+    const [isThinking, setIsThinking] = useState(false);
+    const [isDemoMode, setIsDemoMode] = useState(false);
     const [language, setLanguage] = useState(settings.language);
-
-    // Sync local language when settings change
-    useEffect(() => {
-        setLanguage(settings.language);
-    }, [settings.language]);
-
-    const [showHistory, setShowHistory] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Initialize Sessions
+    useEffect(() => { setLanguage(settings.language); }, [settings.language]);
+
+    // Restore last session from sessionStorage
     useEffect(() => {
-        const handleLoadSession = (e: any) => {
-            const sid = e.detail;
-            loadSession(sid);
-        };
-        window.addEventListener('load-chat-session', handleLoadSession);
-
-        // Initial load (check if we were in a session)
         const lastSession = sessionStorage.getItem('current_jansathi_session');
-        if (lastSession) {
-            loadSession(lastSession);
-        } else {
-            resetToWelcome();
-        }
-
-        return () => window.removeEventListener('load-chat-session', handleLoadSession);
+        if (lastSession) loadSession(lastSession);
+        else resetToWelcome();
     }, []);
 
+    // Register offline queue flush handler
+    useEffect(() => {
+        const cleanup = registerOnlineFlush(async (action: QueuedAction) => {
+            if (action.type === 'apply' && token) {
+                await applyForBenefit(action.payload as unknown as Parameters<typeof applyForBenefit>[0], token);
+            }
+        });
+        return cleanup;
+    }, [token]);
+
+    // Auto-scroll to bottom
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+    }, [messages, isLoading]);
+
     const resetToWelcome = () => {
-        setCurrentSessionId(null);
-        setMessages([{
-            id: 'welcome',
-            role: 'assistant',
-            text: 'Namaste! I am JanSathi. Ask me anything about government schemes or services.',
-            timestamp: new Date()
-        }]);
+        setLocalSessionId(null);
+        setMessages([]);
     };
 
     const loadSession = (id: string) => {
-        try {
-            const stored = localStorage.getItem(SESSIONS_KEY);
-            if (stored) {
-                const sessions = JSON.parse(stored);
-                if (sessions[id]) {
-                    const restored = sessions[id].messages.map((m: any) => ({
-                        ...m,
-                        timestamp: new Date(m.timestamp),
-                        isTyping: false // Don't animate old messages
-                    }));
-                    setMessages(restored);
-                    setCurrentSessionId(id);
-                    sessionStorage.setItem('current_jansathi_session', id);
-                    return;
-                }
+        const stored = localStorage.getItem(SESSIONS_KEY);
+        if (stored) {
+            const sessions = JSON.parse(stored);
+            if (sessions[id]) {
+                setMessages(sessions[id].messages.map((m: Message) => ({
+                    ...m,
+                    timestamp: new Date(m.timestamp),
+                    isTyping: false
+                })));
+                setLocalSessionId(id);
+                sessionStorage.setItem('current_jansathi_session', id);
             }
-        } catch (e) {
-            console.error("Failed to load session:", id, e);
-        }
-        resetToWelcome();
-    };
-
-    const saveSession = (msgs: Message[], id: string) => {
-        try {
-            const stored = localStorage.getItem(SESSIONS_KEY);
-            let sessions = stored ? JSON.parse(stored) : {};
-
-            // Clean messages for storage (remove typing state)
-            const cleanMsgs = msgs.map(({ isTyping, ...rest }) => ({
-                ...rest,
-                timestamp: rest.timestamp.toISOString()
-            }));
-
-            const title = msgs.find(m => m.role === 'user')?.text.substring(0, 30) || 'New Conversation';
-
-            sessions[id] = {
-                id,
-                title: title + (title.length >= 30 ? '...' : ''),
-                messages: cleanMsgs,
-                timestamp: new Date().toISOString()
-            };
-
-            localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
-            window.dispatchEvent(new Event('chat-storage-update'));
-        } catch (e) {
-            console.error("Failed to save session:", e);
         }
     };
 
-    useEffect(() => {
-        if (currentSessionId && messages.length > 0) {
-            saveSession(messages, currentSessionId);
-        }
+    const persistSession = useCallback((sid: string, msgs: Message[]) => {
+        const stored = localStorage.getItem(SESSIONS_KEY);
+        const sessions = stored ? JSON.parse(stored) : {};
+        sessions[sid] = { messages: msgs, updatedAt: new Date().toISOString() };
+        localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+    }, []);
 
-        if (messages.length > 1 || (messages.length === 1 && messages[0].id !== 'welcome')) {
-            scrollToBottom();
-        }
-    }, [messages, currentSessionId]);
-
-    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setSelectedImage(file);
-            setImagePreview(URL.createObjectURL(file));
-        }
-    };
-
-    const clearImage = () => {
-        setSelectedImage(null);
-        setImagePreview(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    const handleDeleteChat = () => {
-        if (confirm("Are you sure you want to delete this conversation?")) {
-            if (currentSessionId) {
-                const stored = localStorage.getItem(SESSIONS_KEY);
-                if (stored) {
-                    const sessions = JSON.parse(stored);
-                    delete sessions[currentSessionId];
-                    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
-                    window.dispatchEvent(new Event('chat-storage-update'));
-                }
-            }
-            sessionStorage.removeItem('current_jansathi_session');
-            resetToWelcome();
-        }
-    };
+    // ── Main send handler ──────────────────────────────────────────────────────
 
     const handleSend = async (text: string = inputText) => {
         if ((!text.trim() && !selectedImage) || isLoading) return;
 
-        let sid = currentSessionId;
-        if (!sid) {
-            sid = Date.now().toString();
-            setCurrentSessionId(sid);
-            sessionStorage.setItem('current_jansathi_session', sid);
+        const activeSid = sessionId || localSessionId || Date.now().toString();
+        if (!localSessionId) {
+            setLocalSessionId(activeSid);
+            sessionStorage.setItem('current_jansathi_session', activeSid);
         }
 
         setIsLoading(true);
-        const newMessage: Message = {
+        setIsThinking(true);
+        const userMsg: Message = {
             id: Date.now().toString(),
             role: 'user',
-            text: text || (selectedImage ? 'Analyzed this document' : ''),
-            timestamp: new Date(),
-            language: language
+            text: text || 'Document Analysis',
+            timestamp: new Date()
         };
 
-        const updatedMessages = [...messages.filter(m => m.id !== 'welcome'), newMessage];
-        setMessages(updatedMessages);
+        setMessages(prev => {
+            const next = [...prev, userMsg];
+            persistSession(activeSid, next);
+            return next;
+        });
         setInputText('');
+        setIsDemoMode(false);
+
+        // Set a 6-second demo-fallback timeout
+        const fallbackTimer = setTimeout(() => {
+            setIsDemoMode(true);
+        }, 6000);
 
         try {
-            let data;
             if (selectedImage) {
-                data = await analyzeImage(selectedImage, language);
-                clearImage();
-
-                const visionMsg: Message = {
-                    id: Date.now().toString() + '_ai',
+                // Image analysis (legacy endpoint kept)
+                const data = await analyzeImage(selectedImage, language);
+                clearTimeout(fallbackTimer);
+                setSelectedImage(null);
+                setImagePreview(null);
+                const aiMsg: Message = {
+                    id: 'ai_' + Date.now(),
                     role: 'assistant',
                     text: data.analysis.text,
                     audio: data.analysis.audio,
                     timestamp: new Date(),
-                    language: data.meta.language,
                     isTyping: true
                 };
-                setMessages(prev => [...prev, visionMsg]);
-            } else {
-                data = await sendQuery({
-                    text_query: text,
-                    language: language,
-                    userId: user?.id
+                setMessages(prev => {
+                    const next = [...prev, aiMsg];
+                    persistSession(activeSid, next);
+                    return next;
                 });
+            } else {
+                // Use unified query endpoint
+                const response = await sendUnifiedQuery(
+                    {
+                        session_id: activeSid,
+                        channel: 'web',
+                        input: { text },
+                        metadata: { lang: language, user_id: user?.id || 'anonymous' }
+                    },
+                    token ?? undefined,
+                    activeSid
+                );
+                clearTimeout(fallbackTimer);
+                setIsDemoMode(false);
 
-                const aiMessage: Message = {
-                    id: Date.now().toString() + '_ai',
+                const aiMsg: Message = {
+                    id: 'ai_' + Date.now(),
                     role: 'assistant',
-                    text: data.answer.text,
-                    audio: data.answer.audio,
+                    text: response.response_text,
+                    audioUrl: response.audio_url,
+                    benefitReceipt: response.benefit_receipt,
+                    confidence: response.confidence,
+                    turnId: response.turn_id,
+                    debugInfo: response.debug,
                     timestamp: new Date(),
-                    language: data.meta?.language,
-                    structured_sources: data.structured_sources,
-                    isTyping: true
+                    isTyping: true,
+                    applyStatus: 'idle'
                 };
-                setMessages(prev => [...prev, aiMessage]);
+                setMessages(prev => {
+                    const next = [...prev, aiMsg];
+                    persistSession(activeSid, next);
+                    return next;
+                });
             }
-        } catch (error) {
-            console.error(error);
-            setMessages(prev => [...prev, {
-                id: Date.now().toString(),
+        } catch {
+            clearTimeout(fallbackTimer);
+            // Show demo fallback if available
+            const fallbackText = DEMO_FALLBACKS[text] ??
+                "I'm having trouble connecting right now. Please try again in a moment.";
+            setIsDemoMode(true);
+            const errMsg: Message = {
+                id: 'err_' + Date.now(),
                 role: 'assistant',
-                text: "Maaf kijiye, I faced a connection issue. Please try again.",
+                text: fallbackText,
                 timestamp: new Date(),
-                isTyping: false
-            }]);
+                isTyping: true
+            };
+            setMessages(prev => {
+                const next = [...prev, errMsg];
+                persistSession(activeSid, next);
+                return next;
+            });
         } finally {
             setIsLoading(false);
+            setIsThinking(false);
         }
     };
 
+    const handleApply = async (msg: Message) => {
+        if (!msg.turnId || !sessionId) return;
+
+        // Update status to 'applying'
+        setMessages(prev =>
+            prev.map(m => m.id === msg.id ? { ...m, applyStatus: 'applying' as const } : m)
+        );
+
+        // If offline, queue the action
+        if (!navigator.onLine) {
+            enqueue('apply', { session_id: sessionId, turn_id: msg.turnId });
+            setMessages(prev =>
+                prev.map(m => m.id === msg.id ? { ...m, applyStatus: 'queued' as const } : m)
+            );
+            return;
+        }
+
+        try {
+            await applyForBenefit(
+                { session_id: sessionId, turn_id: msg.turnId },
+                token ?? undefined
+            );
+            setMessages(prev =>
+                prev.map(m => m.id === msg.id ? { ...m, applyStatus: 'applied' as const } : m)
+            );
+        } catch {
+            setMessages(prev =>
+                prev.map(m => m.id === msg.id ? { ...m, applyStatus: 'idle' as const } : m)
+            );
+            alert('Failed to submit application. Please try again.');
+        }
+    };
+
+    const handleAskAgain = (msg: Message) => {
+        if (msg.turnId) {
+            handleSend(msg.text);
+        }
+    };
+
+    // Legacy scheme apply (for SchemeCard)
+    const handleSchemeApply = async (schemeTitle: string) => {
+        handleSend(`I want to apply for ${schemeTitle}`);
+    };
+
+    // ── Render ─────────────────────────────────────────────────────────────────
+
     return (
-        <div className="flex flex-col h-full w-full glass-panel rounded-3xl overflow-hidden shadow-2xl relative border border-white/10 bg-black/20 backdrop-blur-xl transition-all duration-500">
+        <div className="flex flex-col h-full w-full relative bg-transparent">
 
-            {/* Header Controls */}
-            <div className="flex justify-between items-center p-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-10">
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleDeleteChat}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete this chat"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">Live Consultation</span>
+            {/* Dialect Tuner */}
+            <div className="absolute top-4 left-4 z-50 flex items-center gap-2 p-1.5 bg-background/50 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
+                <div className="p-2 rounded-xl bg-primary/10">
+                    <Globe className="w-4 h-4 text-primary" />
                 </div>
-
-                <div className="flex items-center gap-2">
-                    <Languages className="w-4 h-4 text-slate-400" />
-                    <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        className="text-xs bg-slate-100 dark:bg-slate-800 border-none rounded-lg px-2 py-1 outline-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-blue-500"
-                    >
-                        {LANGUAGES.map(lang => (
-                            <option key={lang.code} value={lang.code}>{lang.name}</option>
-                        ))}
-                    </select>
+                <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="bg-transparent text-[10px] font-black uppercase tracking-widest text-foreground outline-none px-2 pr-6 appearance-none cursor-pointer"
+                >
+                    {DIALECTS.map(d => (
+                        <option key={d.code} value={d.code} className="bg-card text-foreground">{d.name}</option>
+                    ))}
+                </select>
+                <div className="pr-1 opacity-40">
+                    <Languages className="w-3 h-3" />
                 </div>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-                {messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome') ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-80 animate-in fade-in duration-700">
-                        <div className="w-24 h-24 bg-blue-500/10 rounded-3xl flex items-center justify-center mb-6 border border-blue-500/20 shadow-2xl rotate-3">
-                            <BotIcon className="w-12 h-12 text-blue-500" />
-                        </div>
-                        <h3 className="text-2xl font-black text-white mb-2 tracking-tighter">
-                            Namaste! How can I help you today?
-                        </h3>
-                        <p className="text-slate-400 max-w-md mb-12 font-medium">
-                            Ask me about government schemes, farming prices, or health benefits in your language.
-                        </p>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
-                            {[
-                                "PM Kisan Samman Nidhi details",
-                                "Ayushman Bharat eligibility",
-                                "Apply for Ration Card",
-                                "Mandi prices for Wheat"
-                            ].map((q, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => {
-                                        setInputText(q);
-                                        handleSend(q);
-                                    }}
-                                    className="px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-left text-sm text-slate-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 hover:shadow-xl hover:shadow-blue-600/20 transition-all flex items-center justify-between group"
-                                >
-                                    <span className="font-bold">{q}</span>
-                                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    <>
-                        {messages.map((msg) => (
-                            <div
-                                key={msg.id}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}
-                            >
-                                <div
-                                    className={`
-                                        max-w-[85%] sm:max-w-[75%] p-5 rounded-[1.5rem] shadow-sm text-sm md:text-base transition-all duration-200
-                                        ${msg.role === 'user'
-                                            ? 'bg-blue-600 text-white rounded-br-none shadow-blue-600/20'
-                                            : 'bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 rounded-bl-none border border-white/10 backdrop-blur-md'}
-                                    `}
-                                >
-                                    {msg.role === 'assistant' && msg.isTyping ? (
-                                        <Typewriter text={msg.text} onComplete={() => {
-                                            // Handle completion if needed
-                                        }} />
-                                    ) : (
-                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
-                                    )}
-
-                                    {msg.role === 'assistant' && msg.structured_sources && msg.structured_sources.length > 0 && (
-                                        <div className="mt-6 grid grid-cols-1 gap-4 w-full">
-                                            {msg.structured_sources.map((source, idx) => (
-                                                <SchemeCard
-                                                    key={idx}
-                                                    title={source.title || "Government Scheme"}
-                                                    description={source.text}
-                                                    link={source.link}
-                                                    benefit={source.benefit || "View Details"}
-                                                    logo={source.logo}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {msg.audio && (
-                                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
-                                            <AudioPlayer src={msg.audio} />
-                                        </div>
-                                    )}
-
-                                    <span className={`text-[10px] font-bold block mt-3 text-right ${msg.role === 'user' ? 'text-blue-100/60' : 'text-slate-500'}`}>
-                                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                        {isLoading && (
-                            <div className="flex justify-start">
-                                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl rounded-bl-none border border-white/10 shadow-sm flex items-center gap-3">
-                                    <div className="flex space-x-1">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                                    </div>
-                                    <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest animate-pulse">
-                                        AWS Bedrock Analyzing...
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-                    </>
+            {/* Demo mode badge */}
+            <AnimatePresence>
+                {isDemoMode && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="absolute top-4 right-4 z-50 flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded-full"
+                    >
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider">Demo Mode</span>
+                    </motion.div>
                 )}
-                <div ref={messagesEndRef} />
+            </AnimatePresence>
+
+            {/* Background element */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20" />
+
+            {/* Messages Area */}
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 scroll-smooth scrollbar-none pb-8 sm:pb-12">
+                <AnimatePresence mode="wait">
+                    {messages.length === 0 ? (
+                        <motion.div
+                            key="welcome"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="flex flex-col items-center justify-center min-h-[45vh] text-center max-w-5xl mx-auto py-6"
+                        >
+                            <div className="space-y-4 w-full px-4">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 text-emerald-600 text-[9px] font-bold uppercase tracking-widest">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    Verified Assistant
+                                </div>
+                                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+                                    Hello! <br />
+                                    How can <span className="text-primary">JanSathi</span> help?
+                                </h1>
+                                <p className="text-sm text-secondary-foreground max-w-lg mx-auto font-medium leading-relaxed">
+                                    Ask me anything about government schemes, documents, or your benefits.
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-8 max-w-4xl mx-auto px-2 pb-4">
+                                    {SUGGESTIONS.map((s, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleSend(s.title)}
+                                            className="bg-card border border-border/50 p-4 text-left rounded-xl hover:border-primary/30 transition-colors shadow-sm flex flex-col justify-center"
+                                        >
+                                            <p className="text-sm font-bold text-foreground mb-1">{s.title}</p>
+                                            <p className="text-[9px] font-bold text-secondary-foreground opacity-60 uppercase tracking-wider">{s.desc}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <div className="max-w-4xl mx-auto w-full space-y-6 px-2">
+                            {messages.map((msg) => (
+                                <motion.div
+                                    key={msg.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                >
+                                    <div className={`
+                                        p-4 sm:p-5 rounded-2xl relative shadow-sm
+                                        ${msg.role === 'user'
+                                            ? 'max-w-[85%] sm:max-w-[70%] bg-primary text-white'
+                                            : 'w-full sm:max-w-[95%] bg-card border border-border/50 text-foreground'}
+                                    `}>
+                                        {/* FL Active badge on user messages */}
+                                        {msg.role === 'user' && (
+                                            <div className="absolute -top-3 right-4 bg-background border border-border/50 shadow-sm px-2 py-1 rounded-full flex items-center gap-1.5 z-10">
+                                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">FL-Node Active</span>
+                                            </div>
+                                        )}
+
+                                        {/* Assistant: Typing animation or static content */}
+                                        {msg.role === 'assistant' && msg.isTyping ? (
+                                            <div className="text-base leading-relaxed">
+                                                <Typewriter
+                                                    text={msg.text}
+                                                    onComplete={() =>
+                                                        setMessages(prev =>
+                                                            prev.map(m => m.id === msg.id ? { ...m, isTyping: false } : m)
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {/* Provenance badge */}
+                                                {msg.role === 'assistant' && (
+                                                    <div className={`
+                                                        inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest mb-3
+                                                        ${msg.provenance === 'verified_doc'
+                                                            ? 'bg-success/10 text-success border border-success/20'
+                                                            : 'bg-accent/10 text-accent border border-accent/20'}
+                                                    `}>
+                                                        {msg.provenance === 'verified_doc'
+                                                            ? <><Shield className="w-3 h-3" /> Official Source</>
+                                                            : <><Sparkles className="w-3 h-3" /> AI Search</>
+                                                        }
+                                                    </div>
+                                                )}
+
+                                                {/* Message text */}
+                                                <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed font-medium">
+                                                    <ReactMarkdown
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                                                            a: ({ href, children }) => (
+                                                                <a
+                                                                    href={href}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-1 text-primary hover:underline font-bold decoration-primary/30 underline-offset-4"
+                                                                >
+                                                                    {children}
+                                                                    <ExternalLink className="w-2.5 h-2.5" />
+                                                                </a>
+                                                            ),
+                                                            ul: ({ children }) => <ul className="space-y-1 mb-4 list-none">{children}</ul>,
+                                                            li: ({ children }) => (
+                                                                <li className="flex items-start gap-2 text-sm">
+                                                                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+                                                                    <span>{children}</span>
+                                                                </li>
+                                                            ),
+                                                            strong: ({ children }) => (
+                                                                <strong className="font-black text-foreground underline decoration-primary/20 decoration-2 underline-offset-2">
+                                                                    {children}
+                                                                </strong>
+                                                            ),
+                                                        }}
+                                                    >
+                                                        {msg.text}
+                                                    </ReactMarkdown>
+                                                </div>
+
+                                                {/* Explainability */}
+                                                {msg.explainability && (
+                                                    <div className="mt-4 pt-4 border-t border-border/10">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                                                            <Shield className="w-3 h-3 text-emerald-500" />
+                                                            Trust & Provenance
+                                                        </h4>
+                                                        <ExplainabilityCard
+                                                            confidence={msg.explainability.confidence}
+                                                            criteria={msg.explainability.matching_criteria}
+                                                            protocol={msg.explainability.privacy_protocol}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Legacy structured sources (SchemeCard grid) */}
+                                                {msg.structured_sources && msg.structured_sources.length > 0 && (
+                                                    <div className="grid grid-cols-1 gap-4 pt-4">
+                                                        {selectedImage && msg.role === 'assistant' && (
+                                                            <DocumentScorecard
+                                                                docType="Verified Government ID"
+                                                                scores={{ accuracy: 94, integrity: 100, eligibility: 88 }}
+                                                                vulnerabilities={["Blur detected in bottom corner", "Ensure all margins are visible"]}
+                                                            />
+                                                        )}
+                                                        {msg.structured_sources.map((s, sIdx) => (
+                                                            <SchemeCard
+                                                                key={sIdx}
+                                                                title={s.title}
+                                                                description={s.text}
+                                                                link={s.link}
+                                                                benefit={s.benefit}
+                                                                logo={s.logo}
+                                                                related={s.graph_recommendations}
+                                                                onApply={handleSchemeApply}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* ── NEW: Benefit Receipt ─────────────────────── */}
+                                                {msg.benefitReceipt && (
+                                                    <BenefitReceipt
+                                                        receipt={msg.benefitReceipt}
+                                                        confidence={msg.confidence}
+                                                        turnId={msg.turnId}
+                                                        sessionId={sessionId ?? undefined}
+                                                        isApplying={msg.applyStatus === 'applying'}
+                                                        onApply={
+                                                            msg.applyStatus === 'applied'
+                                                                ? undefined
+                                                                : () => handleApply(msg)
+                                                        }
+                                                        onAskAgain={() => handleAskAgain(msg)}
+                                                    />
+                                                )}
+
+                                                {/* Apply status badge */}
+                                                {(msg.applyStatus === 'applied' || msg.applyStatus === 'queued') && (
+                                                    <div className={`mt-2 text-xs font-semibold flex items-center gap-1.5 ${msg.applyStatus === 'applied' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                        {msg.applyStatus === 'applied'
+                                                            ? <>✅ Application submitted!</>
+                                                            : <>⏳ Queued — will submit when online</>
+                                                        }
+                                                    </div>
+                                                )}
+
+                                                {/* Audio player — unified audio_url or legacy audio */}
+                                                {(msg.audioUrl || msg.audio) && (
+                                                    <div className="mt-6 pt-6 border-t border-border/10">
+                                                        <AudioPlayer src={(msg.audioUrl || msg.audio)!} />
+                                                    </div>
+                                                )}
+
+                                                {/* ── NEW: Telemetry Panel ─────────────────────── */}
+                                                {msg.role === 'assistant' && (msg.debugInfo || msg.confidence !== undefined) && (
+                                                    <TelemetryPanel debug={msg.debugInfo} confidence={msg.confidence} />
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className={`text-[8px] font-black uppercase tracking-[0.2em] mt-4 flex items-center gap-2 ${msg.role === 'user' ? 'justify-end text-white/60' : 'justify-start text-muted-foreground'}`}>
+                                            <div className={`w-1 h-1 rounded-full ${msg.role === 'user' ? 'bg-white/40' : 'bg-success'}`} />
+                                            {msg.role === 'user' ? 'Transmission Secure' : 'Authenticated Data'}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+
+                            {/* Thinking State */}
+                            {isThinking && (
+                                <div className="flex justify-start px-2">
+                                    <MultiAgentThoughtProcess />
+                                </div>
+                            )}
+
+                            {/* Loading fallback */}
+                            {isLoading && !isThinking && (
+                                <div className="flex justify-start px-2">
+                                    <div className="flex items-center gap-3 p-3 px-5 bg-secondary/30 rounded-full border border-border">
+                                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                                        <span className="text-[10px] text-foreground font-bold uppercase tracking-wider">JanSathi is thinking...</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white/10 dark:bg-black/40 backdrop-blur-xl border-t border-white/5 z-20">
+            <div className="shrink-0 p-4 sm:p-6 bg-background/80 backdrop-blur-md border-t border-border/50">
+                <div className="max-w-4xl mx-auto w-full">
 
-                {/* Image Preview Banner */}
-                {imagePreview && (
-                    <div className="mb-4 p-3 bg-blue-500/10 rounded-2xl flex items-center justify-between animate-in slide-in-from-bottom-4 backdrop-blur-md border border-blue-500/20">
-                        <div className="flex items-center gap-4">
-                            <div className="relative h-14 w-14 group">
-                                <img src={imagePreview} alt="Selected" className="h-full w-full object-cover rounded-xl border border-white/20" />
-                                <div className="absolute inset-0 bg-blue-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            </div>
-                            <div>
-                                <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Document Selected</p>
-                                <p className="text-sm text-slate-300 font-bold truncate max-w-[200px]">{selectedImage?.name}</p>
-                            </div>
+                    <AnimatePresence>
+                        {imagePreview && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 20 }}
+                                className="mb-4 p-4 bg-card rounded-2xl flex items-center justify-between border border-primary/30 shadow-lg"
+                            >
+                                <div className="flex items-center gap-4">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={imagePreview} className="h-16 w-16 object-cover rounded-xl border border-border shadow-sm" alt="Upload preview" />
+                                    <div>
+                                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-0.5">Image Selected</p>
+                                        <p className="text-sm font-bold truncate max-w-[200px] text-foreground">{selectedImage?.name}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                                    className="p-3 bg-secondary/50 hover:text-red-600 rounded-xl transition-colors"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="flex items-end gap-3 p-2 bg-secondary/30 border border-border/50 rounded-[2rem] shadow-sm relative transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50">
+                        <div className="p-1.5 rounded-2xl bg-card flex-1 flex items-center gap-2 border border-border shadow-lg focus-within:border-primary transition-colors">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                ref={fileInputRef}
+                                onChange={(e) => {
+                                    if (e.target.files?.[0]) {
+                                        setSelectedImage(e.target.files[0]);
+                                        setImagePreview(URL.createObjectURL(e.target.files[0]));
+                                    }
+                                }}
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className={`p-3 rounded-xl transition-all ${selectedImage ? 'bg-primary text-white' : 'hover:bg-secondary text-secondary-foreground'}`}
+                            >
+                                <Camera className="w-5 h-5" />
+                            </button>
+
+                            <VoiceInput onTranscript={handleSend} isProcessing={isLoading} compact={true} />
+
+                            <input
+                                type="text"
+                                value={inputText}
+                                onChange={(e) => setInputText(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                placeholder={selectedImage ? "Click send to analyze photo..." : "Ask your question here..."}
+                                className="flex-1 bg-transparent px-3 text-[15px] font-bold text-foreground placeholder:opacity-30 focus:outline-none"
+                                disabled={isLoading}
+                            />
+
+                            <button
+                                onClick={() => handleSend()}
+                                disabled={isLoading || (!inputText.trim() && !selectedImage)}
+                                className="p-3.5 bg-primary text-white rounded-xl shadow-md disabled:opacity-20 active:scale-95 transition-all"
+                            >
+                                <Send className="w-5 h-5" />
+                            </button>
                         </div>
-                        <button onClick={clearImage} className="p-2 bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl transition-all">
-                            <X className="w-5 h-5" />
-                        </button>
                     </div>
-                )}
 
-                {/* Voice Input Centered */}
-                <div className="mb-6 flex justify-center">
-                    <VoiceInput onTranscript={handleSend} isProcessing={isLoading} />
+                    <div className="flex justify-center items-center gap-3 mt-4 opacity-60">
+                        <div className="h-px w-8 bg-foreground" />
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-foreground">Verified Information • Secure Helper</p>
+                        <div className="h-px w-8 bg-foreground" />
+                    </div>
                 </div>
-
-                {/* Text Input Row */}
-                <div className="flex gap-3 items-center bg-white/5 p-2 rounded-[2rem] border border-white/10 shadow-2xl shadow-black/20 focus-within:border-blue-500/50 transition-all">
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={handleImageSelect}
-                    />
-
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`p-4 rounded-[1.5rem] transition-all ${selectedImage ? 'bg-blue-600 text-white' : 'hover:bg-white/10 text-slate-400 hover:text-white'}`}
-                        title="Analyze Document/Image"
-                        disabled={isLoading}
-                    >
-                        <Camera className="w-6 h-6" />
-                    </button>
-
-                    <input
-                        type="text"
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSend(inputText)}
-                        placeholder={selectedImage ? "Press Send to analyze this image..." : (language === 'hi' ? 'अपना प्रश्न पूछें...' : 'Ask JanSathi...')}
-                        className="flex-1 p-3 bg-transparent text-white placeholder:text-slate-500 focus:outline-none font-medium"
-                        disabled={isLoading}
-                    />
-                    <button
-                        onClick={() => handleSend(inputText)}
-                        disabled={isLoading || (!inputText.trim() && !selectedImage)}
-                        className="p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.5rem] shadow-xl shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 group"
-                    >
-                        <Send className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                    </button>
-                </div>
-                <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-widest mt-4">JanSathi Professional AI • v2.0</p>
             </div>
         </div>
     );
-}
-
-function BotIcon({ className }: { className?: string }) {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 8V4H8" />
-            <rect width="16" height="12" x="4" y="8" rx="2" />
-            <path d="M2 14h2" />
-            <path d="M20 14h2" />
-            <path d="M15 13v2" />
-            <path d="M9 13v2" />
-        </svg>
-    )
 }

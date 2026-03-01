@@ -1,53 +1,66 @@
 # OS files
 .DS_Store
 Thumbs.db
+*.tmp
+*.bak
+*.swp
+*.swo
 
 # IDEs
 .idea/
 .vscode/
-*.swp
-*.swo
+*.sublime-project
+*.sublime-workspace
 
 # Project specific
 .env*
 !.env.example
 *.pem
+deploy_keys/
+*.mdpts
 
 # Node / Frontend
 node_modules/
-frontend/node_modules/
 .next/
-frontend/.next/
 out/
-frontend/out/
+build/
+.turbo/
+.vercel/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 *.tsbuildinfo
-frontend/next-env.d.ts
+next-env.d.ts
 
 # Python / Backend
 __pycache__/
-backend/__pycache__/
 *.py[cod]
 *$py.class
 venv/
 env/
-.env
+.venv/
+.python-version
 .pytest_cache/
+.coverage
+htmlcov/
 backend/instance/
 
-# Database
+# Database & Storage
 *.db
 *.sqlite
+*.sqlite3
+storage/
 
-# AWS
+# AWS & Infrastructure
 .aws/
 aws_credentials
 secrets.json
+.serverless/
+cdk.out/
 
-# Build artifacts
-dist/
-build/
-frontend/build/
+# Logs
+logs/
+*.log
+frontend/build_error*.txt
+

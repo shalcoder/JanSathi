@@ -1,298 +1,303 @@
-JanSathi (जनसाथी)
-Voice-First AI Civic Assistant for India
-1. Project Overview
+# JanSathi (जनसाथी)
+## Voice-First AI Civic Assistant for India  
+### Production-Hardened Agentic Backend (Phase 2 Complete)
 
-JanSathi is a voice-first, AI-powered civic assistant designed to help Indian citizens—especially rural and semi-urban users—access government schemes, certificates, and public services in simple language using voice or text.
+![Status](https://img.shields.io/badge/Status-Cloud_Ready-brightgreen)
+![Architecture](https://img.shields.io/badge/Architecture-Agentic_Core-blue)
+![Deployment](https://img.shields.io/badge/Deployment-Lambda_Ready-success)
 
-The core philosophy is:
+---
 
-Meet citizens where they are — voice first, low bandwidth, minimal UI, high reliability.
+# 📌 Overview
 
-JanSathi is built to work even in:
+**JanSathi** is a deterministic, voice-first civic AI assistant designed to help Indian citizens access government schemes, certificates, and public services through structured conversational workflows.
 
-Low-bandwidth environments
+The backend is built as a **transport-agnostic agentic engine** capable of running on:
 
-Intermittent connectivity
+- Flask (Web deployment)
+- AWS Lambda (Serverless deployment)
+- Future IVR adapters
+- WhatsApp integrations
+- Any transport layer
 
-Users unfamiliar with complex apps
+The core engine remains independent from the execution layer.
 
-It supports:
+---
 
-🎙️ Voice queries
+# 🏗️ Architecture (Current Production State)
 
-⌨️ Text queries
 
-🌐 Web (primary)
+Flask Adapter
+↓
+Lambda Adapter
+↓
+process_user_input() ← Unified Execution Layer
+↓
+AgenticWorkflowEngine (Deterministic FSM)
+↓
+SessionManager
+↓
+Storage Abstraction
+├── LocalJSONStorage
+└── DynamoDBStorage
 
-📴 Offline fallback (cached FAQs)
 
-2. Problem Statement
+## Core Engineering Principles
 
-Many Indian government services are:
+- Deterministic finite-state workflow
+- Storage abstraction (Local ↔ DynamoDB via env)
+- Fail-fast cloud validation
+- Transport-layer independence
+- Serverless compatibility
+- Production-grade error handling
+- Clean separation of concerns
 
-Fragmented across portals
+---
 
-Hard to understand due to complex language
+# ✅ Completed Phases
 
-Inaccessible to users without digital literacy
+---
 
-Citizens often struggle with:
+## Phase 1 — Agentic Core (Completed)
 
-How to apply for certificates (income, caste, residence)
+- Deterministic finite state workflow engine
+- PM-Kisan eligibility workflow
+- Grievance handling workflow
+- Restart support
+- Structured event output contract
+- Session persistence layer
+- Pluggable storage architecture
+- Environment-based storage switching
 
-Understanding eligibility for schemes
+---
 
-Knowing required documents and steps
+## Phase 2 — Cloud Hardening (Completed)
 
-JanSathi solves this by acting as a conversational layer over government knowledge.
+### 1️⃣ Unified Execution Layer
 
-3. High-Level Solution
+File:
 
-JanSathi provides:
+backend/app/core/execution.py
 
-Voice/Text Interface for user queries
 
-Backend AI pipeline to:
+Provides:
 
-Transcribe speech
+```python
+def process_user_input(message: str, session_id: str) -> dict
 
-Retrieve relevant context
+This is now the single execution entry point for:
 
-Generate clear, human-friendly answers
+Flask
 
-Graceful fallback when AI services are unavailable
+Lambda
 
-4. Tech Stack
-Frontend (Website)
+Future adapters
+```
+2️⃣ Flask Refactor
 
-Next.js (React)
+Flask routes now act as thin wrappers:
 
-TypeScript
+Flask → process_user_input() → AgenticWorkflowEngine
 
-Tailwind CSS
+No business logic inside routes.
 
-Web Speech API – browser-based Speech-to-Text
+3️⃣ Lambda Adapter (Serverless Ready)
 
-HTML5 <audio> – audio playback
+File:
 
-Progressive Web–friendly design (low bandwidth aware)
+backend/lambda_handler.py
 
-The frontend is optimized for low-end devices, slow networks, and voice-first interaction.
+Features:
 
-Backend
+Fully independent from Flask
 
-Python (Flask)
+Compatible with Lambda Proxy Integration
 
-Modular service architecture
+Proper statusCode + JSON response
 
-AWS-ready (but not hard-dependent)
+No AWS SDK logic inside
 
-AI / Cloud (Optional / Future)
+Pure transport-layer adapter
 
-AWS Transcribe (Speech-to-Text)
+Lambda Handler:
 
-AWS Bedrock (LLM generation)
+lambda_handler.lambda_handler
+4️⃣ DynamoDB Production Hardening
 
-AWS Polly (Text-to-Speech – optional)
+DynamoDBStorage now:
 
-⚠️ The system is intentionally designed to work without AWS credentials for hackathon demos.
+Validates AWS_REGION
 
-5. Repository Structure
-JanSathi/
-├── backend/
-│   ├── main.py                  # Production entry point
-│   ├── app/                     # Clean Architecture core
-│   │   ├── api/                 # Flask Blueprints
-│   │   ├── services/            # AWS & Logic layer
-│   │   ├── models/              # SQLite/SQLAlchemy models
-│   │   └── core/                # Config, Utils, Logging
-│   ├── Dockerfile               # Production container config
-│   ├── requirements.txt
-│   └── lambda_handler.py        # AWS Lambda entry
-│
-├── frontend/
-│   ├── app/                     # Next.js App Router
-│   ├── components/
-│   │   ├── features/chat/       # Chat interface module
-│   │   ├── layout/              # Dashboard grid elements
-│   │   └── ui/                  # Reusable components
-│   ├── services/                # Axios API client
-│   ├── Dockerfile               # Production Next.js container
-│   └── public/                  # Static assets
-│
-├── docs/
-│   ├── architecture.md
-│   ├── failure_mode_analysis.md
-│   └── pitch_narration.md
-│
-└── README.md
+Validates DYNAMODB_TABLE
 
-6. Backend Architecture
-API Endpoints
-Endpoint	Method	Purpose
-/health	GET	Backend health check
-/query	POST	Main query endpoint (text or audio)
-/query Input Formats
+Performs table existence check (self.table.load())
 
-Text (JSON):
+Fails fast if credentials are missing
 
-{ "text_query": "How to apply for income certificate" }
+Raises explicit errors for:
 
+Missing credentials
 
-Audio (multipart/form-data):
-
-audio_file: <wav/pcm bytes>
+Missing table
 
-/query Output Format
-{
-  "query": "...",
-  "answer": "Human-readable response",
-  "context": []
-}
-
-7. Backend Internal Flow
-Diagram
-flowchart TD
-    A[Client Request] --> B[Flask /query]
-    B --> C{Audio or Text?}
-    C -->|Audio| D[TranscribeService]
-    C -->|Text| E[Normalize Query]
-    D --> E
-    E --> F[RagService]
-    F --> G[BedrockService]
-    G --> H[Response JSON]
-
-Design Principles
-
-No infinite loops
-
-All temp files cleaned via finally
-
-Bounded polling for AWS calls
-
-Graceful mock fallback when AWS unavailable
-
-8. Frontend Architecture (Web)
-Key Screens
-
-Single Home Page (Voice-First UX)
-
-Frontend Responsibilities
-
-Handle microphone permissions via browser
-
-Capture voice using Web Speech API
-
-Send text queries to backend
-
-Play audio responses using HTML5 audio
-
-Display readable, minimal UI responses
-
-Handle offline fallback
-
-9. Frontend → Backend Interaction
-Diagram
-sequenceDiagram
-    participant User
-    participant WebApp
-    participant FlaskAPI
-
-    User->>WebApp: Speak / Type Query
-    WebApp->>FlaskAPI: POST /query
-    FlaskAPI-->>WebApp: JSON Response
-    WebApp-->>User: Display / Play Answer
-
-10. User Flow
-Diagram
-flowchart LR
-    U[User] --> Q{Voice or Text?}
-    Q -->|Voice| V[Browser Mic Input]
-    Q -->|Text| T[Text Input]
-    V --> S[Send Query]
-    T --> S
-    S --> A[AI Response]
-    A --> D[Display / Audio Output]
-
-11. Offline Mode
-
-When internet is unavailable:
-
-Web app detects offline state
-
-Searches cached FAQ keywords
-
-Returns best matching local answer
-
-This ensures:
-
-No blank screen
-
-No crashes
-
-Honest UX messaging
-
-12. Current Project Status (🚀 PRODUCTION READY)
-Backend
-✅ **Professional Clean Architecture**: Decoupled API, Services, and Core layers.
-✅ **Modular API**: Implemented via Flask Blueprints.
-✅ **Production Web Server**: Dockerized with Gunicorn (async workers).
-✅ **Enterprise Security**: Talisman (Security Headers), CORS strict mode, and Rate Limiting.
-✅ **Structured Logging**: JSON-based logging for CloudWatch visibility.
-✅ **AWS Ready**: Bedrock, Polly, Kendra, and Transcribe integration.
-
-Frontend (Web)
-✅ **Enterprise Dashboard UX**: Sidebar + Main Chat + Telemetry Layout.
-✅ **Premium Glassmorphic UI**: Custom Aurora gradient system with backdrop-blur.
-✅ **Multilingual Architecture**: Dynamic switching for 4+ Indian languages.
-✅ **Auto-Voice Delivery**: High-quality neural speech synthesis on response.
-✅ **Robust Error Handling**: Global React Error Boundaries for production stability.
-✅ **Production Build Pipeline**: Optimized Docker multi-stage builds.
-
-13. Known Non-Blocking Risks
-- Browser Speech API: Performance varies on non-Chromium browsers.
-- AWS Credentials: Local mock mode active if env vars are missing.
-
-14. What Is Pending (Next Steps)
-AI Enhancements
-🔲 **Acoustic Fine-tuning**: Improving recognition for thick rural accents.
-🔲 **Multimodal PDF Processing**: Direct scan of multi-page documents.
-
-Development & DevSecOps
-🔲 **Prod-Key Migration**: Swap placeholder Clerk keys with live production keys.
-🔲 **CI/CD Pipeline**: Automate deployment to AWS App Runner or EKS.
-🔲 **Full Lint Clean-up**: Resolve remaining IDE-level TypeScript warnings.
-
-15. How to Run Locally
-Backend
+Region mismatch
+
+No silent fallback to local storage
+
+Guarantee:
+
+If AWS credentials are correct → system works immediately
+If misconfigured → clear explicit failure
+
+5️⃣ Lambda Deployment Hardening
+
+Added:
+
+backend/requirements-lambda.txt
+backend/LAMBDA_DEPLOYMENT.md
+
+Minimal dependency bundle
+
+Flask excluded from Lambda build
+
+Sterile packaging verified
+
+Cold-start optimized
+
+🚀 Local Development
+Backend Setup
 cd backend
 pip install -r requirements.txt
 python main.py
 
-Frontend (Web)
-cd frontend
-npm install
-npm run dev
+Runs on:
 
-16. Project Vision
+http://localhost:5000
+Lambda Local Simulation
+cd backend
+python
+from lambda_handler import lambda_handler
 
-JanSathi is not just a hackathon demo.
-It is designed as a foundational civic AI layer that can:
+event = {
+    "body": '{"message":"hello","session_id":"test123"}'
+}
 
-Scale across states
+print(lambda_handler(event, None))
+☁️ AWS Deployment (Handled Separately)
+Lambda Configuration
 
-Support multiple dialects
+Runtime: Python 3.11
 
-Integrate with official data sources
+Architecture: x86_64
 
-Goal: Make government services understandable, accessible, and human.
+Handler:
 
-17. Authors & Contributors
+lambda_handler.lambda_handler
 
-Poornachandran (Primary Developer)
+Memory: 512 MB (recommended)
 
-Team JanSathi
+Timeout: 15 seconds
 
-18. License
+Required Environment Variables
+STORAGE_TYPE=dynamodb
+AWS_REGION=ap-south-1
+DYNAMODB_TABLE=your_table_name
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
 
-To be decided (Hackathon / Open Source).
+(Or use IAM role instead of keys.)
+
+Required IAM Permissions
+dynamodb:GetItem
+dynamodb:PutItem
+dynamodb:UpdateItem
+
+Scoped to the DynamoDB table.
+
+📂 Backend Structure
+backend/
+│
+├── main.py
+├── lambda_handler.py
+├── requirements.txt
+├── requirements-lambda.txt
+├── LAMBDA_DEPLOYMENT.md
+│
+├── app/
+│   ├── api/
+│   ├── agent/
+│   ├── core/
+│   │   └── execution.py
+│   └── services/
+│
+├── agentic_engine/
+│   ├── workflow_engine.py
+│   ├── storage.py
+│   ├── session_manager.py
+│   └── ...
+🔐 Production Safety Guarantees
+
+No hardcoded AWS credentials
+
+No silent fallback storage
+
+Explicit cloud validation
+
+Deterministic workflows
+
+Lambda independent from Flask
+
+Single unified execution entry
+
+Proper error propagation
+
+⚠️ Pending Work
+🔲 API Contract Hardening
+
+Versioned request schema
+
+Payload normalization layer
+
+🔲 Observability
+
+Structured logging standard
+
+Request correlation IDs
+
+CloudWatch JSON logging
+
+🔲 DynamoDB Scaling Enhancements
+
+TTL for inactive sessions
+
+Partition key strategy
+
+Secondary indexes (GSI)
+
+🔲 Authentication Enforcement
+
+JWT validation middleware
+
+User-session binding
+
+Multi-tenant safety
+
+🔲 Rate Limiting & WAF
+
+API Gateway throttling
+
+DDoS protection
+
+🔲 Frontend–Backend Full Integration
+🎯 System Maturity
+Layer	Status
+Agent Core	✅ Production-Ready
+Storage Layer	✅ Hardened
+Lambda	✅ Verified
+Flask	✅ Refactored
+AWS Deployment	🔲 Pending Setup
+Observability	🔲 Basic
+Authentication	🔲 Pending
+📄 License
+
+MIT License

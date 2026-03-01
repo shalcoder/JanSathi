@@ -17,7 +17,12 @@ from typing import Optional
 from app.agent.supervisor import get_supervisor
 from app.services.telemetry_service import get_telemetry
 
+# Layer 1 & 9 Integration
+from app.automation.l1_integration.schema import UnifiedEventObject
+from app.automation.l9_observability.logger import get_structured_logger
+
 logger = logging.getLogger(__name__)
+struct_logger = get_structured_logger("JanSathiAutomation")
 
 
 # ── Language helpers ────────────────────────────────────────────────────────
@@ -56,10 +61,43 @@ def handle_connect_invocation(event: dict) -> dict:
         event.get("Details", {}).get("ContactData", {}).get("ContactId") or
         uuid.uuid4().hex[:8]
     )
+    
+    # ── [NEW] IVR Caller Profile Lookup ──
+    # Look up profile by phone number (if available) to inject context
+    caller_number = event.get("callerNumber", "")
+    profile_context = {}
+    if caller_number:
+        try:
+            from app.models.models import UserProfile
+            import re
+            # Normalize E.164 phone number
+            clean_phone = re.sub(r'[^\d+]', '', caller_number)
+            if clean_phone.startswith("0") and len(clean_phone) == 11:
+                clean_phone = "+91" + clean_phone[1:]
+            elif len(clean_phone) == 10 and not clean_phone.startswith("+"):
+                clean_phone = "+91" + clean_phone
+                
+            from app.models.models import db
+            # Need app context here since this is often run outside a request
+            from flask import current_app
+            if current_app:
+                profile = UserProfile.query.filter_by(phone_e164=clean_phone).first()
+                if profile:
+                    profile_context = profile.to_ivr_context()
+                    logger.info(f"[ConnectWebhook] Found profile for {clean_phone}: {profile_context.get('name')}")
+        except Exception as e:
+            logger.error(f"[ConnectWebhook] Profile lookup failed: {e}")
+
     session_id    = f"ivr-{contact_id}"
     language      = event.get("language", "hi")
     lang_key      = _lang(language)
     session_attrs = dict(event.get("sessionAttributes", {}))
+    
+    # Inject profile context into session attributes if not already present
+    if profile_context and not session_attrs.get("profile_context"):
+        import json
+        session_attrs["profile_context"] = json.dumps(profile_context)
+
     consent       = event.get("consent", False)
 
     tel.emit("CallProcessed", 1.0, {"channel": "ivr", "language": lang_key})
@@ -102,14 +140,28 @@ def handle_connect_invocation(event: dict) -> dict:
              100.0 if asr_confidence >= 0.6 else 0.0,
              {"channel": "ivr"}, unit="Percent")
 
-    # ── Delegate to Supervisor (9-agent pipeline) ──────────────────────────
+    # ── [NEW Layer 1/9] Unified Event Object & Structured Logging ──
+    unified_event = UnifiedEventObject(
+        session_id=session_id,
+        channel="ivr",
+        language=language,
+        message=transcript,
+        user_context=profile_context,
+        channel_metadata={"asr_confidence": asr_confidence, "slots": session_attrs},
+        consent_given=consent
+    )
+    
+    struct_logger.info("Telecom Voice Trigger Received", layer="1_Integration", session_id=session_id)
+    struct_logger.info(f"Ingested utterance: '{transcript}'", layer="2_Ingestion", session_id=session_id)
+
+    # Convert to dict for legacy compatibility while supervisor is refactored
     supervisor_event = {
-        "session_id":     session_id,
-        "message":        transcript,
-        "language":       language,
-        "channel":        "ivr",
-        "consent":        True,
-        "asr_confidence": asr_confidence,
+        "session_id":     unified_event.session_id,
+        "message":        unified_event.message,
+        "language":       unified_event.language,
+        "channel":        unified_event.channel,
+        "consent":        unified_event.consent_given,
+        "asr_confidence": unified_event.channel_metadata.get("asr_confidence", 1.0),
         "turn_id":        str(uuid.uuid4()),
         "slots":          {k: v for k, v in session_attrs.items() if not k.startswith("_")},
     }

@@ -10,8 +10,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from app.core.utils import setup_logging
-from app.api.routes import bp as api_bp
 from app.core.config import Config
+from app.core.middleware import register_middleware
 
 # Setup Logging Early
 setup_logging()
@@ -52,17 +52,22 @@ def create_app():
         default_limits=[Config.RATELIMIT_DEFAULT],
         storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
     )
+    # Expose limiter on app so blueprints can reference it
+    app.limiter = limiter
 
-    # Register Blueprints
-    app.register_blueprint(api_bp)
-    
+    # Register correlation-ID + lifecycle logging middleware
+    register_middleware(app)
+
     # Register Agent Blueprint (New Architectural Layer)
     from app.agent import agent_bp
     app.register_blueprint(agent_bp, url_prefix='/agent')
 
-    # Register v1 unified API blueprint (frontend integration layer)
+    # Register API Blueprints
     from app.api.v1_routes import v1 as v1_bp
+    from app.api.profile_routes import profile_bp
+    
     app.register_blueprint(v1_bp)
+    app.register_blueprint(profile_bp)
 
 
     # Create SQLite tables only in local dev mode

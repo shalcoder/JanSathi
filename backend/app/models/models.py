@@ -31,22 +31,84 @@ class Conversation(db.Model):
         }
 
 class UserProfile(db.Model):
-    """Anonymized citizen profile for benefit gap analysis."""
-    id = db.Column(db.String(100), primary_key=True) # Clerk User ID
-    location_state = db.Column(db.String(50))
-    location_district = db.Column(db.String(50))
-    occupation = db.Column(db.String(100))
-    income_bracket = db.Column(db.String(50))
+    """
+    Rich citizen profile for scheme matching, IVR caller identification, and SMS alerts.
+    phone_e164 is indexed for fast IVR lookup by caller number.
+    """
+    id = db.Column(db.String(100), primary_key=True)          # Clerk User ID
+    full_name = db.Column(db.String(200))
+    phone_e164 = db.Column(db.String(20), index=True, unique=True)  # +91XXXXXXXXXX — IVR caller lookup
+    age = db.Column(db.Integer)
+    gender = db.Column(db.String(20))                         # male/female/other
+
+    # Location
+    location_state = db.Column(db.String(80))
+    location_district = db.Column(db.String(80))
+    village = db.Column(db.String(100))
+    pincode = db.Column(db.String(10))
+
+    # Socioeconomic
+    occupation = db.Column(db.String(100))                    # farmer/artisan/daily-wage/student/other
+    category = db.Column(db.String(20))                       # General/OBC/SC/ST
+    annual_income = db.Column(db.Integer)                     # in INR
+    land_holding_acres = db.Column(db.Float)                  # for farmer schemes
+
+    # Document flags (no actual document stored here)
+    has_aadhaar = db.Column(db.Boolean, default=False)
+    has_ration_card = db.Column(db.Boolean, default=False)
+    has_bank_account = db.Column(db.Boolean, default=False)
+    has_pm_kisan = db.Column(db.Boolean, default=False)
+
+    # Preferences
+    preferred_language = db.Column(db.String(10), default='hi')   # hi/en/ta/kn/etc
+    income_bracket = db.Column(db.String(50))                 # backward compat
+
+    # Onboarding & completeness
+    profile_complete = db.Column(db.Boolean, default=False)
+    onboarding_completed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def to_dict(self):
         return {
             "id": self.id,
-            "location_state": self.location_state,
-            "location_district": self.location_district,
+            "full_name": self.full_name,
+            "phone": self.phone_e164,
+            "age": self.age,
+            "gender": self.gender,
+            "state": self.location_state,
+            "district": self.location_district,
+            "village": self.village,
+            "pincode": self.pincode,
             "occupation": self.occupation,
+            "category": self.category,
+            "annual_income": self.annual_income,
+            "land_holding_acres": self.land_holding_acres,
+            "has_aadhaar": self.has_aadhaar,
+            "has_ration_card": self.has_ration_card,
+            "has_bank_account": self.has_bank_account,
+            "has_pm_kisan": self.has_pm_kisan,
+            "preferred_language": self.preferred_language,
             "income_bracket": self.income_bracket,
-            "created_at": self.created_at.isoformat()
+            "profile_complete": self.profile_complete,
+            "onboarding_completed_at": self.onboarding_completed_at.isoformat() if self.onboarding_completed_at else None,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+    def to_ivr_context(self) -> dict:
+        """Compact profile dict injected into IVR session working memory."""
+        return {
+            "name": self.full_name or "Nagrik",
+            "state": self.location_state,
+            "occupation": self.occupation,
+            "category": self.category,
+            "annual_income": self.annual_income,
+            "land_acres": self.land_holding_acres,
+            "has_aadhaar": self.has_aadhaar,
+            "has_bank_account": self.has_bank_account,
+            "has_pm_kisan": self.has_pm_kisan,
+            "preferred_language": self.preferred_language or "hi",
         }
 
 class AuditLog(db.Model):

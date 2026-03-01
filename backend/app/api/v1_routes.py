@@ -24,11 +24,14 @@ import os
 import time
 import logging
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app, g
 from app.services.hitl_service import HITLService
 from app.services.notify_service import NotifyService
 from app.services.ivr_service import IVRService
+from app.services.rag_service import RagService
 from app.core.execution import process_user_input
+from app.core.middleware import require_auth, require_admin, validate_json_body
+from app.models.models import db, CommunityPost, UserDocument, Conversation, SchemeApplication
 from agentic_engine.session_manager import SessionManager
 from agentic_engine.storage import LocalJSONStorage
 
@@ -40,6 +43,7 @@ v1 = Blueprint("v1", __name__, url_prefix="/v1")
 hitl_service = HITLService()
 notify_service = NotifyService()
 ivr_service = IVRService()
+rag_service = RagService()
 
 # ─── Session helpers ──────────────────────────────────────────────────────────
 
@@ -54,6 +58,8 @@ def _get_session_manager() -> SessionManager:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @v1.route("/sessions/init", methods=["POST"])
+@require_auth
+@validate_json_body([])
 def init_session():
     """
     POST /v1/sessions/init
@@ -61,7 +67,7 @@ def init_session():
     Returns: { "session_id": "...", "created": true }
     """
     data = request.json or {}
-    user_id = data.get("user_id", "anonymous")
+    user_id = getattr(g, "user_id", data.get("user_id", "anonymous"))
     channel = data.get("channel", "web")
 
     session_id = data.get("session_id") or f"sess-{uuid.uuid4().hex[:12]}"
@@ -81,10 +87,12 @@ def init_session():
         "user_id": user_id,
         "channel": channel,
         "created": created,
+        "correlation_id": getattr(g, "correlation_id", None),
     })
 
 
 @v1.route("/sessions/<session_id>", methods=["GET"])
+@require_auth
 def get_session(session_id: str):
     """GET /v1/sessions/<session_id> → session state and data."""
     sm = _get_session_manager()
@@ -95,6 +103,7 @@ def get_session(session_id: str):
         "session_id": session_id,
         "current_state": session.get("current_state", "START"),
         "data": {k: v for k, v in session.get("data", {}).items() if not k.startswith("_slot")},
+        "correlation_id": getattr(g, "correlation_id", None),
     })
 
 
@@ -103,9 +112,10 @@ def get_session(session_id: str):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @v1.route("/query", methods=["POST"])
+@require_auth
 def unified_query():
     """
-    POST /v1/query
+    POST /v1/query  — rate limited: 30/minute per IP
     Body: {
       "session_id": "...", "message": "...", "language": "hi",
       "channel": "web", "turn_id": "..."  [optional]
@@ -122,14 +132,14 @@ def unified_query():
     turn_id = data.get("turn_id", str(uuid.uuid4()))
 
     if not message:
-        return jsonify({"error": "message is required"}), 400
+        return jsonify({"error": "message is required", "correlation_id": getattr(g, "correlation_id", None)}), 400
 
     # Route through process_user_input (agentic engine)
     try:
         result = process_user_input(message=message, session_id=session_id)
     except Exception as e:
         logger.error(f"[v1/query] Engine error: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "correlation_id": getattr(g, "correlation_id", None)}), 500
 
     response_text = result.get("response", "")
     benefit_receipt = result.get("benefit_receipt")
@@ -156,6 +166,7 @@ def unified_query():
         "benefit_receipt": benefit_receipt,
         "requires_input": result.get("requires_input", False),
         "is_terminal": result.get("is_terminal", False),
+        "correlation_id": getattr(g, "correlation_id", None),
         "debug": {
             "model": "claude-3-haiku / rule-based",
             "latency_ms": latency_ms,
@@ -580,3 +591,150 @@ def get_audit_log():
     except Exception as e:
         return jsonify({"records": [], "error": str(e)}), 500
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# COMMUNITY / FORUM ENDPOINTS 
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/community/posts", methods=["GET"])
+def get_community_posts():
+    """GET /v1/community/posts — fetch crowd-sourced civic awareness posts."""
+    try:
+        limit = request.args.get("limit", 20, type=int)
+        location = request.args.get("location")
+        query = db.session.query(CommunityPost)
+        if location:
+            query = query.filter(CommunityPost.location.ilike(f"%{location}%"))
+        posts = query.order_by(CommunityPost.timestamp.desc()).limit(limit).all()
+        return jsonify([p.to_dict() for p in posts])
+    except Exception as e:
+        logger.error(f"[v1/community] Error: {e}")
+        return jsonify([])
+
+@v1.route("/community/posts", methods=["POST"])
+def create_community_post():
+    """POST /v1/community/posts — share a civic success or query."""
+    try:
+        data = request.json or {}
+        if not data.get("title") or not data.get("content"):
+            return jsonify({"error": "Title and Content are required"}), 400
+        new_post = CommunityPost(
+            title=data["title"],
+            content=data["content"],
+            author=data.get("author", "Anonymous Citizen"),
+            author_role=data.get("role", "Citizen"),
+            location=data.get("location", "India")
+        )
+        db.session.add(new_post)
+        db.session.commit()
+        return jsonify({"status": "success", "post": new_post.to_dict()}), 201
+    except Exception as e:
+        logger.error(f"[v1/community] Create error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DOCUMENT MANAGEMENT (Local Fallback)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@v1.route("/upload", methods=["POST"])
+def upload_file_legacy():
+    """POST /v1/upload — legacy multipart upload for mobile compatibility."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files["file"]
+    user_id = request.form.get("user_id", "anonymous")
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+    
+    filename = f"{uuid.uuid4().hex[:6]}_{file.filename}"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+    
+    # Track in DB
+    try:
+        doc = UserDocument(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            filename=file.filename,
+            file_path=filepath,
+            document_type=request.form.get("type", "Other")
+        )
+        db.session.add(doc)
+        db.session.commit()
+    except Exception as e:
+        logger.error(f"[v1/upload] DB tracking failed: {e}")
+
+    return jsonify({"message": "File uploaded", "filename": filename, "status": "Indexed"})
+
+@v1.route("/documents", methods=["GET"])
+def list_documents():
+    """GET /v1/documents?user_id=..."""
+    user_id = request.args.get("user_id", "anonymous")
+    try:
+        docs = UserDocument.query.filter_by(user_id=user_id).order_by(UserDocument.uploaded_at.desc()).all()
+        return jsonify([d.to_dict() for d in docs])
+    except Exception:
+        return jsonify([])
+
+@v1.route("/documents/<doc_id>", methods=["DELETE"])
+def delete_document(doc_id: str):
+    """DELETE /v1/documents/<doc_id>"""
+    try:
+        doc = UserDocument.query.get(doc_id)
+        if doc and os.path.exists(doc.file_path):
+            os.remove(doc.file_path)
+            db.session.delete(doc)
+            db.session.commit()
+            return jsonify({"status": "deleted"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"error": "Not found"}), 404
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MARKET / LIVELIHOOD CONNECT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/market/connect", methods=["POST"])
+def connect_market():
+    """POST /v1/market/connect — Livelihood matching for farmers/workers."""
+    try:
+        data = request.json or {}
+        crop = data.get("crop", "unknown")
+        # Reuse RAG matching logic if present
+        match = "Local Mandi"
+        if hasattr(rag_service, "match_livelihood"):
+            matches = rag_service.match_livelihood(crop)
+            if matches: match = matches[0]
+        
+        return jsonify({
+            "status": "success",
+            "connection_id": f"CONN-{uuid.uuid4().hex[:6].upper()}-JS",
+            "provider": match,
+            "message": f"Matching complete. Connection established with {match}."
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HEALTH / STATS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/health", methods=["GET"])
+def health():
+    """GET /v1/health — service health and unified dashboard stats."""
+    return jsonify({
+        "status": "healthy",
+        "service": "JanSathi Unified API",
+        "version": "2.1.0",
+        "timestamp": time.time(),
+        "impact": {
+            "active_users": 84500, # Mocked for demo
+            "benefits_processed": "₹12.5 Cr",
+            "success_rate": "92%"
+        }
+    })

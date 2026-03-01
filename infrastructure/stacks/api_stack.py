@@ -17,6 +17,7 @@ from aws_cdk import (
     aws_kendra as kendra,
     aws_cloudwatch as cloudwatch,
     aws_cloudwatch_actions as cw_actions,
+    aws_sns as sns,
 )
 from constructs import Construct
 
@@ -35,11 +36,13 @@ class ApiStack(Stack):
         self,
         scope: Construct,
         construct_id: str,
+        users_table: dynamodb.Table,
         conversations_table: dynamodb.Table,
         cache_table: dynamodb.Table,
         audio_bucket: s3.Bucket,
         uploads_bucket: s3.Bucket,
         kendra_index: kendra.CfnIndex,
+        notifications_topic: sns.Topic,
         state_machine_arn: str = None, # OPTIONAL: ARN from WorkflowStack
         **kwargs,
     ) -> None:
@@ -72,12 +75,14 @@ class ApiStack(Stack):
             timeout=Duration.seconds(29),
             architecture=_lambda.Architecture.X86_64,
             environment={
+                "DYNAMODB_USERS_TABLE": users_table.table_name,
                 "DYNAMODB_CONVERSATIONS_TABLE": conversations_table.table_name,
                 "DYNAMODB_CACHE_TABLE": cache_table.table_name,
                 "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "UPLOADS_BUCKET": uploads_bucket.bucket_name,
-                "AWS_REGION_NAME": kwargs.get("env", cdk.Environment()).region or "us-east-1",
-                "BEDROCK_MODEL_ID": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "SNS_TOPIC_ARN": notifications_topic.topic_arn,
+                "AWS_REGION_NAME": kwargs.get("env", cdk.Environment()).region or "ap-south-1",
+                "BEDROCK_MODEL_ID": "anthropic.claude-3-haiku-20240307-v1:0",
                 "BEDROCK_MAX_TOKENS": "1000",
                 "KENDRA_INDEX_ID": kendra_index.attr_id,
                 "STATE_MACHINE_ARN": state_machine_arn or "", # Env Var for WorkflowService
@@ -92,8 +97,12 @@ class ApiStack(Stack):
         # IAM Permissions (Least Privilege)
         # ============================================================
         # DynamoDB
+        users_table.grant_read_write_data(self.lambda_function)
         conversations_table.grant_read_write_data(self.lambda_function)
         cache_table.grant_read_write_data(self.lambda_function)
+
+        # SNS
+        notifications_topic.grant_publish(self.lambda_function)
 
         # S3
         audio_bucket.grant_read_write(self.lambda_function)

@@ -31,11 +31,13 @@ workflow_stack = WorkflowStack(app, "JanSathi-Workflow", env=env)
 # ============================================================
 api_stack = ApiStack(
     app, "JanSathi-API",
+    users_table=data_stack.users_table,
     conversations_table=data_stack.conversations_table,
     cache_table=data_stack.cache_table,
     audio_bucket=data_stack.audio_bucket,
     uploads_bucket=data_stack.uploads_bucket,
     kendra_index=data_stack.kendra_index,
+    notifications_topic=data_stack.notifications_topic,
     state_machine_arn=workflow_stack.state_machine.state_machine_arn, # Pass SFN ARN
     env=env,
 )

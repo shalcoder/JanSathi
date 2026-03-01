@@ -3,12 +3,31 @@ import axios from "axios";
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Correlation ID — one per browser session, carried on every request.
+// Echoed back by the backend in X-Correlation-Id response header.
+// Used to trace a full user journey across CloudWatch logs.
+// ─────────────────────────────────────────────────────────────────────────────
+const _genCid = (): string =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+const CORRELATION_ID: string =
+  typeof window !== "undefined"
+    ? (sessionStorage.getItem("jansathi_cid") ||
+       (() => { const id = _genCid(); sessionStorage.setItem("jansathi_cid", id); return id; })())
+    : _genCid();
+
+export const getCorrelationId = () => CORRELATION_ID;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Shared API client factory – call buildClient() wherever you need a request
 // to carry auth headers (token + session-id).
 // ─────────────────────────────────────────────────────────────────────────────
 export const buildClient = (token?: string, sessionId?: string) => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "X-Correlation-Id": CORRELATION_ID,
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (sessionId) headers["X-Session-Id"] = sessionId;
@@ -299,6 +318,76 @@ export const getApplicationsBySession = async (
     `/v1/applications?session_id=${sessionId}`,
   );
   return response.data;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TELEMETRY & OBSERVABILITY
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TelemetryEvent {
+  event_type: string;
+  session_id?: string;
+  turn_id?: string;
+  latency_ms?: number;
+  confidence?: number;
+  channel?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Post a telemetry event to the backend for CloudWatch / QuickSight dashboards.
+ */
+export const postTelemetry = async (
+  event: TelemetryEvent,
+  token?: string,
+): Promise<void> => {
+  try {
+    const client = buildClient(token);
+    await client.post("/v1/telemetry", event);
+  } catch {
+    // Telemetry failures are non-blocking — never throw
+  }
+};
+
+export interface AuditLogEntry {
+  id: string;
+  session_id: string;
+  event_type: string;
+  timestamp: string;
+  user_id?: string;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Fetch audit logs for a session (admin only).
+ */
+export const getAuditLogs = async (
+  sessionId: string,
+  token?: string,
+): Promise<AuditLogEntry[]> => {
+  const client = buildClient(token);
+  const response = await client.get<AuditLogEntry[]>(
+    `/v1/audit?session_id=${sessionId}`,
+  );
+  return response.data;
+};
+
+export interface HealthStatus {
+  status: "ok" | "degraded" | "down";
+  version?: string;
+  services: { name: string; status: "ok" | "degraded" | "down" }[];
+}
+
+/**
+ * Health check with structured response.
+ */
+export const getHealth = async (): Promise<HealthStatus> => {
+  try {
+    const response = await apiClient.get<HealthStatus>("/health");
+    return response.data;
+  } catch {
+    return { status: "down", services: [] };
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

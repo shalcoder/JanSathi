@@ -106,7 +106,7 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="text-lg md:text-xl text-secondary-foreground/80 max-w-2xl mb-12 leading-relaxed font-medium"
         >
-          A &quot;Voice-First&quot; AI Assistant that bridges the gap. Ask in your native language and instant access to government schemes. <span className="text-foreground font-semibold">Transforming complex portals into simple conversations.</span>
+          A <strong className="text-foreground">Telecom-Native Agentic Infrastructure</strong>. Speak in your language via a simple phone call, and our 9-Agent AI pipeline instantly connects you to schemes, market prices, and public services.
         </motion.p>
 
         <motion.div
@@ -181,7 +181,7 @@ export default function LandingPage() {
               <ProblemItem
                 icon={<Activity className="w-5 h-5 text-yellow-500" />}
                 title="Low Digital Literacy"
-                desc="Typing is difficult for many; voice is the natural interface."
+                desc="Navigating apps is difficult. A simple phone call is universally accessible."
               />
             </div>
           </div>
@@ -213,22 +213,22 @@ export default function LandingPage() {
 
           <ProcessStep
             number="01"
-            title="Speak Naturally"
-            desc="Ask questions in Hindi, Tamil, or Kannada using your microphone."
+            title="Call JanSathi"
+            desc="Dial the toll-free number and speak naturally in Hindi, Tamil, or Kannada."
             icon={<Mic className="w-6 h-6 text-white" />}
             color="bg-orange-500"
           />
           <ProcessStep
             number="02"
-            title="AI Understands"
-            desc="Our 'Sanskrit Logic Core' interprets your intent and searches government databases."
+            title="Agentic Routing"
+            desc="The IVR intent agent routes your query to the specialized Scheme, Market, or Verify agent."
             icon={<Cpu className="w-6 h-6 text-white" />}
             color="bg-blue-600"
           />
           <ProcessStep
             number="03"
-            title="Instant Help"
-            desc="Get actionable answers, scheme links, and status updates immediately."
+            title="Instant Delivery"
+            desc="Receive precise voice answers instantly, followed by SMS links and HITL escalation if needed."
             icon={<CheckCircle2 className="w-6 h-6 text-white" />}
             color="bg-emerald-500"
           />
@@ -248,42 +248,42 @@ export default function LandingPage() {
             <p className="text-[11px] font-bold text-primary uppercase tracking-[0.3em]">Core Capabilities</p>
           </motion.div>
           <h2 className="text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-tight">
-            Comprehensive <span className="text-primary">Intelligence</span>
+            The 9-Agent <span className="text-primary">Ecosystem</span>
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[minmax(180px,auto)]">
           <FeatureCard
-            icon={<Mic className="w-8 h-8 text-white" />}
-            title="Linguistic Neural Mesh"
-            subtitle="Matrubhasha Core"
-            description="Real-time voice synthesis in 22+ regional dialects using advanced transformer models."
+            icon={<Radio className="w-8 h-8 text-white" />}
+            title="Telecom-Native IVR Agent"
+            subtitle="Agent 1"
+            description="The entry point. Handles live phone calls, intent detection, consent collection, and audio streaming via AWS Connect."
             className="md:col-span-2 bg-gradient-to-br from-orange-500 to-red-600 text-white border-none shadow-orange-500/20"
             iconBg="bg-white/20"
             textColor="text-white"
             subTextColor="text-orange-100"
           />
           <FeatureCard
-            icon={<Languages className="w-8 h-8 text-blue-500" />}
-            title="Semantic Interpreter"
-            subtitle="Sarkari Gyan"
-            description="Deep understanding of 5000+ policy documents with query resolution."
+            icon={<Database className="w-8 h-8 text-blue-500" />}
+            title="Scheme Matching Engine"
+            subtitle="Agent 2"
+            description="Deep reasoning agent that cross-references user profile constraints (income, caste, land) against RAG vectors."
             className="bg-card hover:border-blue-500/20"
             delay={0.1}
           />
           <FeatureCard
             icon={<Bot className="w-8 h-8 text-emerald-500" />}
-            title="Drishti Vision V2"
-            subtitle="Kagaz-Se-Data"
-            description="State-of-the-art OCR pipeline for instant Aadhaar & Ration Card digitisation."
+            title="Market & Weather Agents"
+            subtitle="Agents 3 & 4"
+            description="Specialized tooling agents. Real-time API integration for Mandi prices and local weather alerts."
             className="bg-card hover:border-emerald-500/20"
             delay={0.2}
           />
           <FeatureCard
-            icon={<ShieldCheck className="w-8 h-8 text-indigo-500" />}
-            title="Zero-Knowledge Security"
-            subtitle="Surakshit Protocol"
-            description="End-to-end encryption ensures your personal data never leaves the secure Bharat cloud infrastructure."
+            icon={<Users className="w-8 h-8 text-indigo-500" />}
+            title="Human-in-the-Loop Escalation"
+            subtitle="Agent 9"
+            description="Deterministic fallbacks. If confidence is low or the user requests an expert, the call is cleanly transferred to a human operator."
             className="md:col-span-2 bg-card hover:border-indigo-500/20"
             delay={0.3}
           />
@@ -356,26 +356,26 @@ export default function LandingPage() {
         <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
           <RoadmapItem
             phase="Phase 1"
-            title="Production Baseline"
-            desc="Clean Architecture + Voice Q&A for Central Schemes. (Completed)"
+            title="Telecom Infrastructure Baseline"
+            desc="Amazon Connect IVR + LangChain Supervisor Pipeline (Completed)"
             align="left"
           />
           <RoadmapItem
             phase="Phase 2"
-            title="Visual Intelligence"
-            desc="Drishti Multimodal analysis for scanning physical notices. (Completed)"
+            title="Scheme Reasoner & Profile DB"
+            desc="Clerk Auth, Rich User Profile, RAG Matching Engine (Completed)"
             align="right"
           />
           <RoadmapItem
             phase="Phase 3"
-            title="Public Impact v3.0"
-            desc="Hybrid Knowledge Graph + Mandi Market Integration. (Current)"
+            title="Data Synchronisation Layer"
+            desc="Profile sync from Dashboard to IVR AWS session lookup (Completed)"
             align="left"
           />
           <RoadmapItem
             phase="Phase 4"
-            title="Sovereign Agent"
-            desc="'Fill for Me' - Autonomous form assistant via voice. (Future)"
+            title="Multi-Modal Fallback"
+            desc="Twilio SMS Action Hooks + Image Verification Tool Agent (Future)"
             align="right"
           />
         </div>

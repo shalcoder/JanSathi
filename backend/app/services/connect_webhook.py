@@ -1,44 +1,149 @@
 """
 connect_webhook.py – IVR / Amazon Connect Lambda entry point.
 
-Handles incoming Connect invocations:
-  1. Transcribes audio if S3 key provided (via TranscribeService)
-  2. Classifies intent+language via IntentService
-  3. Routes:
-       apply     → workflow_engine slot collection
-       info      → RAG + Polly TTS
-       grievance → grievance handler
-       track     → session status
-  4. Returns {"playPrompt": "...", "sessionAttributes": {...}}
-     for Amazon Connect to speak aloud.
+Delegates to JanSathiSupervisor for the full 9-agent pipeline:
+  Telecom Entry → Intent → Slot/Rules → Verifier → Notify/HITL
+
+Returns { "playPrompt", "sessionAttributes", "intent", "requiresInput" }
+for Amazon Connect TTS.
 """
 
 import logging
 import os
+import time
+import uuid
 from typing import Optional
 
-from app.services.intent_service import IntentService
-from app.services.polly_service import PollyService
-from app.services.transcribe_service import TranscribeService
-from app.core.execution import process_user_input
+from app.agent.supervisor import get_supervisor
+from app.services.telemetry_service import get_telemetry
 
 logger = logging.getLogger(__name__)
 
-# Lazy singletons
-_intent_service: Optional[IntentService] = None
-_polly_service: Optional[PollyService] = None
-_transcribe_service: Optional[TranscribeService] = None
+
+# ── Language helpers ────────────────────────────────────────────────────────
+
+WELCOME_MESSAGES = {
+    "hi": "नमस्ते! मैं जनसाथी हूँ। सहमति के लिए 1 दबाएँ।",
+    "ta": "வணக்கம்! நான் ஜன் சாதி. சம்மதிக்க 1 அழுத்தவும்.",
+    "en": "Hello! I am JanSathi. Press 1 to consent and continue.",
+}
+
+def _lang(language: str) -> str:
+    return language[:2].lower() if language else "en"
 
 
-def _get_services():
-    global _intent_service, _polly_service, _transcribe_service
-    if _intent_service is None:
-        _intent_service = IntentService()
-    if _polly_service is None:
-        _polly_service = PollyService()
-    if _transcribe_service is None:
-        _transcribe_service = TranscribeService()
-    return _intent_service, _polly_service, _transcribe_service
+# ── Main entry point ────────────────────────────────────────────────────────
+
+def handle_connect_invocation(event: dict) -> dict:
+    """
+    Amazon Connect Lambda entry point — delegates to JanSathiSupervisor.
+
+    event keys:
+      contactId / Details.ContactData.ContactId  → session_id
+      language        str   'hi'|'ta'|'en'
+      text            str   pre-transcribed text
+      audioS3Key      str   S3 key to transcribe
+      audioS3Bucket   str   S3 bucket
+      dtmfDigits      str   DTMF input
+      consent         bool  True if user pressed 1
+      sessionAttributes dict
+    """
+    t_start = time.perf_counter()
+    tel = get_telemetry()
+
+    contact_id = (
+        event.get("contactId") or
+        event.get("Details", {}).get("ContactData", {}).get("ContactId") or
+        uuid.uuid4().hex[:8]
+    )
+    session_id    = f"ivr-{contact_id}"
+    language      = event.get("language", "hi")
+    lang_key      = _lang(language)
+    session_attrs = dict(event.get("sessionAttributes", {}))
+    consent       = event.get("consent", False)
+
+    tel.emit("CallProcessed", 1.0, {"channel": "ivr", "language": lang_key})
+
+    # ── Consent gate ───────────────────────────────────────────────────────
+    if not consent:
+        return _build_response(
+            WELCOME_MESSAGES.get(lang_key, WELCOME_MESSAGES["en"]),
+            session_attrs, "consent_required", language, requires_input=True
+        )
+
+    # ── Get transcript ─────────────────────────────────────────────────────
+    transcript     = event.get("text", "").strip()
+    asr_confidence = 1.0
+
+    if not transcript:
+        audio_key    = event.get("audioS3Key", "")
+        audio_bucket = event.get("audioS3Bucket", os.getenv("AUDIO_BUCKET", ""))
+        if audio_key and audio_bucket:
+            try:
+                from app.services.transcribe_service import TranscribeService
+                raw = TranscribeService().transcribe_audio_s3(audio_bucket, audio_key, language)
+                if isinstance(raw, dict):
+                    transcript     = raw.get("transcript", "")
+                    asr_confidence = float(raw.get("confidence", 0.8))
+                else:
+                    transcript     = str(raw)
+                    asr_confidence = 0.8
+                logger.info(f"[ConnectWebhook] ASR: '{transcript[:80]}' conf={asr_confidence:.2f}")
+            except Exception as e:
+                logger.error(f"[ConnectWebhook] Transcription failed: {e}")
+
+    if not transcript:
+        dtmf = event.get("dtmfDigits", "")
+        if dtmf:
+            transcript     = f"DTMF:{dtmf}"
+            asr_confidence = 1.0
+
+    tel.emit("ASRSuccessRate",
+             100.0 if asr_confidence >= 0.6 else 0.0,
+             {"channel": "ivr"}, unit="Percent")
+
+    # ── Delegate to Supervisor (9-agent pipeline) ──────────────────────────
+    supervisor_event = {
+        "session_id":     session_id,
+        "message":        transcript,
+        "language":       language,
+        "channel":        "ivr",
+        "consent":        True,
+        "asr_confidence": asr_confidence,
+        "turn_id":        str(uuid.uuid4()),
+        "slots":          {k: v for k, v in session_attrs.items() if not k.startswith("_")},
+    }
+
+    try:
+        result = get_supervisor().orchestrate(supervisor_event)
+    except Exception as e:
+        logger.error(f"[ConnectWebhook] Supervisor error: {e}")
+        result = {
+            "play_prompt":    "क्षमा करें, एक समस्या हुई। कृपया पुनः प्रयास करें।",
+            "requires_input": False,
+            "intent":         "ERROR",
+        }
+
+    play_prompt = (
+        result.get("play_prompt") or
+        result.get("response_text") or
+        "आपका अनुरोध प्रक्रिया में है।"
+    )
+    session_attrs.update({
+        "intent":      result.get("intent", ""),
+        "language":    language,
+        "case_id":     result.get("case_id", ""),
+        "receipt_url": result.get("receipt_url", ""),
+        "session_id":  session_id,
+        "latency_ms":  str(round((time.perf_counter() - t_start) * 1000, 2)),
+    })
+
+    return _build_response(
+        play_prompt, session_attrs,
+        result.get("intent", ""), language,
+        requires_input=result.get("requires_input", False),
+    )
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────

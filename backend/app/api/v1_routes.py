@@ -386,8 +386,197 @@ def get_ivr_sessions():
 def ivr_connect_webhook():
     """
     POST /v1/ivr/connect-webhook
-    Proxies Amazon Connect Lambda invocation events to ivr_service.
+    Proxies Amazon Connect Lambda invocation events through the full
+    9-agent supervisor pipeline.
     """
     event = request.json or {}
-    result = ivr_service.handle_connect_invocation(event)
+    from app.services.connect_webhook import handle_connect_invocation
+    result = handle_connect_invocation(event)
     return jsonify(result)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IVR TURN — per-slot answer update
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/ivr/turn", methods=["POST"])
+def ivr_turn():
+    """
+    POST /v1/ivr/turn
+    Records a single slot-fill turn. Called by Connect flow after each user
+    answer (speech or DTMF) to advance the slot collection state.
+
+    Body:
+      { "session_id": "...", "turn_id": "...", "slot": "land_hectares",
+        "value": 1.2, "method": "speech|dtmf", "confidence": 0.85 }
+
+    Returns next prompt or final eligibility result.
+    """
+    data       = request.json or {}
+    session_id = data.get("session_id", "")
+    turn_id    = data.get("turn_id", str(uuid.uuid4()))
+    slot_key   = data.get("slot", "")
+    slot_value = data.get("value")
+    method     = data.get("method", "speech")
+    confidence = float(data.get("confidence", 0.8))
+
+    if not session_id or not slot_key:
+        return jsonify({"error": "session_id and slot are required"}), 400
+
+    # Persist slot into session
+    sm = _get_session_manager()
+    existing = sm.get_session(session_id)
+    if not existing:
+        sm.create_session(session_id)
+    sm.update_data(session_id, slot_key, slot_value)
+
+    # Audit slot fill (value omitted for PII safety)
+    try:
+        from app.services.audit_service import AuditService
+        AuditService().log_slot(session_id, slot_key, method, confidence)
+    except Exception:
+        pass
+
+    # Emit telemetry
+    try:
+        from app.services.telemetry_service import get_telemetry
+        get_telemetry().emit("AvgTurnsPerSession", 1.0, {"session": session_id})
+    except Exception:
+        pass
+
+    # Advance workflow engine with this answer
+    try:
+        result = process_user_input(
+            message=f"SLOT:{slot_key}={slot_value}",
+            session_id=session_id,
+        )
+        return jsonify({
+            "session_id":     session_id,
+            "turn_id":        turn_id,
+            "slot_recorded":  slot_key,
+            "next_prompt":    result.get("response", ""),
+            "requires_input": result.get("requires_input", True),
+            "benefit_receipt": result.get("benefit_receipt"),
+        })
+    except Exception as e:
+        logger.error(f"[v1/ivr/turn] Engine error: {e}")
+        return jsonify({
+            "session_id": session_id,
+            "turn_id": turn_id,
+            "slot_recorded": slot_key,
+            "next_prompt": "जानकारी प्राप्त हो गई। अगला प्रश्न आ रहा है।",
+            "requires_input": True,
+        })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IVR CONSENT — log user consent
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/ivr/consent", methods=["POST"])
+def ivr_consent():
+    """
+    POST /v1/ivr/consent
+    Records user consent before any PII collection. Called at start of
+    every IVR session when user presses 1.
+
+    Body: { "session_id": "...", "consent": true, "language": "hi" }
+    """
+    data       = request.json or {}
+    session_id = data.get("session_id", "")
+    consent    = data.get("consent", False)
+    language   = data.get("language", "hi")
+
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
+
+    if not consent:
+        return jsonify({"error": "User did not consent"}), 403
+
+    try:
+        from app.services.audit_service import AuditService
+        caller_hash = str(hash(session_id))[:16]
+        AuditService().log_consent(session_id, caller_hash, language, consent)
+    except Exception as e:
+        logger.warning(f"[v1/ivr/consent] Audit failed: {e}")
+
+    return jsonify({
+        "session_id": session_id,
+        "consent":    True,
+        "language":   language,
+        "status":     "recorded",
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ORCHESTRATE — universal supervisor entry point
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/orchestrate", methods=["POST"])
+def orchestrate():
+    """
+    POST /v1/orchestrate
+    Universal entry point for all channels — delegates directly to
+    JanSathiSupervisor (9-agent pipeline).
+
+    Body:
+      { "session_id": "...", "message": "...", "language": "hi",
+        "channel": "web|ivr|whatsapp", "consent": true,
+        "asr_confidence": 0.9, "slots": {} }
+    """
+    data  = request.json or {}
+    if not data.get("message") and not data.get("session_id"):
+        return jsonify({"error": "message or session_id required"}), 400
+
+    try:
+        from app.agent.supervisor import get_supervisor
+        result = get_supervisor().orchestrate(data)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"[v1/orchestrate] Supervisor error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TELEMETRY — CloudWatch metric summary for admin
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/telemetry", methods=["GET"])
+def get_telemetry_summary():
+    """
+    GET /v1/telemetry
+    Returns in-memory CloudWatch metric summary for the admin dashboard.
+    Useful during hackathon demo when CW console is not accessible.
+    """
+    try:
+        from app.services.telemetry_service import get_telemetry
+        tel = get_telemetry()
+        return jsonify({
+            "summary":  tel.get_summary(),
+            "raw":      tel.get_local_metrics()[-50:],   # last 50 events
+            "namespace": "JanSathi",
+        })
+    except Exception as e:
+        logger.error(f"[v1/telemetry] Error: {e}")
+        return jsonify({"summary": {}, "raw": []}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUDIT LOG — read local audit records (dev only)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/admin/audit", methods=["GET"])
+def get_audit_log():
+    """
+    GET /v1/admin/audit?session_id=...
+    Returns local audit log records (dev/demo mode).
+    In production, read from S3 audit bucket.
+    """
+    session_id = request.args.get("session_id")
+    try:
+        from app.services.audit_service import AuditService
+        records = AuditService().get_local_records(session_id)
+        return jsonify({"records": records, "count": len(records)})
+    except Exception as e:
+        return jsonify({"records": [], "error": str(e)}), 500
+

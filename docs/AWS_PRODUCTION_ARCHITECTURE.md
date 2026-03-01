@@ -537,7 +537,7 @@ Resources:
     ],
     "Resource": [
       "arn:aws:bedrock:ap-south-1::model/claude-3-5-haiku",
-      "arn:aws:kendra:ap-south-1:123456789012:index/abc123"
+      "arn:aws:kendra:ap-south-1:YOUR_ACCOUNT_ID:index/YOUR_INDEX_ID"
     ],
     "Condition": {
       "StringEquals": {

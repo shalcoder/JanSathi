@@ -15,49 +15,132 @@ import {
     Plus,
     Save,
     Fingerprint,
-    ArrowUpRight,
     Activity
 } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
+import { buildClient } from '@/services/api';
 
 const ProfilePage = () => {
     const { user, isLoaded } = useUser();
+    const { getToken } = useAuth();
+    
+    // Track API state
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
     const [profile, setProfile] = useState({
         firstName: '',
         lastName: '',
+        full_name: '',
+        phone: '',
         email: '',
         location: 'Update Location',
         language: 'Hindi',
+        preferred_language: 'hi',
         notifications: 'SMS & Voice',
-        kycStatus: 'Pending Verification'
+        kycStatus: 'Pending Verification',
+        occupation: 'Farmer',
+        category: 'General',
+        annual_income: '',
+        land_holding_acres: '',
+        has_aadhaar: false,
+        has_ration_card: false,
+        has_bank_account: false,
+        has_pm_kisan: false,
     });
 
+    // 1. Fetch live profile on mount
     React.useEffect(() => {
-        if (isLoaded && user) {
-            // Load custom overrides from local storage if any
-            const stored = localStorage.getItem('jansathi_user_profile');
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                setProfile(prev => ({ ...prev, ...parsed }));
-            } else {
-                // Default to Clerk data
-                setProfile(prev => ({
-                    ...prev,
-                    firstName: user.firstName || 'Citizen',
-                    lastName: user.lastName || '',
-                    email: user.primaryEmailAddress?.emailAddress || '',
-                    // Keep location/kyc as default placeholders if not in storage
-                }));
-            }
-        }
-    }, [isLoaded, user]);
+        if (!isLoaded || !user) return;
 
-    const handleProfileSubmit = (e: React.FormEvent) => {
+        const loadProfile = async () => {
+            try {
+                const token = await getToken();
+                const client = buildClient(token || undefined);
+                const res = await client.get('/v1/profile');
+                const data = res.data.data;
+                
+                if (data) {
+                    // Split full name if present
+                    const names = (data.full_name || '').split(' ');
+                    const firstName = names[0] || user.firstName || 'Citizen';
+                    const lastName = names.length > 1 ? names.slice(1).join(' ') : (user.lastName || '');
+                    
+                    const loc = data.village ? `${data.village}, ${data.district}` : (data.district || 'Update Location');
+                    
+                    // Helper functions for options
+                    const langMap: Record<string, string> = { 'hi': 'Hindi', 'en': 'English', 'ta': 'Tamil', 'kn': 'Kannada' };
+                    setProfile(prev => ({
+                        ...prev,
+                        firstName,
+                        lastName,
+                        full_name: data.full_name || '',
+                        phone: data.phone || '',
+                        email: user.primaryEmailAddress?.emailAddress || '',
+                        location: loc,
+                        language: langMap[data.preferred_language] || 'Hindi',
+                        preferred_language: data.preferred_language || 'hi',
+                        occupation: data.occupation || 'Farmer',
+                        category: data.category || 'General',
+                        annual_income: data.annual_income || '',
+                        land_holding_acres: data.land_holding_acres || '',
+                        has_aadhaar: data.has_aadhaar || false,
+                        has_ration_card: data.has_ration_card || false,
+                        has_bank_account: data.has_bank_account || false,
+                        has_pm_kisan: data.has_pm_kisan || false,
+                        kycStatus: data.has_aadhaar ? 'KYC Completed' : 'Pending Verification'
+                    }));
+                }
+            } catch (err) {
+                console.error("Failed to load profile", err);
+                setError("Failed to load your profile data.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadProfile();
+    }, [isLoaded, user, getToken]);
+
+    // 2. Save profile to backend
+    const handleProfileSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setProfile(editForm);
-        // Persist local edits
-        localStorage.setItem('jansathi_user_profile', JSON.stringify(editForm));
-        setIsProfileModalOpen(false);
+        setIsSaving(true);
+        setError(null);
+        setSuccessMessage(null);
+        
+        try {
+            const token = await getToken();
+            const client = buildClient(token || undefined);
+            
+            // Reconstruct full name
+            const full_name = `${editForm.firstName} ${editForm.lastName}`.trim();
+            
+            await client.put('/v1/profile', {
+                full_name,
+                phone: editForm.phone,
+                preferred_language: editForm.preferred_language,
+                occupation: editForm.occupation,
+                category: editForm.category,
+                annual_income: editForm.annual_income,
+                land_holding_acres: editForm.land_holding_acres,
+            });
+            
+            setProfile(editForm);
+            setIsProfileModalOpen(false);
+            setSuccessMessage("Profile updated successfully");
+            
+            // Clear success message after 3 seconds
+            setTimeout(() => setSuccessMessage(null), 3000);
+            
+        } catch (err) {
+            console.error("Failed to update profile", err);
+            setError("Failed to update profile. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const [familyMembers, setFamilyMembers] = useState([
@@ -91,8 +174,28 @@ const ProfilePage = () => {
         'ta': 'Tamil (தமிழ்)'
     };
 
+    if (isLoading) {
+        return (
+            <div className="h-full flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full"></div>
+            </div>
+        );
+    }
+
     return (
         <div className="h-full max-w-6xl mx-auto pb-20 relative px-4 sm:px-0">
+            {error && (
+                <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-sm font-medium">
+                    {error}
+                </div>
+            )}
+            {successMessage && (
+                <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm font-medium flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    {successMessage}
+                </div>
+            )}
+
             {/* Profile Header */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -251,11 +354,14 @@ const ProfilePage = () => {
                 {/* Sidebar - Settings Summary */}
                 <div className="space-y-6">
                     <div className="bg-card p-8 rounded-2xl border border-border shadow-sm">
-                        <h3 className="text-base font-bold text-foreground mb-6 uppercase tracking-widest opacity-50">Preferences</h3>
+                        <h3 className="text-base font-bold text-foreground mb-6 uppercase tracking-widest opacity-50">Socioeconomic Profile</h3>
                         <div className="space-y-6">
                             {[
                                 { label: "Main Language", val: profile.language, icon: Languages, color: "text-primary" },
-                                { label: "Notifications", val: profile.notifications, icon: Bell, color: "text-blue-600" },
+                                { label: "Mobile Number", val: profile.phone || "Not Set", icon: Bell, color: "text-blue-600" },
+                                { label: "Occupation", val: profile.occupation, icon: Activity, color: "text-emerald-500" },
+                                { label: "Caste Category", val: profile.category, icon: Users, color: "text-amber-500" },
+                                { label: "Registered Land", val: profile.land_holding_acres ? `${profile.land_holding_acres} Acres` : 'N/A', icon: MapPin, color: "text-purple-500" },
                             ].map((item, i) => (
                                 <div key={i} className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center border border-border">
@@ -332,22 +438,51 @@ const ProfilePage = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Email Address</label>
-                                        <input type="email" value={editForm.email} onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary" required />
+                                        <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Mobile Number (IVR/SMS)</label>
+                                        <input type="tel" value={editForm.phone} onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary" required />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Occupation</label>
+                                            <select value={editForm.occupation} onChange={(e) => setEditForm(prev => ({ ...prev, occupation: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary appearance-none">
+                                                <option value="Farmer">Farmer</option>
+                                                <option value="Artisan">Artisan</option>
+                                                <option value="Daily Wage Worker">Daily Wage Worker</option>
+                                                <option value="Student">Student</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Category</label>
+                                            <select value={editForm.category} onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary appearance-none">
+                                                <option value="General">General</option>
+                                                <option value="OBC">OBC</option>
+                                                <option value="SC">SC</option>
+                                                <option value="ST">ST</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Annual Income (₹)</label>
+                                            <input type="number" value={editForm.annual_income} onChange={(e) => setEditForm(prev => ({ ...prev, annual_income: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Land Acres (optional)</label>
+                                            <input type="number" step="0.1" value={editForm.land_holding_acres} onChange={(e) => setEditForm(prev => ({ ...prev, land_holding_acres: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary" />
+                                        </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Region / Location</label>
-                                        <input type="text" value={editForm.location} onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary" required />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">KYC Status</label>
-                                        <select value={editForm.kycStatus} onChange={(e) => setEditForm(prev => ({ ...prev, kycStatus: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary appearance-none">
-                                            <option value="Pending Verification">Pending Verification</option>
-                                            <option value="KYC Completed">KYC Completed</option>
+                                        <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Preferred Language</label>
+                                        <select value={editForm.preferred_language} onChange={(e) => setEditForm(prev => ({ ...prev, preferred_language: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary appearance-none">
+                                            <option value="hi">Hindi</option>
+                                            <option value="en">English</option>
+                                            <option value="ta">Tamil</option>
+                                            <option value="kn">Kannada</option>
                                         </select>
                                     </div>
-                                    <button type="submit" className="w-full py-4 mt-4 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm hover:opacity-90 transition-opacity">
-                                        Save Changes
+                                    <button type="submit" disabled={isSaving} className="w-full py-4 mt-4 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm flex items-center justify-center disabled:opacity-50">
+                                        {isSaving ? 'Saving...' : 'Save Changes'}
                                     </button>
                                 </form>
                             ) : (

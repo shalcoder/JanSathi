@@ -6,11 +6,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
 from app.core.utils import setup_logging
-from app.api.routes import bp as api_bp
 from app.core.config import Config
 
 # Setup Logging Early
@@ -30,40 +27,33 @@ def create_app():
     # Security: CORS - Allow all origins for deployment testing
     CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
     
-    # Talisman only in non-Lambda mode (API Gateway handles HTTPS)
-    if not USE_DYNAMODB:
-        try:
-            from flask_talisman import Talisman
-            Talisman(app, content_security_policy=None)
-        except ImportError:
-            pass
-
     # Database: SQLite only for local dev
     if not USE_DYNAMODB:
         from app.models.models import db
-        from flask_migrate import Migrate
-        db.init_app(app)
-        Migrate(app, db)
-
-    # Rate Limiting (memory storage for Lambda, file for local)
-    limiter = Limiter(
-        get_remote_address,
-        app=app,
-        default_limits=[Config.RATELIMIT_DEFAULT],
-        storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
-    )
+        try:
+            from flask_migrate import Migrate
+            db.init_app(app)
+            Migrate(app, db)
+        except ImportError:
+            db.init_app(app)
 
     # Register Blueprints
+    from app.api.routes import bp as api_bp
     app.register_blueprint(api_bp)
     
-    # Register Agent Blueprint (New Architectural Layer)
-    from app.agent import agent_bp
-    app.register_blueprint(agent_bp, url_prefix='/agent')
+    # Register Agent Blueprint (New Architectural Layer) - Optional
+    try:
+        from app.agent import agent_bp
+        app.register_blueprint(agent_bp, url_prefix='/agent')
+    except ImportError:
+        pass
 
-    # Register v1 unified API blueprint (frontend integration layer)
-    from app.api.v1_routes import v1 as v1_bp
-    app.register_blueprint(v1_bp)
-
+    # Register v1 unified API blueprint (frontend integration layer) - Optional
+    try:
+        from app.api.v1_routes import v1 as v1_bp
+        app.register_blueprint(v1_bp)
+    except ImportError:
+        pass
 
     # Create SQLite tables only in local dev mode
     if not USE_DYNAMODB:

@@ -1,37 +1,54 @@
-from app.core.utils import logger
-import os
-import requests
+"""
+whatsapp_service.py — Thin stub (channel not in current JanSathi scope)
+
+From agents.md scope:
+  Voice → Eligibility → Checklist → SMS → Dashboard
+
+WhatsApp is NOT a required channel in the current build.
+This stub exists only for forward-compatibility.
+
+For SMS notifications use notify_service.NotifyService (SNS).
+If WhatsApp integration is added in future, wire it through
+JanSathiSupervisor.orchestrate({"channel": "whatsapp", ...}).
+"""
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 class WhatsAppService:
     """
-    Handling Multi-Modal WhatsApp interactions via Meta/Twilio Business API.
-    Supports text queries, document uploads, and location-sharing.
+    Out-of-scope stub. Forwards to NotifyService for SMS fallback.
     """
-    def __init__(self):
-        self.api_key = os.getenv("WHATSAPP_API_KEY")
-        self.phone_number_id = os.getenv("WHATSAPP_PHONE_ID")
 
-    def process_incoming_message(self, message_data):
+    def __init__(self):
+        logger.info(
+            "[WhatsAppService] WhatsApp channel is not in current scope. "
+            "Using SNS SMS via notify_service for all outbound messages."
+        )
+
+    def process_incoming_message(self, message_data: dict) -> dict:
         """
-        Extracts intent from WhatsApp payload.
-        Handles text, images (for OCR), and location.
+        Not implemented. Returns structured event so caller can
+        route through JanSathiSupervisor.
         """
-        sender = message_data.get('from')
-        text = message_data.get('text', {}).get('body', '')
-        
-        logger.info(f"WhatsApp message from {sender}: {text}")
-        
-        # In a real implementation, we would route this to agent_service.orchestrate_query
+        logger.warning("[WhatsAppService] process_incoming_message called — not wired.")
         return {
-            "sender": sender,
-            "query": text,
-            "channel": "whatsapp"
+            "sender":  message_data.get("from", ""),
+            "query":   message_data.get("text", {}).get("body", ""),
+            "channel": "whatsapp",
+            "status":  "not_implemented",
         }
 
-    def send_scheme_info(self, to_number, scheme_data):
-        """
-        Sends a structured message template with scheme details.
-        """
-        logger.info(f"Sending WhatsApp scheme info to {to_number}")
-        # Simulate API call to Meta Graph API
-        return {"status": "message_queued", "to": to_number}
+    def send_scheme_info(self, to_number: str, scheme_data: dict) -> dict:
+        """Stub: delegates to NotifyService SMS."""
+        try:
+            from app.services.notify_service import NotifyService
+            ns = NotifyService()
+            case_id = scheme_data.get("case_id", "N/A")
+            scheme  = scheme_data.get("scheme_name", "Unknown Scheme")
+            ns.notify_submission(to_number, scheme, case_id)
+            return {"status": "delegated_to_sms", "to": to_number}
+        except Exception as e:
+            logger.error(f"[WhatsAppService] SMS fallback failed: {e}")
+            return {"status": "failed", "to": to_number}

@@ -1,0 +1,143 @@
+# JanSathi – Scheme Slot Schemas & Eligibility Rules
+# Each scheme defines:
+#   slots:      ordered list of data points to collect from user
+#   rules:      mandatory eligibility conditions (evaluated by RulesEngine)
+#   sources:    citation links shown in BenefitReceipt
+
+schemes:
+  pm_kisan:
+    display_name: "PM-Kisan Samman Nidhi"
+    description: "₹6,000/year for eligible farmers in 3 installments"
+    slots:
+      - key: state
+        prompt: "Which state do you live in? / आप किस राज्य में रहते हैं?"
+        dtmf_prompt: "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other"
+        type: string
+        dtmf_map:
+          {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other",
+          }
+        required: true
+      - key: land_hectares
+        prompt: "How many hectares of farm land do you own? / आपके पास कितनी हेक्टेयर जमीन है?"
+        dtmf_prompt: "Enter land in hectares (e.g. press 1 for less than 2 hectares)"
+        type: float
+        required: true
+      - key: income_annual
+        prompt: "What is your annual family income in rupees? / वार्षिक पारिवारिक आय क्या है?"
+        type: float
+        required: true
+      - key: aadhaar_last4
+        prompt: "Please say the last 4 digits of your Aadhaar number / आधार के अंतिम 4 अंक बताएं"
+        type: string
+        dtmf_prompt: "Please enter the last 4 digits of your Aadhaar"
+        required: true
+    rules:
+      mandatory:
+        - field: land_hectares
+          operator: lt
+          value: 2
+          label: "Land < 2 hectares"
+          citation: "PM-Kisan Guidelines Section 2.1"
+        - field: income_annual
+          operator: lt
+          value: 200000
+          label: "Annual Income < ₹2L"
+          citation: "PM-Kisan Guidelines Section 2.3"
+    sources:
+      - title: "PM-Kisan Official Guidelines"
+        url: "https://pmkisan.gov.in/documents/Revised_PM-KISAN_Operational_Guidelines.pdf"
+        page: 3
+
+  pm_awas_urban:
+    display_name: "PM Awas Yojana (Urban)"
+    description: "Housing assistance for EWS/LIG/MIG categories"
+    slots:
+      - key: state
+        prompt: "Which state do you live in?"
+        type: string
+        required: true
+      - key: income_annual
+        prompt: "What is your annual household income in rupees?"
+        type: float
+        required: true
+      - key: has_pucca_house
+        prompt: "Do you currently own a pucca (permanent) house? (yes/no)"
+        type: boolean
+        dtmf_prompt: "Press 1 for Yes, 2 for No"
+        dtmf_map: { "1": true, "2": false }
+        required: true
+      - key: is_first_time_buyer
+        prompt: "Is this your first time applying for government housing? (yes/no)"
+        type: boolean
+        dtmf_prompt: "Press 1 for Yes, 2 for No"
+        dtmf_map: { "1": true, "2": false }
+        required: true
+    rules:
+      mandatory:
+        - field: income_annual
+          operator: lte
+          value: 1800000
+          label: "Annual Income ≤ ₹18L (MIG-II cap)"
+          citation: "PMAY-U Guidelines 2.0"
+        - field: has_pucca_house
+          operator: eq
+          value: false
+          label: "Does not own pucca house"
+          citation: "PMAY-U Section 3"
+    sources:
+      - title: "PMAY-U Official Site"
+        url: "https://pmaymis.gov.in"
+
+  e_shram:
+    display_name: "E-Shram Registration"
+    description: "National database for unorganised workers — UAN + benefits"
+    slots:
+      - key: age
+        prompt: "What is your age?"
+        type: int
+        required: true
+      - key: is_unorganised_worker
+        prompt: "Are you an unorganised/informal sector worker? (yes/no)"
+        type: boolean
+        dtmf_prompt: "Press 1 for Yes, 2 for No"
+        dtmf_map: { "1": true, "2": false }
+        required: true
+      - key: has_epfo_or_esic
+        prompt: "Are you registered with EPFO or ESIC? (yes/no)"
+        type: boolean
+        dtmf_prompt: "Press 1 for Yes, 2 for No"
+        dtmf_map: { "1": true, "2": false }
+        required: true
+      - key: mobile
+        prompt: "Please say your 10-digit mobile number linked to Aadhaar"
+        type: string
+        required: true
+    rules:
+      mandatory:
+        - field: age
+          operator: gte
+          value: 16
+          label: "Age ≥ 16"
+          citation: "E-Shram Eligibility Guidelines"
+        - field: age
+          operator: lte
+          value: 59
+          label: "Age ≤ 59"
+          citation: "E-Shram Eligibility Guidelines"
+        - field: is_unorganised_worker
+          operator: eq
+          value: true
+          label: "Must be unorganised sector worker"
+          citation: "E-Shram Section 2"
+        - field: has_epfo_or_esic
+          operator: eq
+          value: false
+          label: "Not already covered by EPFO/ESIC"
+          citation: "E-Shram Section 2.1"
+    sources:
+      - title: "E-Shram Portal"
+        url: "https://eshram.gov.in"

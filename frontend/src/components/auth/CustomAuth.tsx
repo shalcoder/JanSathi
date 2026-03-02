@@ -31,11 +31,14 @@ interface CustomAuthProps {
 }
 
 export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
-    const { signIn, isLoaded: isSignInLoaded } = useSignIn();
-    const { signUp, isLoaded: isSignUpLoaded } = useSignUp();
+    // const { signIn, isLoaded: isSignInLoaded } = useSignIn();
+    // const { signUp, isLoaded: isSignUpLoaded } = useSignUp();
+    const isSignInLoaded = true;
+    const isSignUpLoaded = true;
     const router = useRouter();
 
     const handleOAuth = async (strategy: "oauth_google" | "oauth_microsoft") => {
+        /*
         if (mode === "signIn") {
             if (!isSignInLoaded) return;
             await signIn.authenticateWithRedirect({
@@ -51,6 +54,9 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
                 redirectUrlComplete: "/dashboard",
             });
         }
+        */
+        console.log("OAuth strategy selected:", strategy);
+        router.push("/dashboard");
     };
 
     const handleEmailClick = () => {
@@ -63,7 +69,7 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
     // But aligning with the image request:
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -71,7 +77,7 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
         >
             {/* Decorative Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-primary/5 pointer-events-none -z-10"></div>
-            
+
             {/* Header */}
             <div className="text-center mb-4 relative z-10">
                 <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-orange-500/20 mb-4">JS</div>
@@ -85,48 +91,48 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
 
             {/* Social Buttons */}
             <div className="space-y-3 relative z-10">
-            <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleOAuth("oauth_google")}
-                className="flex items-center justify-center gap-3 w-full bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm shadow-sm"
-            >
-                <GoogleIcon />
-                <span>{mode === "signUp" ? "Sign up with Google" : "Continue with Google"}</span>
-            </motion.button>
-
-            <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleOAuth("oauth_microsoft")}
-                className="flex items-center justify-center gap-3 w-full bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm shadow-sm"
-            >
-                <MicrosoftIcon />
-                <span>{mode === "signUp" ? "Sign up with Microsoft" : "Continue with Microsoft"}</span>
-            </motion.button>
-
-            {/* Split Row: Email & SSO */}
-            <div className="grid grid-cols-2 gap-3 mt-2">
                 <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleEmailClick}
-                    className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleOAuth("oauth_google")}
+                    className="flex items-center justify-center gap-3 w-full bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm shadow-sm"
                 >
-                    <Mail className="w-4 h-4 text-secondary-foreground" />
-                    <span>Email</span>
+                    <GoogleIcon />
+                    <span>{mode === "signUp" ? "Sign up with Google" : "Continue with Google"}</span>
                 </motion.button>
 
                 <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => router.push(mode === "signIn" ? "/sign-in/sso" : "/sign-up/sso")}
-                    className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleOAuth("oauth_microsoft")}
+                    className="flex items-center justify-center gap-3 w-full bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm shadow-sm"
                 >
-                    <Lock className="w-4 h-4 text-secondary-foreground" />
-                    <span>SSO</span>
+                    <MicrosoftIcon />
+                    <span>{mode === "signUp" ? "Sign up with Microsoft" : "Continue with Microsoft"}</span>
                 </motion.button>
-            </div>
+
+                {/* Split Row: Email & SSO */}
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                    <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleEmailClick}
+                        className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm"
+                    >
+                        <Mail className="w-4 h-4 text-secondary-foreground" />
+                        <span>Email</span>
+                    </motion.button>
+
+                    <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => router.push(mode === "signIn" ? "/sign-in/sso" : "/sign-up/sso")}
+                        className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm"
+                    >
+                        <Lock className="w-4 h-4 text-secondary-foreground" />
+                        <span>SSO</span>
+                    </motion.button>
+                </div>
             </div>
 
             {/* Divider / Spacer */}

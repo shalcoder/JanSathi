@@ -159,14 +159,14 @@ class ApiStack(Stack):
             self, "JanSathiApi",
             rest_api_name="JanSathi-API",
             handler=self.lambda_function,
-            proxy=True,  # Proxy all requests to Lambda (Flask handles routing)
+            proxy=True,
             deploy_options=apigw.StageOptions(
                 stage_name="prod",
-                throttling_rate_limit=100,  # 100 req/sec
+                throttling_rate_limit=100,
                 throttling_burst_limit=200,
                 logging_level=apigw.MethodLoggingLevel.INFO,
                 data_trace_enabled=True,
-                tracing_enabled=True,  # X-Ray
+                tracing_enabled=True,
                 metrics_enabled=True,
             ),
             default_cors_preflight_options=apigw.CorsOptions(
@@ -176,6 +176,23 @@ class ApiStack(Stack):
                 max_age=Duration.hours(1),
             ),
         )
+
+        # Usage Plan for External Partners
+        usage_plan = self.api.add_usage_plan(
+            "JanSathiUsagePlan",
+            name="ProfessionalPartners",
+            throttle=apigw.ThrottleSettings(
+                rate_limit=50,
+                burst_limit=100
+            ),
+            quota=apigw.QuotaSettings(
+                limit=1000,
+                period=apigw.Period.DAY
+            )
+        )
+
+        api_key = self.api.add_api_key("JanSathiPartnerKey")
+        usage_plan.add_api_key(api_key)
 
         # Store API URL for frontend stack
         self.api_url = self.api.url

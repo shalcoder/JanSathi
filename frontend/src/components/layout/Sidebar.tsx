@@ -23,7 +23,7 @@ import {
     Zap,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useUser, UserButton, SignedIn, SignedOut, SignInButton, SignOutButton } from '@clerk/nextjs';
+// import { useUser, UserButton, SignedIn, SignedOut, SignInButton, SignOutButton } from '@clerk/nextjs';
 
 interface ChatSession {
     id: string;
@@ -202,41 +202,42 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
 
             {/* Profile Footer - Compact */}
             <div className="pt-4 border-t border-border/50 mt-auto">
-                <SignedIn>
-                    <div className="space-y-2">
-                        <div className="p-3 rounded-lg bg-secondary/20 border border-border/50 flex items-center gap-3 group cursor-pointer hover:bg-secondary/40 transition-colors">
-                            <div className="shrink-0">
-                                <UserButton
+                {/* <SignedIn> */}
+                <div className="space-y-2">
+                    <div className="p-3 rounded-lg bg-secondary/20 border border-border/50 flex items-center gap-3 group cursor-pointer hover:bg-secondary/40 transition-colors">
+                        <div className="shrink-0">
+                            {/* <UserButton
                                     afterSignOutUrl="/"
                                     appearance={{
                                         elements: {
                                             avatarBox: "w-8 h-8 border border-slate-200 dark:border-slate-700"
                                         }
                                     }}
-                                />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <UserProfileName />
-                            </div>
+                                /> */}
+                            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">D</div>
                         </div>
-
-                        <SignOutButton>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-secondary-foreground hover:bg-red-500/10 hover:text-red-500 font-bold group border border-transparent hover:border-red-500/20 text-xs">
-                                <LogOut className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-red-500 transition-colors" />
-                                <span>Sign Out</span>
-                            </button>
-                        </SignOutButton>
+                        <div className="flex-1 min-w-0">
+                            <UserProfileName />
+                        </div>
                     </div>
-                </SignedIn>
 
-                <SignedOut>
+                    {/* <SignOutButton> */}
+                    <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-secondary-foreground hover:bg-red-500/10 hover:text-red-500 font-bold group border border-transparent hover:border-red-500/20 text-xs">
+                        <LogOut className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-red-500 transition-colors" />
+                        <span>Sign Out</span>
+                    </button>
+                    {/* </SignOutButton> */}
+                </div>
+                {/* </SignedIn> */}
+
+                {/* <SignedOut>
                     <SignInButton mode="modal">
                         <button className="w-full flex items-center justify-center gap-2 py-2 bg-primary text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-opacity hover:opacity-90 shadow-sm">
                             <User className="w-3 h-3" />
                             <span>Sign In</span>
                         </button>
                     </SignInButton>
-                </SignedOut>
+                </SignedOut> */}
 
                 <div className="text-center mt-4 opacity-20 hover:opacity-100 transition-opacity">
                     <p className="text-[9px] font-bold text-secondary-foreground uppercase tracking-widest">
@@ -249,11 +250,12 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
 }
 
 function UserProfileName() {
-    const { user } = useUser();
+    // const { user } = useUser();
+    const user = { fullName: "Demo User" };
     return (
         <>
             <p className="text-sm font-bold text-foreground truncate tracking-tight">
-                {user?.fullName || user?.username || "JanSathi Citizen"}
+                {user?.fullName || "JanSathi Citizen"}
             </p>
             <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-2 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />

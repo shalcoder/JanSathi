@@ -19,20 +19,28 @@ import CallSimulator from "@/components/features/dashboard/CallSimulator";
 import HITLQueue from "@/components/features/dashboard/HITLQueue";
 import BenefitReceiptViewer from "@/components/features/dashboard/BenefitReceiptViewer";
 import SecurityAuditPanel from "@/components/features/dashboard/SecurityAuditPanel";
-import { Menu, Sun, Moon, Search, Bell, PhoneCall, LayoutDashboard, FileText, Settings, User, Users, HelpCircle } from 'lucide-react';
-import { useUser, useAuth, UserButton } from '@clerk/nextjs';
+import PhoneEmulatorPage from "@/components/features/dashboard/PhoneEmulatorPage";
+import ImpactMode from "@/components/features/dashboard/ImpactMode";
+import FederatedLearningStatus from "@/components/features/dashboard/FederatedLearningStatus";
+import MarketPrices from "@/components/features/dashboard/MarketPrices";
+import { Menu, Sun, Moon, Search, Bell } from 'lucide-react';
+// import { useUser, useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { buildClient } from '@/services/api';
 
 export default function Home() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
-  const { getToken } = useAuth();
+  // const { user, isLoaded } = useUser();
+  // const { getToken } = useAuth();
+  const user = { firstName: "Demo", lastName: "User", imageUrl: "" };
+  const isLoaded = true;
+  const getToken = async () => "mock-token";
+  proxy: true;
   const [activePage, setActivePage] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   // Semantic notification types
   const [notifications, setNotifications] = useState([
@@ -78,32 +86,34 @@ export default function Home() {
 
   // Initialize and check user
   useEffect(() => {
+    /*
     async function checkProfile() {
       if (!isLoaded || !user) return;
-      
+
       try {
         const token = await getToken();
         if (!token) return;
-        
+
         const api = buildClient(token);
         const res = await api.get('/v1/profile');
         if (res.data?.profile?.profile_complete === false) {
-           router.push('/onboarding');
+          router.push('/onboarding');
         } else {
-           setIsLoadingProfile(false);
+          setIsLoadingProfile(false);
         }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.error("Failed to check profile status:", err);
         // If profile doesn't exist (404) or there is an issue fetching it for a new user, redirect to onboarding directly
         if (err.response?.status === 404 || err.response?.status === 400 || (err.response && err.response.data && String(err.response.data.detail).includes('not found'))) {
-           router.push('/onboarding');
-           return; // Keep loading state true to prevent flashing while routing
+          router.push('/onboarding');
+          return; // Keep loading state true to prevent flashing while routing
         }
         setIsLoadingProfile(false);
       }
     }
     checkProfile();
+    */
   }, [isLoaded, user, router, getToken]);
 
   useEffect(() => {
@@ -168,6 +178,14 @@ export default function Home() {
         return <BenefitReceiptViewer />;
       case 'security':
         return <SecurityAuditPanel />;
+      case 'phone-emulator':
+        return <PhoneEmulatorPage />;
+      case 'impact':
+        return <ImpactMode />;
+      case 'federated-learning':
+        return <FederatedLearningStatus />;
+      case 'market-prices':
+        return <MarketPrices />;
       default:
         return <OverviewPage onNavigate={setActivePage} />;
     }
@@ -311,8 +329,10 @@ export default function Home() {
 
             {/* User Identity - Clerk Avatar */}
             <div className="hidden sm:block">
-               <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 shadow-sm" } }} />
+              {/* <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 shadow-sm" } }} /> */}
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">D</div>
             </div>
+            proxy: true;
           </div>
         </header>
 

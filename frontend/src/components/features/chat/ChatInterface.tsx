@@ -16,7 +16,7 @@ import DocumentScorecard from './DocumentScorecard';
 import ExplainabilityCard from './ExplainabilityCard';
 import MultiAgentThoughtProcess from './MultiAgentThoughtProcess';
 import { Languages, Globe } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
+// import { useUser } from '@clerk/nextjs';
 import {
     sendUnifiedQuery,
     analyzeImage,
@@ -120,7 +120,8 @@ const DEMO_FALLBACKS: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ChatInterface() {
-    const { user } = useUser();
+    // const { user } = useUser();
+    const user = { id: 'demo-user-id', fullName: 'Demo User' };
     const { settings } = useSettings();
     const { sessionId, token } = useSession();
 

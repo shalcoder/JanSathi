@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Mic, Languages, Bot, Globe, Cpu, Database, ChevronRight, Activity, Zap, Users, AlertTriangle, CheckCircle2, Radio, Lock, FileText, Shield } from "lucide-react";
 import BackendStatus from "@/components/BackendStatus";
 import ImpactStats from "@/components/features/community/ImpactStats";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+// import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
 export default function LandingPage() {
   return (
@@ -39,17 +39,17 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <SignedOut>
-              <Link
-                href="/sign-in"
-                className="px-6 py-2.5 bg-foreground text-background dark:bg-white dark:text-black rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
-              >
-                Sign In
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </SignedOut>
+            {/* <SignedOut> */}
+            <Link
+              href="/dashboard"
+              className="px-6 py-2.5 bg-foreground text-background dark:bg-white dark:text-black rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
+            >
+              Enter App
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            {/* </SignedOut> */}
 
-            <SignedIn>
+            {/* <SignedIn>
               <div className="flex items-center gap-4">
                 <Link
                   href="/dashboard"
@@ -59,7 +59,7 @@ export default function LandingPage() {
                 </Link>
                 <UserButton afterSignOutUrl="/" />
               </div>
-            </SignedIn>
+            </SignedIn> */}
           </div>
         </div>
       </nav>
@@ -115,20 +115,20 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.5 }}
           className="flex flex-col sm:flex-row gap-4 items-center w-full justify-center"
         >
-          <SignedOut>
-            <Link
-              href="/sign-in"
-              className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-              <span className="relative flex items-center justify-center gap-2">
-                Start Chat
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
-          </SignedOut>
+          {/* <SignedOut> */}
+          <Link
+            href="/dashboard"
+            className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            <span className="relative flex items-center justify-center gap-2">
+              Start Chat
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </span>
+          </Link>
+          {/* </SignedOut> */}
 
-          <SignedIn>
+          {/* <SignedIn>
             <Link
               href="/dashboard"
               className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
@@ -139,7 +139,7 @@ export default function LandingPage() {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </Link>
-          </SignedIn>
+          </SignedIn> */}
 
           <a
             href="#mission"
@@ -245,7 +245,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="flex items-center gap-2 mb-4"
           >
-             <div className="h-px w-12 bg-gradient-to-r from-transparent via-primary to-transparent"></div>
+            <div className="h-px w-12 bg-gradient-to-r from-transparent via-primary to-transparent"></div>
             <p className="text-[12px] font-black text-primary uppercase tracking-[0.4em]">Core Capabilities</p>
           </motion.div>
           <h2 className="text-4xl lg:text-5xl font-black tracking-tight text-foreground leading-tight">
@@ -311,7 +311,7 @@ export default function LandingPage() {
             compact={true}
             delay={0.3}
           />
-           <FeatureCard
+          <FeatureCard
             icon={<Zap className="w-6 h-6 text-yellow-500" />}
             title="A8: Output Generator"
             description="Constructs customized SMS and PDF receipts."
@@ -340,7 +340,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
             <div className="space-y-10">
               <div>
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
@@ -374,9 +374,9 @@ export default function LandingPage() {
 
             <div className="relative w-full flex justify-center lg:justify-end perspective-[2000px]">
               <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 via-purple-600/20 to-emerald-500/20 rounded-[3rem] blur-3xl opacity-50 group-hover:opacity-100 transition duration-1000"></div>
-              
+
               <div className="w-full max-w-lg py-12 px-6 sm:px-10 bg-slate-950/80 backdrop-blur-3xl rounded-[2.5rem] border border-white/10 flex items-center justify-center relative shadow-[0_0_50px_rgba(0,0,0,0.3)] transform-gpu transition-transform duration-700 hover:rotate-y-[-4deg] hover:rotate-x-[2deg]">
-                
+
                 <div className="relative w-full flex flex-col items-stretch justify-center gap-3">
                   {[
                     { name: "L1: Telecom Integration", style: "border-orange-500/40 bg-orange-500/10 text-orange-400 group-hover/layer:bg-orange-500/20" },
@@ -401,11 +401,11 @@ export default function LandingPage() {
                     >
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/80 opacity-0 group-hover/layer:opacity-100 transition-opacity"></div>
                       <span className="font-mono text-xs sm:text-sm font-bold tracking-widest pl-6 md:pl-8 drop-shadow-md">
-                         {layer.name}
+                        {layer.name}
                       </span>
                     </motion.div>
                   ))}
-                  
+
                   {/* Subtle connecting line behind */}
                   <div className="absolute left-8 md:left-10 top-6 bottom-6 w-[2px] bg-gradient-to-b from-transparent via-white/10 to-transparent z-0"></div>
                 </div>
@@ -419,9 +419,9 @@ export default function LandingPage() {
       <section id="roadmap" className="relative z-10 py-32 px-6 max-w-5xl mx-auto">
         <div className="text-center mb-24">
           <div className="inline-flex items-center justify-center gap-2 mb-6">
-             <div className="h-px w-8 bg-gradient-to-r from-transparent to-primary"></div>
-             <p className="text-[12px] font-black text-primary uppercase tracking-[0.4em]">The Future</p>
-             <div className="h-px w-8 bg-gradient-to-l from-transparent to-primary"></div>
+            <div className="h-px w-8 bg-gradient-to-r from-transparent to-primary"></div>
+            <p className="text-[12px] font-black text-primary uppercase tracking-[0.4em]">The Future</p>
+            <div className="h-px w-8 bg-gradient-to-l from-transparent to-primary"></div>
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-foreground">Project Roadmap</h2>
         </div>
@@ -611,7 +611,7 @@ interface RoadmapItemProps {
 function RoadmapItem({ phase, title, desc, status, align }: RoadmapItemProps) {
   const isCompleted = status === 'Completed';
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}

@@ -16,44 +16,73 @@ class WorkflowStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # ============================================================
-        # Step 1: Mock Pass States (for Hackathon Demo)
+        # Step 1: Lambda Task Definitions
         # ============================================================
-        # In a real app, these would be LambdaInvoke tasks
         
-        verify_aadhaar = sfn.Pass(
-            self, "AadhaarVerification",
-            result=sfn.Result.from_object({"status": "verified", "auth_code": "UID-OK"}),
+        verify_aadhaar_fn = _lambda.Function(
+            self, "AadhaarVerifyFn",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="app.tasks.verification_tasks.aadhaar_verify",
+            code=_lambda.Code.from_asset("backend"),
+            timeout=cdk.Duration.seconds(15)
+        )
+
+        check_bank_fn = _lambda.Function(
+            self, "BankVerifyFn",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="app.tasks.verification_tasks.bank_verify",
+            code=_lambda.Code.from_asset("backend"),
+            timeout=cdk.Duration.seconds(15)
+        )
+
+        eligibility_audit_fn = _lambda.Function(
+            self, "EligibilityAuditFn",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="app.tasks.engine_tasks.evaluate_eligibility",
+            code=_lambda.Code.from_asset("backend"),
+            timeout=cdk.Duration.seconds(15)
+        )
+
+        artifact_gen_fn = _lambda.Function(
+            self, "ArtifactGenFn",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="app.tasks.engine_tasks.generate_artifact",
+            code=_lambda.Code.from_asset("backend"),
+            timeout=cdk.Duration.seconds(30)
+        )
+
+        # ============================================================
+        # Step 2: Step Function Tasks
+        # ============================================================
+        
+        aadhaar_task = tasks.LambdaInvoke(
+            self, "AadhaarVerificationTask",
+            lambda_function=verify_aadhaar_fn,
             result_path="$.aadhaar_result"
         )
         
-        check_bank = sfn.Pass(
-            self, "CheckBankLink",
-            result=sfn.Result.from_object({"status": "active", "bank": "SBI"}),
+        bank_task = tasks.LambdaInvoke(
+            self, "CheckBankLinkTask",
+            lambda_function=check_bank_fn,
             result_path="$.bank_result"
         )
 
-        eligibility_audit = sfn.Pass(
-            self, "EligibilityAudit",
-            result=sfn.Result.from_object({"eligible": True, "score": 95}),
+        audit_task = tasks.LambdaInvoke(
+            self, "EligibilityAuditTask",
+            lambda_function=eligibility_audit_fn,
             result_path="$.eligibility_result"
         )
 
-        form_synthesis = sfn.Pass(
-            self, "FormSynthesis",
-            result=sfn.Result.from_object({"form_id": "FORM-12345", "status": "generated"}),
-            result_path="$.form_result"
-        )
-
-        final_submission = sfn.Pass(
-            self, "FinalSubmission",
-            result=sfn.Result.from_object({"application_id": "APP-2024-001", "status": "submitted"}),
-            result_path="$.submission_result"
+        artifact_task = tasks.LambdaInvoke(
+            self, "GenerateArtifactTask",
+            lambda_function=artifact_gen_fn,
+            result_path="$.artifact_result"
         )
 
         # ============================================================
         # Chain Definition
         # ============================================================
-        definition = verify_aadhaar.next(check_bank).next(eligibility_audit).next(form_synthesis).next(final_submission)
+        definition = aadhaar_task.next(bank_task).next(audit_task).next(artifact_task)
 
         # ============================================================
         # State Machine

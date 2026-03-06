@@ -25,8 +25,12 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Security: CORS - Allow all origins for deployment testing
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    # Security: CORS - Restricted to authorized origins
+    origins = [
+        "http://localhost:3000",
+        "https://jansathi.vercel.app",
+    ]
+    CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
     
     # Database: SQLite only for local dev
     if not USE_DYNAMODB:

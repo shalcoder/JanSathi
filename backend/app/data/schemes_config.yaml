@@ -60,37 +60,56 @@ schemes:
         prompt: "Which state do you live in?"
         type: string
         required: true
-      - key: income_annual
-        prompt: "What is your annual household income in rupees?"
+      - key: family_income
+        prompt: "What is your annual family income in rupees?"
         type: float
         required: true
-      - key: has_pucca_house
-        prompt: "Do you currently own a pucca (permanent) house? (yes/no)"
-        type: boolean
-        dtmf_prompt: "Press 1 for Yes, 2 for No"
-        dtmf_map: { "1": true, "2": false }
+      - key: housing_status
+        prompt: "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)"
+        type: string
         required: true
-      - key: is_first_time_buyer
-        prompt: "Is this your first time applying for government housing? (yes/no)"
-        type: boolean
-        dtmf_prompt: "Press 1 for Yes, 2 for No"
-        dtmf_map: { "1": true, "2": false }
+      - key: rural_or_urban
+        prompt: "Do you live in a rural or urban area? (rural/urban)"
+        type: string
         required: true
     rules:
       mandatory:
-        - field: income_annual
+        - field: family_income
           operator: lte
           value: 1800000
           label: "Annual Income ≤ ₹18L (MIG-II cap)"
           citation: "PMAY-U Guidelines 2.0"
-        - field: has_pucca_house
-          operator: eq
-          value: false
+        - field: housing_status
+          operator: ne
+          value: "pucca"
           label: "Does not own pucca house"
           citation: "PMAY-U Section 3"
     sources:
       - title: "PMAY-U Official Site"
         url: "https://pmaymis.gov.in"
+
+  grievance_pm_kisan:
+    display_name: "PM-Kisan Grievance"
+    description: "Submit a formal grievance regarding non-receipt of PM-Kisan payment"
+    type: "grievance"
+    slots:
+      - key: application_id
+        prompt: "Please provide your PM-Kisan Application ID or Aadhaar number."
+        type: string
+        required: true
+      - key: district
+        prompt: "Which district are you from? / आप किस जिले से हैं?"
+        type: string
+        required: true
+      - key: last_payment_date
+        prompt: "When did you receive your last payment? (e.g., January, or Not received)"
+        type: string
+        required: true
+    rules:
+      mandatory: []
+    sources:
+      - title: "PM-Kisan Grievance Portal"
+        url: "https://pmkisan.gov.in/Grievance.aspx"
 
   e_shram:
     display_name: "E-Shram Registration"

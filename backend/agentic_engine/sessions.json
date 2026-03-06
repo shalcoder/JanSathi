@@ -1,67 +1,20 @@
 {
-  "test-kisan-1": {
-    "current_state": "START",
+  "test-flask-debug": {
+    "current_state": "COLLECT_LAND_OWNERSHIP",
     "data": {
-      "_scheme": "pm_kisan",
-      "_pending_slots": [
-        "state",
-        "land_hectares",
-        "income_annual",
-        "aadhaar_last4"
-      ],
-      "_slot_schemas": {
-        "state": {
-          "key": "state",
-          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
-          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
-          "type": "string",
-          "dtmf_map": {
-            "1": "maharashtra",
-            "2": "tamil nadu",
-            "3": "uttar pradesh",
-            "4": "other"
-          },
-          "required": true
-        },
-        "land_hectares": {
-          "key": "land_hectares",
-          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
-          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
-          "type": "float",
-          "required": true
-        },
-        "income_annual": {
-          "key": "income_annual",
-          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
-          "type": "float",
-          "required": true
-        },
-        "aadhaar_last4": {
-          "key": "aadhaar_last4",
-          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
-          "type": "string",
-          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
-          "required": true
-        }
-      }
-    }
+      "state": "ping"
+    },
+    "created_at": 1772813713.6070564
   },
-  "test-grv-1": {
-    "current_state": "START",
-    "data": {
-      "grievance_id": "GRV-184572",
-      "grievance_draft": "To,\nThe District Grievance Officer,\nApplicant'S District District\n\nSubject: Grievance Regarding Government Scheme Payment \u2014 Ref: GRV-184572\n\nRespected Sir/Madam,\n\nI am writing to formally register a grievance regarding: mera paisa nahi aaya. Despite fulfilling all eligibility criteria, I have not received the entitled benefit. I respectfully request an urgent review and resolution of this matter.\n\nGrievance Reference No.: GRV-184572\n\nYours faithfully,\n[Applicant Name]"
-    }
-  },
-  "test-awas-1": {
-    "current_state": "START",
+  "test-awas-session-3": {
+    "current_state": "COMPLETED",
     "data": {
       "_scheme": "pm_awas_urban",
       "_pending_slots": [
         "state",
-        "income_annual",
-        "has_pucca_house",
-        "is_first_time_buyer"
+        "family_income",
+        "housing_status",
+        "rural_or_urban"
       ],
       "_slot_schemas": {
         "state": {
@@ -70,138 +23,115 @@
           "type": "string",
           "required": true
         },
-        "income_annual": {
-          "key": "income_annual",
-          "prompt": "What is your annual household income in rupees?",
+        "family_income": {
+          "key": "family_income",
+          "prompt": "What is your annual family income in rupees?",
           "type": "float",
           "required": true
         },
-        "has_pucca_house": {
-          "key": "has_pucca_house",
-          "prompt": "Do you currently own a pucca (permanent) house? (yes/no)",
-          "type": "boolean",
-          "dtmf_prompt": "Press 1 for Yes, 2 for No",
-          "dtmf_map": {
-            "1": true,
-            "2": false
-          },
+        "housing_status": {
+          "key": "housing_status",
+          "prompt": "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)",
+          "type": "string",
           "required": true
         },
-        "is_first_time_buyer": {
-          "key": "is_first_time_buyer",
-          "prompt": "Is this your first time applying for government housing? (yes/no)",
-          "type": "boolean",
-          "dtmf_prompt": "Press 1 for Yes, 2 for No",
-          "dtmf_map": {
-            "1": true,
-            "2": false
-          },
+        "rural_or_urban": {
+          "key": "rural_or_urban",
+          "prompt": "Do you live in a rural or urban area? (rural/urban)",
+          "type": "string",
           "required": true
         }
-      }
-    }
-  },
-  "test-kisan-debug": {
-    "current_state": "START",
-    "data": {
-      "_scheme": "pm_kisan",
-      "_pending_slots": [
-        "state",
-        "land_hectares",
-        "income_annual",
-        "aadhaar_last4"
-      ],
-      "_slot_schemas": {
-        "state": {
-          "key": "state",
-          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
-          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
-          "type": "string",
-          "dtmf_map": {
-            "1": "maharashtra",
-            "2": "tamil nadu",
-            "3": "uttar pradesh",
-            "4": "other"
+      },
+      "state": "Uttar Pradesh",
+      "family_income": 100000.0,
+      "housing_status": "kutcha",
+      "rural_or_urban": "rural",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM Awas Yojana (Urban)",
+        "rules": [
+          {
+            "label": "Annual Income \u2264 \u20b918L (MIG-II cap)",
+            "rule": "family_income lte 1800000",
+            "pass": true,
+            "citation": "PMAY-U Guidelines 2.0",
+            "user_value": 100000.0,
+            "required_value": 1800000
           },
-          "required": true
-        },
-        "land_hectares": {
-          "key": "land_hectares",
-          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
-          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
-          "type": "float",
-          "required": true
-        },
-        "income_annual": {
-          "key": "income_annual",
-          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
-          "type": "float",
-          "required": true
-        },
-        "aadhaar_last4": {
-          "key": "aadhaar_last4",
-          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
-          "type": "string",
-          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
-          "required": true
-        }
-      }
-    }
+          {
+            "label": "Does not own pucca house",
+            "rule": "housing_status ne pucca",
+            "pass": true,
+            "citation": "PMAY-U Section 3",
+            "user_value": "kutcha",
+            "required_value": "pucca"
+          }
+        ],
+        "sources": [
+          {
+            "title": "PMAY-U Official Site",
+            "url": "https://pmaymis.gov.in"
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772815940.224981
   },
-  "test-debug-99": {
-    "current_state": "START",
-    "data": {
-      "_scheme": "pm_kisan",
-      "_pending_slots": [
-        "state",
-        "land_hectares",
-        "income_annual",
-        "aadhaar_last4"
-      ],
-      "_slot_schemas": {
-        "state": {
-          "key": "state",
-          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
-          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
-          "type": "string",
-          "dtmf_map": {
-            "1": "maharashtra",
-            "2": "tamil nadu",
-            "3": "uttar pradesh",
-            "4": "other"
-          },
-          "required": true
-        },
-        "land_hectares": {
-          "key": "land_hectares",
-          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
-          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
-          "type": "float",
-          "required": true
-        },
-        "income_annual": {
-          "key": "income_annual",
-          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
-          "type": "float",
-          "required": true
-        },
-        "aadhaar_last4": {
-          "key": "aadhaar_last4",
-          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
-          "type": "string",
-          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
-          "required": true
-        }
-      }
-    }
-  },
-  "test-k1": {
+  "test-grievance-session-1": {
     "current_state": "COLLECT_SLOTS",
     "data": {
       "_scheme": "pm_kisan",
       "_pending_slots": [
-        "state",
-        "land_hectares",
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "APP-123456",
+      "land_hectares": "Lucknow",
+      "income_annual": "November 2024"
+    },
+    "created_at": 1772816015.148293
+  },
+  "test-session-pmkisan-1772816244": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
         "income_annual",
         "aadhaar_last4"
       ],
@@ -239,25 +169,438 @@
           "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
           "required": true
         }
-      }
-    }
+      },
+      "state": "Uttar Pradesh",
+      "land_hectares": 1.5
+    },
+    "created_at": 1772816247.0100377
   },
-  "test-g1": {
-    "current_state": "START",
+  "test-session-pmkisan-1772816327": {
+    "current_state": "COMPLETED",
     "data": {
-      "grievance_id": "GRV-060993",
-      "grievance_draft": "To,\nThe District Grievance Officer,\nApplicant'S District District\n\nSubject: Grievance Regarding Government Scheme Payment \u2014 Ref: GRV-060993\n\nRespected Sir/Madam,\n\nI am writing to formally register a grievance regarding: mera paisa nahi aaya hai. Despite fulfilling all eligibility criteria, I have not received the entitled benefit. I respectfully request an urgent review and resolution of this matter.\n\nGrievance Reference No.: GRV-060993\n\nYours faithfully,\n[Applicant Name]"
-    }
+      "_scheme": "pm_kisan",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "Uttar Pradesh",
+      "land_hectares": 1.5,
+      "income_annual": 150000.0,
+      "aadhaar_last4": "1234",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM-Kisan Samman Nidhi",
+        "rules": [
+          {
+            "label": "Land < 2 hectares",
+            "rule": "land_hectares lt 2",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.1",
+            "user_value": 1.5,
+            "required_value": 2
+          },
+          {
+            "label": "Annual Income < \u20b92L",
+            "rule": "income_annual lt 200000",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.3",
+            "user_value": 150000.0,
+            "required_value": 200000
+          }
+        ],
+        "sources": [
+          {
+            "title": "PM-Kisan Official Guidelines",
+            "url": "https://pmkisan.gov.in/documents/Revised_PM-KISAN_Operational_Guidelines.pdf",
+            "page": 3
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772816329.8580828
   },
-  "test-a1": {
+  "test-session-awas-1772816374": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_awas_urban",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in?",
+          "type": "string",
+          "required": true
+        },
+        "family_income": {
+          "key": "family_income",
+          "prompt": "What is your annual family income in rupees?",
+          "type": "float",
+          "required": true
+        },
+        "housing_status": {
+          "key": "housing_status",
+          "prompt": "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)",
+          "type": "string",
+          "required": true
+        },
+        "rural_or_urban": {
+          "key": "rural_or_urban",
+          "prompt": "Do you live in a rural or urban area? (rural/urban)",
+          "type": "string",
+          "required": true
+        }
+      },
+      "state": "Maharashtra",
+      "family_income": 100000.0,
+      "housing_status": "kutcha",
+      "rural_or_urban": "rural",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM Awas Yojana (Urban)",
+        "rules": [
+          {
+            "label": "Annual Income \u2264 \u20b918L (MIG-II cap)",
+            "rule": "family_income lte 1800000",
+            "pass": true,
+            "citation": "PMAY-U Guidelines 2.0",
+            "user_value": 100000.0,
+            "required_value": 1800000
+          },
+          {
+            "label": "Does not own pucca house",
+            "rule": "housing_status ne pucca",
+            "pass": true,
+            "citation": "PMAY-U Section 3",
+            "user_value": "kutcha",
+            "required_value": "pucca"
+          }
+        ],
+        "sources": [
+          {
+            "title": "PMAY-U Official Site",
+            "url": "https://pmaymis.gov.in"
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772816376.2335796
+  },
+  "test-session-grievance-1772816425": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "APP-987654",
+      "land_hectares": "Lucknow",
+      "income_annual": "November 2024"
+    },
+    "created_at": 1772816427.0578794
+  },
+  "test-session-pmkisan-1772816660": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "Uttar Pradesh",
+      "land_hectares": 1.5,
+      "income_annual": 150000.0,
+      "aadhaar_last4": "1234",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM-Kisan Samman Nidhi",
+        "rules": [
+          {
+            "label": "Land < 2 hectares",
+            "rule": "land_hectares lt 2",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.1",
+            "user_value": 1.5,
+            "required_value": 2
+          },
+          {
+            "label": "Annual Income < \u20b92L",
+            "rule": "income_annual lt 200000",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.3",
+            "user_value": 150000.0,
+            "required_value": 200000
+          }
+        ],
+        "sources": [
+          {
+            "title": "PM-Kisan Official Guidelines",
+            "url": "https://pmkisan.gov.in/documents/Revised_PM-KISAN_Operational_Guidelines.pdf",
+            "page": 3
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772816662.8990839
+  },
+  "test-session-pmkisan-1772816669": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "Uttar Pradesh",
+      "land_hectares": 1.5,
+      "income_annual": 150000.0,
+      "aadhaar_last4": "1234",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM-Kisan Samman Nidhi",
+        "rules": [
+          {
+            "label": "Land < 2 hectares",
+            "rule": "land_hectares lt 2",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.1",
+            "user_value": 1.5,
+            "required_value": 2
+          },
+          {
+            "label": "Annual Income < \u20b92L",
+            "rule": "income_annual lt 200000",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.3",
+            "user_value": 150000.0,
+            "required_value": 200000
+          }
+        ],
+        "sources": [
+          {
+            "title": "PM-Kisan Official Guidelines",
+            "url": "https://pmkisan.gov.in/documents/Revised_PM-KISAN_Operational_Guidelines.pdf",
+            "page": 3
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772816671.9858205
+  },
+  "test-session-awas-1772816701": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_awas_urban",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in?",
+          "type": "string",
+          "required": true
+        },
+        "family_income": {
+          "key": "family_income",
+          "prompt": "What is your annual family income in rupees?",
+          "type": "float",
+          "required": true
+        },
+        "housing_status": {
+          "key": "housing_status",
+          "prompt": "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)",
+          "type": "string",
+          "required": true
+        },
+        "rural_or_urban": {
+          "key": "rural_or_urban",
+          "prompt": "Do you live in a rural or urban area? (rural/urban)",
+          "type": "string",
+          "required": true
+        }
+      },
+      "state": "Maharashtra",
+      "family_income": 100000.0,
+      "housing_status": "kutcha",
+      "rural_or_urban": "rural",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM Awas Yojana (Urban)",
+        "rules": [
+          {
+            "label": "Annual Income \u2264 \u20b918L (MIG-II cap)",
+            "rule": "family_income lte 1800000",
+            "pass": true,
+            "citation": "PMAY-U Guidelines 2.0",
+            "user_value": 100000.0,
+            "required_value": 1800000
+          },
+          {
+            "label": "Does not own pucca house",
+            "rule": "housing_status ne pucca",
+            "pass": true,
+            "citation": "PMAY-U Section 3",
+            "user_value": "kutcha",
+            "required_value": "pucca"
+          }
+        ],
+        "sources": [
+          {
+            "title": "PMAY-U Official Site",
+            "url": "https://pmaymis.gov.in"
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772816703.8189938
+  },
+  "test-session-awas-1772816709": {
     "current_state": "COLLECT_SLOTS",
     "data": {
       "_scheme": "pm_awas_urban",
       "_pending_slots": [
-        "state",
-        "income_annual",
-        "has_pucca_house",
-        "is_first_time_buyer"
+        "family_income",
+        "housing_status",
+        "rural_or_urban"
       ],
       "_slot_schemas": {
         "state": {
@@ -266,45 +609,112 @@
           "type": "string",
           "required": true
         },
-        "income_annual": {
-          "key": "income_annual",
-          "prompt": "What is your annual household income in rupees?",
+        "family_income": {
+          "key": "family_income",
+          "prompt": "What is your annual family income in rupees?",
           "type": "float",
           "required": true
         },
-        "has_pucca_house": {
-          "key": "has_pucca_house",
-          "prompt": "Do you currently own a pucca (permanent) house? (yes/no)",
-          "type": "boolean",
-          "dtmf_prompt": "Press 1 for Yes, 2 for No",
+        "housing_status": {
+          "key": "housing_status",
+          "prompt": "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)",
+          "type": "string",
+          "required": true
+        },
+        "rural_or_urban": {
+          "key": "rural_or_urban",
+          "prompt": "Do you live in a rural or urban area? (rural/urban)",
+          "type": "string",
+          "required": true
+        }
+      },
+      "state": "Maharashtra"
+    },
+    "created_at": 1772816711.622354
+  },
+  "test-session-pmkisan-1772816729": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
           "dtmf_map": {
-            "1": true,
-            "2": false
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
           },
           "required": true
         },
-        "is_first_time_buyer": {
-          "key": "is_first_time_buyer",
-          "prompt": "Is this your first time applying for government housing? (yes/no)",
-          "type": "boolean",
-          "dtmf_prompt": "Press 1 for Yes, 2 for No",
-          "dtmf_map": {
-            "1": true,
-            "2": false
-          },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
           "required": true
         }
-      }
-    }
+      },
+      "state": "Uttar Pradesh",
+      "land_hectares": 1.5,
+      "income_annual": 150000.0,
+      "aadhaar_last4": "1234",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM-Kisan Samman Nidhi",
+        "rules": [
+          {
+            "label": "Land < 2 hectares",
+            "rule": "land_hectares lt 2",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.1",
+            "user_value": 1.5,
+            "required_value": 2
+          },
+          {
+            "label": "Annual Income < \u20b92L",
+            "rule": "income_annual lt 200000",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.3",
+            "user_value": 150000.0,
+            "required_value": 200000
+          }
+        ],
+        "sources": [
+          {
+            "title": "PM-Kisan Official Guidelines",
+            "url": "https://pmkisan.gov.in/documents/Revised_PM-KISAN_Operational_Guidelines.pdf",
+            "page": 3
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772816731.2052033
   },
-  "test-k1b": {
+  "test-session-grievance-1772816740": {
     "current_state": "COLLECT_SLOTS",
     "data": {
       "_scheme": "pm_kisan",
       "_pending_slots": [
-        "state",
-        "land_hectares",
-        "income_annual",
         "aadhaar_last4"
       ],
       "_slot_schemas": {
@@ -341,26 +751,18 @@
           "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
           "required": true
         }
-      }
-    }
+      },
+      "state": "APP-987654",
+      "land_hectares": "Lucknow",
+      "income_annual": "November 2024"
+    },
+    "created_at": 1772816742.1153831
   },
-  "test-g2": {
-    "current_state": "START",
-    "data": {
-      "grievance_id": "GRV-745707",
-      "grievance_draft": "To,\nThe District Grievance Officer,\nApplicant'S District District\n\nSubject: Grievance Regarding Government Scheme Payment \u2014 Ref: GRV-745707\n\nRespected Sir/Madam,\n\nI am writing to formally register a grievance regarding: mera paisa nahi aaya. Despite fulfilling all eligibility criteria, I have not received the entitled benefit. I respectfully request an urgent review and resolution of this matter.\n\nGrievance Reference No.: GRV-745707\n\nYours faithfully,\n[Applicant Name]"
-    }
-  },
-  "test-a2": {
-    "current_state": "COLLECT_SLOTS",
+  "test-session-awas-1772816777": {
+    "current_state": "COMPLETED",
     "data": {
       "_scheme": "pm_awas_urban",
-      "_pending_slots": [
-        "state",
-        "income_annual",
-        "has_pucca_house",
-        "is_first_time_buyer"
-      ],
+      "_pending_slots": [],
       "_slot_schemas": {
         "state": {
           "key": "state",
@@ -368,35 +770,501 @@
           "type": "string",
           "required": true
         },
-        "income_annual": {
-          "key": "income_annual",
-          "prompt": "What is your annual household income in rupees?",
+        "family_income": {
+          "key": "family_income",
+          "prompt": "What is your annual family income in rupees?",
           "type": "float",
           "required": true
         },
-        "has_pucca_house": {
-          "key": "has_pucca_house",
-          "prompt": "Do you currently own a pucca (permanent) house? (yes/no)",
-          "type": "boolean",
-          "dtmf_prompt": "Press 1 for Yes, 2 for No",
+        "housing_status": {
+          "key": "housing_status",
+          "prompt": "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)",
+          "type": "string",
+          "required": true
+        },
+        "rural_or_urban": {
+          "key": "rural_or_urban",
+          "prompt": "Do you live in a rural or urban area? (rural/urban)",
+          "type": "string",
+          "required": true
+        }
+      },
+      "state": "Maharashtra",
+      "family_income": 100000.0,
+      "housing_status": "kutcha",
+      "rural_or_urban": "rural",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM Awas Yojana (Urban)",
+        "rules": [
+          {
+            "label": "Annual Income \u2264 \u20b918L (MIG-II cap)",
+            "rule": "family_income lte 1800000",
+            "pass": true,
+            "citation": "PMAY-U Guidelines 2.0",
+            "user_value": 100000.0,
+            "required_value": 1800000
+          },
+          {
+            "label": "Does not own pucca house",
+            "rule": "housing_status ne pucca",
+            "pass": true,
+            "citation": "PMAY-U Section 3",
+            "user_value": "kutcha",
+            "required_value": "pucca"
+          }
+        ],
+        "sources": [
+          {
+            "title": "PMAY-U Official Site",
+            "url": "https://pmaymis.gov.in"
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772816779.1372986
+  },
+  "test-session-grievance-1772816819": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
           "dtmf_map": {
-            "1": true,
-            "2": false
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
           },
           "required": true
         },
-        "is_first_time_buyer": {
-          "key": "is_first_time_buyer",
-          "prompt": "Is this your first time applying for government housing? (yes/no)",
-          "type": "boolean",
-          "dtmf_prompt": "Press 1 for Yes, 2 for No",
-          "dtmf_map": {
-            "1": true,
-            "2": false
-          },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
           "required": true
         }
-      }
-    }
+      },
+      "state": "APP-987654",
+      "land_hectares": "Lucknow",
+      "income_annual": "November 2024"
+    },
+    "created_at": 1772816821.5145636
+  },
+  "test-session-pmkisan-1772816921": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "Uttar Pradesh",
+      "land_hectares": 1.5,
+      "income_annual": 150000.0,
+      "aadhaar_last4": "1234",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM-Kisan Samman Nidhi",
+        "rules": [
+          {
+            "label": "Land < 2 hectares",
+            "rule": "land_hectares lt 2",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.1",
+            "user_value": 1.5,
+            "required_value": 2
+          },
+          {
+            "label": "Annual Income < \u20b92L",
+            "rule": "income_annual lt 200000",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.3",
+            "user_value": 150000.0,
+            "required_value": 200000
+          }
+        ],
+        "sources": [
+          {
+            "title": "PM-Kisan Official Guidelines",
+            "url": "https://pmkisan.gov.in/documents/Revised_PM-KISAN_Operational_Guidelines.pdf",
+            "page": 3
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772816923.281537
+  },
+  "test-session-awas-1772817009": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_awas_urban",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in?",
+          "type": "string",
+          "required": true
+        },
+        "family_income": {
+          "key": "family_income",
+          "prompt": "What is your annual family income in rupees?",
+          "type": "float",
+          "required": true
+        },
+        "housing_status": {
+          "key": "housing_status",
+          "prompt": "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)",
+          "type": "string",
+          "required": true
+        },
+        "rural_or_urban": {
+          "key": "rural_or_urban",
+          "prompt": "Do you live in a rural or urban area? (rural/urban)",
+          "type": "string",
+          "required": true
+        }
+      },
+      "state": "Maharashtra",
+      "family_income": 100000.0,
+      "housing_status": "kutcha",
+      "rural_or_urban": "rural",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM Awas Yojana (Urban)",
+        "rules": [
+          {
+            "label": "Annual Income \u2264 \u20b918L (MIG-II cap)",
+            "rule": "family_income lte 1800000",
+            "pass": true,
+            "citation": "PMAY-U Guidelines 2.0",
+            "user_value": 100000.0,
+            "required_value": 1800000
+          },
+          {
+            "label": "Does not own pucca house",
+            "rule": "housing_status ne pucca",
+            "pass": true,
+            "citation": "PMAY-U Section 3",
+            "user_value": "kutcha",
+            "required_value": "pucca"
+          }
+        ],
+        "sources": [
+          {
+            "title": "PMAY-U Official Site",
+            "url": "https://pmaymis.gov.in"
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772817011.309345
+  },
+  "test-session-grievance-1772817122": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "APP-987654",
+      "land_hectares": "Lucknow",
+      "income_annual": "November 2024"
+    },
+    "created_at": 1772817124.3966873
+  },
+  "curl-test": {
+    "current_state": "COLLECT_STATE",
+    "data": {},
+    "created_at": 1772817229.9337478
+  },
+  "test-session-pmkisan-1772817347": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "Uttar Pradesh",
+      "land_hectares": 1.5,
+      "income_annual": 150000.0,
+      "aadhaar_last4": "1234",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM-Kisan Samman Nidhi",
+        "rules": [
+          {
+            "label": "Land < 2 hectares",
+            "rule": "land_hectares lt 2",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.1",
+            "user_value": 1.5,
+            "required_value": 2
+          },
+          {
+            "label": "Annual Income < \u20b92L",
+            "rule": "income_annual lt 200000",
+            "pass": true,
+            "citation": "PM-Kisan Guidelines Section 2.3",
+            "user_value": 150000.0,
+            "required_value": 200000
+          }
+        ],
+        "sources": [
+          {
+            "title": "PM-Kisan Official Guidelines",
+            "url": "https://pmkisan.gov.in/documents/Revised_PM-KISAN_Operational_Guidelines.pdf",
+            "page": 3
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772817349.9004378
+  },
+  "test-session-awas-1772817456": {
+    "current_state": "COMPLETED",
+    "data": {
+      "_scheme": "pm_awas_urban",
+      "_pending_slots": [],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in?",
+          "type": "string",
+          "required": true
+        },
+        "family_income": {
+          "key": "family_income",
+          "prompt": "What is your annual family income in rupees?",
+          "type": "float",
+          "required": true
+        },
+        "housing_status": {
+          "key": "housing_status",
+          "prompt": "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)",
+          "type": "string",
+          "required": true
+        },
+        "rural_or_urban": {
+          "key": "rural_or_urban",
+          "prompt": "Do you live in a rural or urban area? (rural/urban)",
+          "type": "string",
+          "required": true
+        }
+      },
+      "state": "Maharashtra",
+      "family_income": 100000.0,
+      "housing_status": "kutcha",
+      "rural_or_urban": "rural",
+      "benefit_receipt": {
+        "eligible": true,
+        "scheme_name": "PM Awas Yojana (Urban)",
+        "rules": [
+          {
+            "label": "Annual Income \u2264 \u20b918L (MIG-II cap)",
+            "rule": "family_income lte 1800000",
+            "pass": true,
+            "citation": "PMAY-U Guidelines 2.0",
+            "user_value": 100000.0,
+            "required_value": 1800000
+          },
+          {
+            "label": "Does not own pucca house",
+            "rule": "housing_status ne pucca",
+            "pass": true,
+            "citation": "PMAY-U Section 3",
+            "user_value": "kutcha",
+            "required_value": "pucca"
+          }
+        ],
+        "sources": [
+          {
+            "title": "PMAY-U Official Site",
+            "url": "https://pmaymis.gov.in"
+          }
+        ],
+        "confidence": 1.0
+      },
+      "eligibility_score": 1.0
+    },
+    "created_at": 1772817458.433839
+  },
+  "test-session-grievance-1772817509": {
+    "current_state": "COLLECT_SLOTS",
+    "data": {
+      "_scheme": "pm_kisan",
+      "_pending_slots": [
+        "aadhaar_last4"
+      ],
+      "_slot_schemas": {
+        "state": {
+          "key": "state",
+          "prompt": "Which state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+          "dtmf_prompt": "Press 1 for Maharashtra, 2 for Tamil Nadu, 3 for Uttar Pradesh, 4 for Other",
+          "type": "string",
+          "dtmf_map": {
+            "1": "maharashtra",
+            "2": "tamil nadu",
+            "3": "uttar pradesh",
+            "4": "other"
+          },
+          "required": true
+        },
+        "land_hectares": {
+          "key": "land_hectares",
+          "prompt": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+          "dtmf_prompt": "Enter land in hectares (e.g. press 1 for less than 2 hectares)",
+          "type": "float",
+          "required": true
+        },
+        "income_annual": {
+          "key": "income_annual",
+          "prompt": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+          "type": "float",
+          "required": true
+        },
+        "aadhaar_last4": {
+          "key": "aadhaar_last4",
+          "prompt": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+          "type": "string",
+          "dtmf_prompt": "Please enter the last 4 digits of your Aadhaar",
+          "required": true
+        }
+      },
+      "state": "APP-987654",
+      "land_hectares": "Lucknow",
+      "income_annual": "November 2024"
+    },
+    "created_at": 1772817511.2408707
   }
 }

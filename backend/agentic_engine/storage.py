@@ -33,7 +33,10 @@ class LocalJSONStorage(BaseSessionStorage):
     """
     Local JSON file implementation of session storage.
     """
-    def __init__(self, file_path="backend/agentic_engine/sessions.json"):
+    def __init__(self, file_path=None):
+        if file_path is None:
+            # Default to a file in the concurrent directory to the engine
+            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sessions.json")
         self.file_path = file_path
 
     def initialize(self):

@@ -12,43 +12,11 @@ load_dotenv()
 # SECRET RETRIEVAL (SSM Parameter Store → .env fallback)
 # ============================================================
 
-_ssm_client = None
-
 def get_secret(param_name: str, default: str = None) -> str:
     """
-    Retrieve secret from AWS SSM Parameter Store (FREE tier).
-    Falls back to environment variables for local development.
-    
-    Args:
-        param_name: SSM parameter name (e.g., '/jansathi/prod/secret-key')
-                    or environment variable name (e.g., 'SECRET_KEY')
-        default: Default value if not found
-        
-    Returns:
-        Secret value string
+    Retrieve secret from environment variables for local development.
     """
-    global _ssm_client
-    
-    # First, try environment variable (local dev)
-    env_value = os.environ.get(param_name, None)
-    if env_value:
-        return env_value
-    
-    # In production, try SSM Parameter Store
-    if os.environ.get('NODE_ENV') == 'production':
-        try:
-            if _ssm_client is None:
-                _ssm_client = boto3.client('ssm', region_name=os.getenv('AWS_REGION', 'us-east-1'))
-            
-            response = _ssm_client.get_parameter(
-                Name=param_name,
-                WithDecryption=True
-            )
-            return response['Parameter']['Value']
-        except Exception as e:
-            print(f"SSM Parameter Store fallback for '{param_name}': {e}")
-    
-    return default
+    return os.environ.get(param_name, default)
 
 
 # ============================================================

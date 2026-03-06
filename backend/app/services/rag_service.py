@@ -212,54 +212,53 @@ class RagService:
             return []
 
     def _kendra_search(self, query):
-        """Standard Kendra string retrieval."""
+        """Standard Kendra string retrieval with validation."""
         raw_items = self._kendra_search_raw(query)
         results = []
         for item in raw_items:
-            text = item.get('Content', '')
-            source = item.get('DocumentId', 'Ref')
-            results.append(f"{text} [Source: Kendra {source}]")
+            content = item.get('Content', '')
+            if not content: continue
+            
+            # Extract citation
+            doc_id = item.get('DocumentId', 'Policy Ref')
+            doc_uri = item.get('DocumentURI', 'https://india.gov.in')
+            
+            # Format and sanitize
+            clean_text = re.sub(r'\s+', ' ', content).strip()
+            results.append(f"{clean_text} [Source: Kendra {doc_id} | {doc_uri}]")
+            
         return results
 
     def get_structured_sources(self, query):
         """Detailed data for UI scheme cards — Merges Local + Kendra."""
         final_results = []
         
-        # 1. Local Hybrid Search
-        local_docs = self._hybrid_search(query)
-        for i in range(len(local_docs)):
+        # 1. Kendra Results (High Priority for official data)
+        kendra_items = self._kendra_search_raw(query)
+        for i, item in enumerate(kendra_items):
             if i >= 3: break
-            doc, _ = local_docs[i]
-            # Create a card from the doc item
-            card = {
+            final_results.append({
+                "id": f"kendra-{i}",
+                "title": "Official Government Policy",
+                "text": str(item.get('Content', ''))[:350] + "...",
+                "link": str(item.get('DocumentURI', 'https://india.gov.in')),
+                "benefit": "verified",
+                "logo": "https://img.icons8.com/color/96/gov-india.png",
+                "source_type": "Kendra Index"
+            })
+
+        # 2. Local Hybrid Search (Fallback or additional context)
+        local_docs = self._hybrid_search(query)
+        for i, (doc, _) in enumerate(local_docs):
+            if len(final_results) >= 5: break # Cap results
+            final_results.append({
                 "id": str(doc.get('id', '')),
                 "title": str(doc.get('title', '')),
                 "text": str(doc.get('text', '')),
                 "link": str(doc.get('link', '')),
                 "benefit": str(doc.get('benefit', '')),
                 "logo": str(doc.get('logo', 'https://img.icons8.com/color/96/gov-india.png')),
-                "graph_recommendations": []
-            }
-            related = doc.get('related', [])
-            rec_titles = []
-            for rid in related:
-                scheme = self._get_by_id(rid)
-                if scheme:
-                    rec_titles.append(str(scheme.get('title', '')))
-            card['graph_recommendations'] = rec_titles
-            final_results.append(card)
-
-        # 2. Kendra Results (as cards)
-        kendra_items = self._kendra_search_raw(query)
-        for i in range(len(kendra_items)):
-            item = kendra_items[i]
-            final_results.append({
-                "id": f"kendra-{i}",
-                "title": "Official Document (Kendra)",
-                "text": str(item.get('Content', ''))[:300] + "...",
-                "link": str(item.get('DocumentURI', 'https://india.gov.in')),
-                "benefit": "Verified Policy Info",
-                "logo": "https://img.icons8.com/color/96/gov-india.png"
+                "source_type": "Local Knowledge Base"
             })
             
         return final_results

@@ -25,8 +25,12 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Security: CORS - Allow all origins for deployment testing
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    # Security: CORS - Restricted to authorized origins
+    origins = [
+        "http://localhost:3000",
+        "https://jansathi.vercel.app",
+    ]
+    CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
     
     # Database: SQLite only for local dev
     if not USE_DYNAMODB:
@@ -38,20 +42,20 @@ def create_app():
         except ImportError:
             db.init_app(app)
 
-    # Rate Limiting (memory storage for Lambda, file for local)
-    try:
-        from flask_limiter import Limiter
-        from flask_limiter.util import get_remote_address
-        limiter = Limiter(
-            get_remote_address,
-            app=app,
-            default_limits=[Config.RATELIMIT_DEFAULT],
-            storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
-        )
-        # Expose limiter on app so blueprints can reference it
-        app.limiter = limiter
-    except ImportError:
-        pass
+    # Rate Limiting DISABLED FOR DEBUGGING
+    # try:
+    #     from flask_limiter import Limiter
+    #     from flask_limiter.util import get_remote_address
+    #     limiter = Limiter(
+    #         get_remote_address,
+    #         app=app,
+    #         default_limits=[Config.RATELIMIT_DEFAULT],
+    #         storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
+    #     )
+    #     # Expose limiter on app so blueprints can reference it
+    #     app.limiter = limiter
+    # except ImportError:
+    #     pass
 
     # Register correlation-ID + lifecycle logging middleware
     register_middleware(app)
@@ -91,4 +95,4 @@ app = create_app()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=(os.environ.get('NODE_ENV') != 'production'))
+    app.run(host='0.0.0.0', port=port, debug=False)

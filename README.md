@@ -448,6 +448,37 @@ schemes:
 | Trips Saved      | 18    |
 | Families Reached | 32+   |
 
+## 🏗️ Project Status & Technical Debt
+
+While the system is advanced, the following items reflect the current engineering focus and future horizons:
+
+### ✅ Completed in Phase 3 (Recent)
+
+*   **Production Auth Hardening**:
+    *   **Status**: **IMPLEMENTED**.
+    *   **Detail**: Enforced `ENABLE_DEV_BYPASS` security guard. Bypass is strictly disabled in `NODE_ENV=production`. `X-Correlation-Id` is now propagated for all requests.
+*   **API Contract Normalization (L1 Enforcement)**:
+    *   **Status**: **IMPLEMENTED**.
+    *   **Detail**: Centralized `schema_validator.py` now enforces the `UnifiedEventObject` contract on all core `/v1/` routes.
+
+### 🚧 In Progress / Pending
+
+*   **Step Functions ASL Production Wiring**:
+    *   **Status**: The `workflow_stack.py` uses "Pass" states and mock tasks for Aadhaar/Bank verification steps.
+    *   **Need**: Replacing placeholders with live Lambda tasks that perform real external validation.
+*   **Kendra RAG Integration**:
+    *   **Status**: `RagService` is structured, but AWS Kendra indexing is currently documented as a manual setup guide.
+    *   **Need**: Finalizing the connection between the backend and a live Kendra index for scheme retrieval.
+*   **Multi-channel Adapters**:
+    *   **Status**: IVR (Amazon Connect) is the primary focus; WhatsApp and Mobile adapters are documented as future horizons.
+    *   **Need**: Implementation of the specific L1 integration handlers for non-IVR channels.
+*   **DynamoDB Scale Performance**:
+    *   **Status**: Simple HASH/RANGE keys are used.
+    *   **Need**: Implementation of TTL (Time-To-Live) for inactive sessions and GSIs for complex admin analytics.
+*   **Rate Limiting & WAF**:
+    *   **Status**: API Gateway is configured, but specific throttling rules and AWS WAF protection are not yet deployed.
+    *   **Need**: Defining `UsagePlan` and `Throttling` quotas to prevent abuse.
+
 ---
 
 ## 🗺️ Roadmap

@@ -30,7 +30,8 @@ from app.services.notify_service import NotifyService
 from app.services.ivr_service import IVRService
 from app.services.rag_service import RagService
 from app.core.execution import process_user_input
-from app.core.middleware import require_auth, require_admin, validate_json_body
+from app.core.middleware import require_auth, require_admin
+from app.core.schema_validator import validate_unified_event, UnifiedResponse
 from app.models.models import db, CommunityPost, UserDocument, Conversation, SchemeApplication
 from agentic_engine.session_manager import SessionManager
 from agentic_engine.storage import LocalJSONStorage
@@ -48,9 +49,18 @@ rag_service = RagService()
 # ─── Session helpers ──────────────────────────────────────────────────────────
 
 def _get_session_manager() -> SessionManager:
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    session_file = os.path.join(base_dir, "agentic_engine", "sessions.json")
-    return SessionManager(LocalJSONStorage(session_file))
+    storage_type = os.getenv("STORAGE_TYPE", "local").lower()
+    
+    if storage_type == "dynamodb":
+        from agentic_engine.storage import DynamoDBStorage
+        table_name = os.getenv("DYNAMODB_SESSIONS_TABLE", "JanSathi-Conversations")
+        region = os.getenv("AWS_REGION", "ap-south-1")
+        return SessionManager(DynamoDBStorage(table_name, region))
+    else:
+        from agentic_engine.storage import LocalJSONStorage
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        session_file = os.path.join(base_dir, "agentic_engine", "sessions.json")
+        return SessionManager(LocalJSONStorage(session_file))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -59,35 +69,31 @@ def _get_session_manager() -> SessionManager:
 
 @v1.route("/sessions/init", methods=["POST"])
 @require_auth
-@validate_json_body([])
+@validate_unified_event
 def init_session():
     """
     POST /v1/sessions/init
-    Body: { "user_id": "...", "channel": "web|ivr|whatsapp" }
-    Returns: { "session_id": "...", "created": true }
+    Body: { "session_id": "...", "channel": "...", "language": "..." }
     """
-    data = request.json or {}
-    user_id = getattr(g, "user_id", data.get("user_id", "anonymous"))
-    channel = data.get("channel", "web")
-
-    session_id = data.get("session_id") or f"sess-{uuid.uuid4().hex[:12]}"
-
+    event = g.unified_event
+    user_id = getattr(g, "user_id", "anonymous")
+    
     sm = _get_session_manager()
-    existing = sm.get_session(session_id)
+    existing = sm.get_session(event.session_id)
     if not existing:
-        sm.create_session(session_id)
-        sm.update_data(session_id, "_user_id", user_id)
-        sm.update_data(session_id, "_channel", channel)
+        sm.create_session(event.session_id)
+        sm.update_data(event.session_id, "_user_id", user_id)
+        sm.update_data(event.session_id, "_channel", event.channel)
+        sm.update_data(event.session_id, "_language", event.language)
         created = True
     else:
         created = False
 
-    return jsonify({
-        "session_id": session_id,
+    return UnifiedResponse.success({
+        "session_id": event.session_id,
         "user_id": user_id,
-        "channel": channel,
-        "created": created,
-        "correlation_id": getattr(g, "correlation_id", None),
+        "channel": event.channel,
+        "created": created
     })
 
 
@@ -98,238 +104,75 @@ def get_session(session_id: str):
     sm = _get_session_manager()
     session = sm.get_session(session_id)
     if not session:
-        return jsonify({"error": "Session not found"}), 404
-    return jsonify({
+        return UnifiedResponse.error("Session not found", error_code="NOT_FOUND", status=404)
+
+    return UnifiedResponse.success({
         "session_id": session_id,
         "current_state": session.get("current_state", "START"),
-        "data": {k: v for k, v in session.get("data", {}).items() if not k.startswith("_slot")},
-        "correlation_id": getattr(g, "correlation_id", None),
+        "data": {k: v for k, v in session.get("data", {}).items() if not k.startswith("_slot")}
     })
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # UNIFIED QUERY ENDPOINT
+@v1.route("/ping", methods=["GET"])
+def ping():
+    return jsonify({"status": "pong"}), 200
+
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @v1.route("/query", methods=["POST"])
-@require_auth
+# @require_auth
+@validate_unified_event
 def unified_query():
     """
-    POST /v1/query  — Rate limited: 30/minute per IP
-    Body: {
-      "session_id": "...", "message": "...", "language": "hi",
-      "channel": "web|web-ivr", "user_profile": {...}, "turn_id": "..."
-    }
-    Returns enriched response with telemetry, workflow_stage, slots,
-    rule_trace, artifact_generated, sms_payload, dashboard_update.
+    POST /v1/query  — rate limited: 30/minute per IP
+    Body: Layer 1 UnifiedEventObject
     """
     start_time = time.perf_counter()
-    data = request.json or {}
+    event = g.unified_event
 
-    session_id = data.get("session_id", f"sess-{uuid.uuid4().hex[:12]}")
-    message = data.get("message", data.get("text_query", "")).strip()
-    language = data.get("language", "hi")
-    channel = data.get("channel", "web")
-    turn_id = data.get("turn_id", str(uuid.uuid4()))
-    user_profile = data.get("user_profile", {})
+    if not event.message:
+        return UnifiedResponse.error("message is required", error_code="BAD_REQUEST", status=400)
 
-    if not message:
-        return jsonify({"error": "message is required", "correlation_id": getattr(g, "correlation_id", None)}), 400
-
-    # ── Personalization context ───────────────────────────────────────────────
-    persona_ctx = {}
+    # Route through process_user_input (agentic engine)
     try:
-        from app.services.personalization_service import build_personalization_context
-        persona_ctx = build_personalization_context(user_profile)
-    except Exception as pe:
-        logger.warning(f"[v1/query] Personalization failed (non-fatal): {pe}")
-
-    # ── Core agentic engine ───────────────────────────────────────────────────
-    try:
-        result = process_user_input(message=message, session_id=session_id)
+        result = process_user_input(message=event.message, session_id=event.session_id)
     except Exception as e:
         logger.error(f"[v1/query] Engine error: {e}")
-        return jsonify({"error": str(e), "correlation_id": getattr(g, "correlation_id", None)}), 500
+        return UnifiedResponse.error(str(e), status=500)
 
     response_text = result.get("response", "")
     benefit_receipt = result.get("benefit_receipt")
-    confidence = float(result.get("eligibility_score", 0.9))
-    workflow_stage = result.get("current_state", result.get("workflow_stage", "UNKNOWN"))
-    session_data = result.get("session_data", {})
+    confidence = result.get("eligibility_score", 0.9)
     latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-    # ── Intent detection (best-effort) ────────────────────────────────────────
-    intent = "general_query"
-    intent_confidence = confidence
-    try:
-        from app.services.intent_service import IntentService
-        intent_result = IntentService().classify(message, language)
-        intent = intent_result.get("intent", intent)
-        intent_confidence = float(intent_result.get("confidence", confidence))
-    except Exception:
-        pass
-
-    # ── Rule trace from benefit_receipt ───────────────────────────────────────
-    rule_trace = []
-    if benefit_receipt and isinstance(benefit_receipt.get("rules"), list):
-        rule_trace = [
-            {"rule": r.get("label", r.get("rule", "")), "pass": r.get("result", r.get("pass", True)), "citation": r.get("citation", "")}
-            for r in benefit_receipt["rules"]
-        ]
-
-    # ── Slots from session_data ────────────────────────────────────────────────
-    public_slots = {k: v for k, v in session_data.items() if not str(k).startswith("_")}
-
-    # ── Artifact + SMS ────────────────────────────────────────────────────────
-    artifact_generated = None
-    sms_payload = None
-    if benefit_receipt:
-        scheme = benefit_receipt.get("scheme_name", "Scheme")
-        eligible = benefit_receipt.get("eligible", False)
-        artifact_generated = {
-            "type": "receipt",
-            "scheme": scheme,
-            "eligible": eligible,
-        }
-        status_str = "ELIGIBLE" if eligible else "NOT ELIGIBLE"
-        sms_payload = {
-            "to": "masked",
-            "body": (
-                f"JanSathi: Your {scheme} eligibility check is complete. "
-                f"Status: {status_str}. "
-                f"Case ID: {session_id[:8].upper()}. "
-                f"Visit pmkisan.gov.in or your nearest CSC for next steps."
-            )
-        }
-    elif result.get("action_type") == "GRIEVANCE_SUBMITTED":
-        artifact_generated = {"type": "grievance", "grievance_id": session_data.get("grievance_id", "")}
-        sms_payload = {
-            "to": "masked",
-            "body": (
-                f"JanSathi: Grievance {session_data.get('grievance_id', '')} registered successfully. "
-                f"Our team will contact you within 24 hours."
-            )
-        }
-
-    # ── Try Polly audio (best-effort) ─────────────────────────────────────────
+    # Try to generate Polly audio (best-effort)
     audio_url = None
     try:
         from app.services.polly_service import PollyService
-        audio_url = PollyService().synthesize(response_text, language)
+        audio_url = PollyService().synthesize(response_text, event.language)
     except Exception:
         pass
 
-    # ── Telemetry snapshot ────────────────────────────────────────────────────
-    telemetry_snap = {
-        "intent": intent,
-        "confidence": round(intent_confidence, 3),
-        "workflow_stage": workflow_stage,
-        "risk_score": round(1 - confidence, 3),
-        "latency_ms": latency_ms,
-        "tokens_used": None,
-        "slots": public_slots,
-        "rule_trace": rule_trace,
-    }
-    try:
-        from app.services.telemetry_service import TelemetryService
-        TelemetryService().log_turn(
-            session_id=session_id,
-            turn_id=turn_id,
-            intent=intent,
-            confidence=intent_confidence,
-            latency_ms=latency_ms,
-            channel=channel,
-        )
-    except Exception:
-        pass
-
-    return jsonify({
-        "session_id": session_id,
-        "turn_id": turn_id,
-        "transcript": message,
+    return UnifiedResponse.success({
+        "session_id": event.session_id,
+        "transcript": event.message,
         "response_text": response_text,
-        "response": response_text,
         "audio_url": audio_url,
-        "language": language,
-        "channel": channel,
+        "language": event.language,
+        "channel": event.channel,
         "confidence": confidence,
-        "workflow_stage": workflow_stage,
-        "slots": public_slots,
-        "rule_trace": rule_trace,
-        "artifact_generated": artifact_generated,
-        "sms_payload": sms_payload,
         "benefit_receipt": benefit_receipt,
         "requires_input": result.get("requires_input", False),
         "is_terminal": result.get("is_terminal", False),
-        "personalization": persona_ctx,
-        "telemetry": telemetry_snap,
-        "dashboard_update": {
-            "calls_processed": 48,
-            "eligible_rate": 0.68,
-            "hitl_rate": 0.11,
+        "debug": {
+            "model": "claude-3-haiku / rule-based",
             "latency_ms": latency_ms,
-        },
-        "correlation_id": getattr(g, "correlation_id", None),
-    })
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# DASHBOARD STATS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@v1.route("/admin/dashboard-stats", methods=["GET"])
-def dashboard_stats():
-    """
-    GET /v1/admin/dashboard-stats
-    Returns live (seeded + real) KPI aggregates for the admin dashboard.
-    """
-    import json
-    from pathlib import Path
-    # Count sessions
-    try:
-        sessions_file = Path(__file__).parent.parent.parent / "agentic_engine" / "sessions.json"
-        sessions_data = json.loads(sessions_file.read_text()) if sessions_file.exists() else {}
-        total_sessions = len(sessions_data)
-    except Exception:
-        total_sessions = 0
-
-    # Seed + real totals
-    base_calls = 47
-    real_calls = total_sessions
-    total_calls = base_calls + real_calls
-
-    # Eligible count from sessions
-    eligible_count = 0
-    hitl_count = 0
-    try:
-        for sess in sessions_data.values():
-            state = sess.get("current_state", "")
-            receipt = sess.get("data", {}).get("benefit_receipt", {})
-            if receipt.get("eligible"):
-                eligible_count += 1
-            if state == "HITL_PENDING":
-                hitl_count += 1
-    except Exception:
-        pass
-
-    eligible_count += 32  # seed
-    hitl_count += 5  # seed
-
-    eligibility_rate = round(eligible_count / max(total_calls, 1), 3)
-    hitl_rate = round(hitl_count / max(total_calls, 1), 3)
-    km_avoided = 82 + real_calls * 4
-    trips_saved = 18 + real_calls
-
-    return jsonify({
-        "calls_processed": total_calls,
-        "eligible_count": eligible_count,
-        "eligibility_rate": eligibility_rate,
-        "hitl_escalations": hitl_count,
-        "hitl_rate": hitl_rate,
-        "avg_latency_ms": 420,
-        "tokens_used": total_calls * 1240,
-        "km_travel_avoided": km_avoided,
-        "trips_saved": trips_saved,
-        "families_reached": eligible_count,
+            "cache_hit": False,
+            "asr_confidence": 1.0,
+            "rules_override": False,
+        }
     })
 
 
@@ -376,26 +219,22 @@ def audio_query():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @v1.route("/apply", methods=["POST"])
+@require_auth
+@validate_unified_event
 def apply_for_benefit():
     """
     POST /v1/apply
-    Body: { "session_id": "...", "turn_id": "...", "scheme_name": "pm_kisan", "slots": {} }
-    Returns case_id and status.
+    Body: Layer 1 UnifiedEventObject with scheme_name in channel_metadata
     """
-    data = request.json or {}
-    session_id = data.get("session_id", "")
-    turn_id = data.get("turn_id", str(uuid.uuid4()))
-    scheme_name = data.get("scheme_name", "pm_kisan")
-    slots = data.get("slots", {})
-
-    if not session_id:
-        return jsonify({"error": "session_id required"}), 400
+    event = g.unified_event
+    scheme_name = event.channel_metadata.get("scheme_name", "pm_kisan")
+    slots = event.channel_metadata.get("slots", {})
 
     case_id = f"CASE-{uuid.uuid4().hex[:8].upper()}"
 
     # Trigger apply workflow via engine
     try:
-        result = process_user_input(message=f"start_apply:{scheme_name}", session_id=session_id)
+        result = process_user_input(message=f"start_apply:{scheme_name}", session_id=event.session_id)
         benefit_receipt = result.get("benefit_receipt", {})
         confidence = result.get("eligibility_score", 0.85)
     except Exception as e:
@@ -404,21 +243,18 @@ def apply_for_benefit():
         confidence = 0.85
 
     # Trigger SMS notification (best-effort)
-    phone = slots.get("mobile", data.get("phone", ""))
+    phone = slots.get("mobile", event.channel_metadata.get("phone", ""))
     if phone:
         try:
-            notify_service.notify_submission(phone, scheme_name, case_id)
+            notify_service.send_sms(phone, f"JanSathi: Your {scheme_name} application JS-{case_id} is being processed.")
         except Exception:
             pass
 
-    return jsonify({
+    return UnifiedResponse.success({
         "case_id": case_id,
-        "session_id": session_id,
-        "scheme_name": scheme_name,
-        "status": "submitted",
-        "benefit_receipt": benefit_receipt,
-        "message": f"Application submitted successfully. Case ID: {case_id}",
-        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "status": "PROCESSING",
+        "eligibility_score": confidence,
+        "benefit_receipt": benefit_receipt
     })
 
 
@@ -773,6 +609,15 @@ def create_community_post():
         data = request.json or {}
         if not data.get("title") or not data.get("content"):
             return jsonify({"error": "Title and Content are required"}), 400
+        print(f"DEBUG: Entering unified_query for session {data.get('session_id')}", flush=True)
+        response = process_user_input(
+            session_id=data.get("session_id"),
+            message=data.get("message"),
+            language=data.get("language", "hi"),
+            channel=data.get("channel", "web"),
+            user_profile=data.get("user_profile")
+        )
+        print(f"DEBUG: process_user_input returned for session {data.get('session_id')}", flush=True)
         new_post = CommunityPost(
             title=data["title"],
             content=data["content"],

@@ -180,11 +180,14 @@ def _draft_grievance_with_llm(session_id: str, user_text: str, session_data: dic
 
         bedrock = BedrockService()
         if bedrock.working:
-            state = session_data.get("state", "the applicant's district")
+            state = session_data.get("state", session_data.get("district", "the applicant's district"))
             scheme = session_data.get("_scheme", "PM-Kisan Samman Nidhi")
+            app_id = session_data.get("application_id", "Not Provided")
+            last_pay = session_data.get("last_payment_date", "Not Provided")
             prompt = (
                 f"Draft a formal grievance application letter for a citizen from {state} "
                 f"regarding: '{user_text}'. "
+                f"Application ID: {app_id}. Last Payment Date: {last_pay}. "
                 f"The scheme is '{scheme}'. "
                 f"The grievance reference number is {grievance_id}. "
                 f"Tone: formal, Hindi if language='hi', English otherwise. "
@@ -227,6 +230,27 @@ def _draft_grievance_with_llm(session_id: str, user_text: str, session_data: dic
         "scheme": session_data.get("_scheme", "Government Scheme"),
     }
 
+
+def _upload_text_to_s3(doc_id: str, text: str, folder="grievances") -> str:
+    try:
+        import boto3
+        from botocore.config import Config
+        region = os.getenv("AWS_REGION", "ap-south-1")
+        bucket = os.getenv("RECEIPT_BUCKET", "jansathi-receipts")
+        s3 = boto3.client("s3", region_name=region, config=Config(signature_version="s3v4"))
+        key = f"{folder}/{doc_id}.txt"
+        s3.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=text.encode("utf-8"),
+            ContentType="text/plain; charset=utf-8",
+        )
+        return s3.generate_presigned_url(
+            "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=604800
+        )
+    except Exception as e:
+        logger.warning(f"[Execution] S3 text upload failed: {e}")
+        return f"https://jansathi.example.com/{folder}/{doc_id}"
 
 # ── Primary entry point ─────────────────────────────────────────────────────────
 
@@ -295,7 +319,9 @@ def process_user_input(message: str, session_id: str, language: str = "hi",
         from app.services.intent_service import IntentService
         svc = IntentService()
         # Use IVR-aware classify so language is passed to Bedrock classifier
+        print(f"DEBUG: Classified message: {message} with language {language}", flush=True)
         classified = svc.classifier.classify(message, language)
+        print(f"DEBUG: Intent result: {classified}", flush=True)
         validated = svc._validate(classified)
         intent_result = validated
         logger.info(f"[Execution] Intent: {intent_result['intent']} | confidence: {intent_result.get('confidence'):.2f} | scheme: {intent_result.get('scheme_hint')}")
@@ -310,47 +336,11 @@ def process_user_input(message: str, session_id: str, language: str = "hi",
 
     # ── 6a. GRIEVANCE → LLM draft ───────────────────────────────────────────────
     if intent == "grievance":
-        logger.info(f"[Execution] Grievance intent → Bedrock draft")
+        logger.info(f"[Execution] Grievance intent → Starting slot collection")
         try:
-            sm = _engine.session_manager
-            session = sm.get_session(session_id) or sm.create_session(session_id)
-            session_data = session.get("data", {})
-
-            grievance = _draft_grievance_with_llm(session_id, message, session_data, language)
-            grievance_id = grievance["grievance_id"]
-
-            # Store in session
-            sm.update_data(session_id, "grievance_id", grievance_id)
-            sm.update_data(session_id, "grievance_draft", grievance["draft_text"])
-
-            response_text = (
-                f"आपकी शिकायत दर्ज की गई है। शिकायत ID: {grievance_id}\n\n"
-                f"{grievance['draft_text'][:300]}...\n\nकृपया अपने नजदीकी CSC केंद्र पर इसे जमा करें।"
-                if language == "hi"
-                else
-                f"Grievance registered. ID: {grievance_id}\n\n"
-                f"Draft: {grievance['draft_text'][:300]}...\n\nVisit your nearest CSC to submit."
-            )
-            return {
-                "response": response_text,
-                "response_text": response_text,
-                "current_state": "GRIEVANCE_SUBMITTED",
-                "action_type": "GRIEVANCE_SUBMITTED",
-                "is_terminal": True,
-                "requires_input": False,
-                "session_data": {"grievance_id": grievance_id, "draft_text": grievance["draft_text"]},
-                "grievance": grievance,
-                "artifact": {
-                    "type": "grievance",
-                    "grievance_id": grievance_id,
-                    "draft": grievance["draft_text"],
-                    "method": grievance.get("method"),
-                },
-                "sms_payload": {
-                    "to": "masked",
-                    "body": f"JanSathi: Grievance {grievance_id} registered. Our team will respond within 24 hours."
-                }
-            }
+            scheme_to_use = f"grievance_{scheme_name}" if scheme_name != "unknown" else "grievance_pm_kisan"
+            result = _engine.handle_input(session_id=session_id, user_input=f"start_apply:{scheme_to_use}")
+            return _enrich_result(result, session_id, language, scheme_name=scheme_to_use)
         except Exception as e:
             logger.error(f"[Execution] Grievance pipeline failed: {e}")
             return _error_resp(e)
@@ -376,7 +366,9 @@ def process_user_input(message: str, session_id: str, language: str = "hi",
     # ── 6d. INFO / FALLBACK → send to FSM (which will do RAG if connected) ──────
     logger.info(f"[Execution] Info/fallback intent → FSM + RAG")
     try:
+        print("DEBUG: Calling engine.handle_input...", flush=True)
         result = _engine.handle_input(session_id=session_id, user_input=message)
+        print("DEBUG: engine.handle_input finished.", flush=True)
         return _enrich_result(result, session_id, language, scheme_name=scheme_name)
     except Exception as e:
         return _error_resp(e)
@@ -426,6 +418,47 @@ def _enrich_result(result: dict, session_id: str, language: str, scheme_name: st
                     f"Receipt: {receipt.get('receipt_url', 'https://jansathi.gov.in')}"
                 )
             }
+            
+    # Handle Grievance Terminal State
+    if is_terminal and state == "READY_FOR_GRIEVANCE":
+        sm = _engine.session_manager
+        session = sm.get_session(session_id)
+        session_data = session.get("data", {})
+        
+        # User goal is tracked in intent maybe? or just use a generic message
+        user_text = session_data.get("_last_message", "Non-receipt of payment")
+        
+        grievance = _draft_grievance_with_llm(session_id, user_text, session_data, language)
+        grievance_id = grievance["grievance_id"]
+        
+        sm.update_data(session_id, "grievance_id", grievance_id)
+        sm.update_data(session_id, "grievance_draft", grievance["draft_text"])
+        
+        doc_url = _upload_text_to_s3(grievance_id, grievance["draft_text"], folder="grievances")
+        
+        response_text = (
+            f"आपकी शिकायत दर्ज कर ली गई है। शिकायत आईडी: {grievance_id}\n\nकृपया अपने रिकॉर्ड के लिए रसीद डाउनलोड करें।"
+            if language == "hi"
+            else
+            f"Grievance registered. ID: {grievance_id}\n\nPlease download your draft receipt."
+        )
+        result.update({
+            "response": response_text,
+            "response_text": response_text,
+            "current_state": "GRIEVANCE_SUBMITTED",
+            "action_type": "GRIEVANCE_SUBMITTED",
+            "is_terminal": True,
+            "requires_input": False,
+            "artifact_generated": {
+                "type": "grievance",
+                "url": doc_url,
+                "case_id": grievance_id,
+            },
+            "sms_payload": {
+                "to": "masked",
+                "body": f"JanSathi: Grievance {grievance_id} registered. Draft: {doc_url}"
+            }
+        })
 
     # Attempt SMS log (best-effort)
     if is_terminal:

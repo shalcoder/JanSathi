@@ -59,17 +59,17 @@ def log_request_lifecycle(response):
 # JWT AUTHENTICATION
 # ═══════════════════════════════════════════════════════════════
 
-_DEV_MODE = os.getenv("NODE_ENV", "development") != "production"
+_DEV_BYPASS_ENABLED = os.getenv("ENABLE_DEV_BYPASS", "false").lower() == "true"
+_IS_PROD = os.getenv("NODE_ENV", "development") == "production"
 
 def _decode_clerk_jwt(token: str) -> Optional[dict]:
     """
     Decode and verify a Clerk-issued JWT.
-    In dev mode, returns a dummy payload without verification.
-    In production, verifies against Clerk's JWKS endpoint.
+    Bypass only if ENABLE_DEV_BYPASS is true AND not in production environment.
     """
-    if _DEV_MODE:
-        # Dev bypass: accept any token, return a dummy payload
-        return {"sub": "dev-user", "email": "dev@jansathi.local", "role": "user"}
+    if _DEV_BYPASS_ENABLED and not _IS_PROD:
+        logger.warning("SECURITY WARNING: JWT Auth bypass is ACTIVE (ENABLE_DEV_BYPASS=true)")
+        return {"sub": "dev-user", "email": "dev@jansathi.local", "role": "admin"}
 
     try:
         import jwt

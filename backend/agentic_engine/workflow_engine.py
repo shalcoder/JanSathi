@@ -176,6 +176,15 @@ class AgenticWorkflowEngine:
         scheme_name: str = data.get("_scheme", "pm_kisan")
 
         if not pending:
+            schemes = _load_schemes()
+            scheme = schemes.get(scheme_name, {})
+            if scheme.get("type") == "grievance":
+                self.session_manager.update_state(session_id, "READY_FOR_GRIEVANCE")
+                return self._resp(
+                    session_id,
+                    "Information collected. Generating grievance draft...",
+                    "READY_FOR_GRIEVANCE", "READY_FOR_GRIEVANCE", terminal=True
+                )
             return self._run_eligibility(session_id, scheme_name)
 
         current_key = pending[0]
@@ -205,6 +214,15 @@ class AgenticWorkflowEngine:
         self.session_manager.update_data(session_id, "_pending_slots", pending)
 
         if not pending:
+            schemes = _load_schemes()
+            scheme = schemes.get(scheme_name, {})
+            if scheme.get("type") == "grievance":
+                self.session_manager.update_state(session_id, "READY_FOR_GRIEVANCE")
+                return self._resp(
+                    session_id,
+                    "Information collected. Generating grievance draft...",
+                    "READY_FOR_GRIEVANCE", "READY_FOR_GRIEVANCE", terminal=True
+                )
             return self._run_eligibility(session_id, scheme_name)
 
         next_key = pending[0]

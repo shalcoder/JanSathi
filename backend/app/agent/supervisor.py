@@ -141,6 +141,51 @@ class JanSathiSupervisor:
                 session_id, turn_id, "GREETING", requires_input=True
             )
 
+        # ── 0.5. AgentCore Integration ──────────────────────────────────────
+        from os import getenv
+        if getenv("USE_AGENTCORE", "false").lower() == "true":
+            try:
+                from agentcore.invoke import invoke_agentcore
+                logger.info(f"[Supervisor] Delegating to Bedrock AgentCore: {message[:40]}...")
+                
+                # Map supervisor event to AgentCore params
+                agent_result = invoke_agentcore(
+                    user_message=message,
+                    session_id=session_id,
+                    language=language,
+                    channel=channel,
+                    consent_given=consent,
+                    asr_confidence=asr_confidence
+                )
+                
+                # Check for error in AgentCore response
+                if agent_result.get("action_type") == "ERROR" and "Bedrock" in agent_result.get("response", ""):
+                    logger.warning("[Supervisor] AgentCore failed (AccessDenied?), falling back to local pipeline.")
+                    # Continue to local pipeline if AgentCore fails (AccessDenied etc)
+                else:
+                    # Successfully got response from AgentCore
+                    return {
+                        "session_id":       session_id,
+                        "turn_id":          turn_id,
+                        "intent":           agent_result.get("intent", "UNKNOWN"),
+                        "response_text":    agent_result.get("response_text", agent_result.get("response", "")),
+                        "play_prompt":      agent_result.get("response_text", agent_result.get("response", "")),
+                        "audio_url":        agent_result.get("audio_url"),
+                        "language":         language,
+                        "requires_input":   agent_result.get("requires_input", False),
+                        "case_id":          agent_result.get("case_id"),
+                        "receipt_url":      agent_result.get("receipt_url"),
+                        "benefit_receipt":  agent_result.get("benefit_receipt", {}),
+                        "debug": {
+                            "latency_ms":   agent_result.get("latency_ms", 0),
+                            "agent":        "BedrockAgentCore",
+                            "mode":         agent_result.get("mode", "agentcore")
+                        }
+                    }
+            except Exception as e:
+                logger.error(f"[Supervisor] AgentCore delegation failed: {e}")
+                # Fallback to local pipeline
+
         # ── [2] INTENT CLASSIFICATION AGENT ─────────────────────────────────
         try:
             t_intent = time.perf_counter()

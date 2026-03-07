@@ -889,8 +889,143 @@ def health():
         "version": "2.1.0",
         "timestamp": time.time(),
         "impact": {
-            "active_users": 84500, # Mocked for demo
+            "active_users": 84500,  # Mocked for demo
             "benefits_processed": "₹12.5 Cr",
             "success_rate": "92%"
         }
     })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LANGGRAPH AGENT ENDPOINT — Full 9-agent pipeline
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/agent/invoke", methods=["POST"])
+def agent_invoke():
+    """
+    POST /v1/agent/invoke
+    Runs the full JanSathi LangGraph 9-agent pipeline (or routes to
+    Bedrock AgentCore if USE_AGENTCORE=true).
+
+    Body:
+      {
+        "session_id":     "sess-abc123",      // unique session ID
+        "message":        "PM Kisan apply",   // user's query
+        "language":       "hi",               // hi|en|ta|kn...
+        "channel":        "web",              // web|ivr|sms
+        "consent_given":  true,               // DPDP consent
+        "phone":          "+918888888888",    // optional, for SMS
+        "slots":          {},                 // previously collected slots
+        "asr_confidence": 1.0                 // 1.0 for text; 0-1 for IVR
+      }
+
+    Returns:
+      {
+        "session_id":         str,
+        "response_text":      str,
+        "intent":             str,
+        "scheme_hint":        str,
+        "slots":              dict,
+        "slots_complete":     bool,
+        "eligibility_result": dict,
+        "verifier_result":    dict,
+        "benefit_receipt":    dict,
+        "hitl_case_id":       str,
+        "sms_sent":           bool,
+        "mode":               "langgraph" | "agentcore" | "fallback"
+      }
+    """
+    start_time = time.perf_counter()
+    data = request.json or {}
+
+    session_id = data.get("session_id") or f"sess-{uuid.uuid4().hex[:12]}"
+    message = data.get("message", data.get("text_query", "")).strip()
+    language = data.get("language", "hi")
+    channel = data.get("channel", "web")
+    consent_given = data.get("consent_given", True)
+    phone = data.get("phone", "")
+    slots = data.get("slots", {})
+    asr_confidence = float(data.get("asr_confidence", 1.0))
+
+    if not message:
+        return jsonify({"error": "message is required", "session_id": session_id}), 400
+
+    use_agentcore = os.getenv("USE_AGENTCORE", "false").lower() == "true"
+
+    # ── Mode A: Bedrock AgentCore (production) ────────────────────────────────
+    if use_agentcore:
+        try:
+            from agentcore.invoke import invoke_agentcore
+            result = invoke_agentcore(
+                user_message=message,
+                session_id=session_id,
+                language=language,
+                channel=channel,
+                slots=slots,
+            )
+            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            return jsonify({
+                "session_id": session_id,
+                "response_text": result.get("response", ""),
+                "mode": "agentcore",
+                "latency_ms": latency_ms,
+                "citations": result.get("citations", []),
+            })
+        except Exception as e:
+            logger.error(f"[v1/agent/invoke] AgentCore failed, falling back to LangGraph: {e}")
+
+    # ── Mode B: Local LangGraph pipeline (development / fallback) ─────────────
+    try:
+        try:
+            from agents.supervisor import run_pipeline
+            final_state = run_pipeline(
+                session_id=session_id,
+                user_query=message,
+                channel=channel,
+                language=language,
+                phone=phone,
+                consent_given=consent_given,
+                slots=slots if slots else None,
+                asr_confidence=asr_confidence,
+            )
+            mode = "langgraph"
+        except ImportError:
+            # LangGraph not installed — run fallback sequential pipeline
+            from agents.supervisor import run_pipeline_fallback
+            final_state = run_pipeline_fallback(
+                session_id=session_id,
+                user_query=message,
+                channel=channel,
+                language=language,
+            )
+            mode = "fallback"
+
+        latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+        return jsonify({
+            "session_id":         final_state.get("session_id", session_id),
+            "response_text":      final_state.get("response_text", ""),
+            "intent":             final_state.get("intent", ""),
+            "intent_confidence":  final_state.get("intent_confidence", 0),
+            "scheme_hint":        final_state.get("scheme_hint", ""),
+            "language":           final_state.get("language", language),
+            "slots":              final_state.get("slots", {}),
+            "slots_complete":     final_state.get("slots_complete", False),
+            "eligibility_result": final_state.get("eligibility_result", {}),
+            "verifier_result":    final_state.get("verifier_result", {}),
+            "benefit_receipt":    final_state.get("benefit_receipt", {}),
+            "hitl_case_id":       final_state.get("hitl_case_id", ""),
+            "sms_sent":           final_state.get("sms_sent", False),
+            "error":              final_state.get("error", ""),
+            "mode":               mode,
+            "latency_ms":         latency_ms,
+        })
+
+    except Exception as e:
+        logger.error(f"[v1/agent/invoke] Pipeline error: {e}")
+        return jsonify({
+            "error": str(e),
+            "session_id": session_id,
+            "response_text": "⚠️ System error. Please visit india.gov.in",
+        }), 500
+

@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { checkHealth } from '@/services/api';
 import { Activity, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { useI18n } from '@/context/i18n';
 
 export default function BackendStatus() {
+    const { t } = useI18n();
     const [status, setStatus] = useState<'loading' | 'online' | 'offline'>('loading');
 
     useEffect(() => {
@@ -29,7 +31,7 @@ export default function BackendStatus() {
             <div className="flex items-center gap-2">
                 <span className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-emerald-500 animate-pulse' : status === 'loading' ? 'bg-primary' : 'bg-white'
                     }`}></span>
-                {status === 'online' ? 'Cluster Stable' : status === 'loading' ? 'Handshaking...' : 'Node Failure'}
+                {status === 'online' ? t('status_stable') : status === 'loading' ? t('status_loading') : t('status_failure')}
             </div>
         </div>
     );

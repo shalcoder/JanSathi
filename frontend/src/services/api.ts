@@ -182,8 +182,32 @@ export const sendUnifiedQuery = async (
   sessionId?: string,
 ): Promise<UnifiedQueryResponse> => {
   const client = buildClient(token, sessionId ?? params.session_id);
-  const response = await client.post<UnifiedQueryResponse>("/v1/query", params);
-  return response.data;
+  
+  // Route to the new intelligent agent endpoint
+  const response = await client.post<any>("/v1/agent/invoke", {
+    session_id: params.session_id,
+    message: params.input.text || "",
+    language: params.metadata?.lang || "hi",
+    channel: params.channel || "web",
+    userId: params.metadata?.user_id,
+  });
+
+  const data = response.data;
+
+  // Map backend AgentState to UnifiedQueryResponse for UI compatibility
+  return {
+    session_id: data.session_id,
+    turn_id: data.turn_id || `turn-${Date.now()}`,
+    transcript: params.input.text || "",
+    response_text: data.response_text,
+    benefit_receipt: data.benefit_receipt,
+    confidence: data.confidence || 0.9,
+    audio_url: data.audio_url,
+    debug: {
+      model: data.mode || "agentcore",
+      latency_ms: data.latency_ms || 0,
+    }
+  };
 };
 
 /**
@@ -408,7 +432,7 @@ export const getHistory = async (
 
 export const checkHealth = async (): Promise<boolean> => {
   try {
-    const response = await apiClient.get("/health");
+    const response = await apiClient.get("/v1/health");
     return response.status === 200;
   } catch {
     return false;

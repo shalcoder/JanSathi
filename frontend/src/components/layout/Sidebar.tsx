@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton, SignOutButton } from '@clerk/nextjs';
+import { useI18n } from '@/context/i18n';
 
 interface ChatSession {
     id: string;
@@ -40,6 +41,7 @@ interface SidebarProps {
 const SESSIONS_KEY = 'jansathi_chat_sessions';
 
 export default function Sidebar({ activePage, onPageChange, onNewChat }: SidebarProps) {
+    const { t } = useI18n();
     const [sessions, setSessions] = useState<ChatSession[]>([]);
 
     useEffect(() => {
@@ -119,7 +121,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                     className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all hover:bg-primary/90 active:scale-95 shadow-md shadow-primary/20 hover:shadow-lg"
                 >
                     <PlusCircle className="w-4 h-4" />
-                    <span>New Chat</span>
+                    <span>{t('new_chat')}</span>
                 </button>
 
                 {/* Main Navigation */}
@@ -143,7 +145,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                                             <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-50"></div>
                                         )}
                                         <item.icon className={`w-4 h-4 relative z-10 ${activePage === item.id ? item.color : 'opacity-60 group-hover:opacity-100 group-hover:text-foreground transition-all duration-300 group-hover:scale-110'}`} />
-                                        <span className={`text-sm tracking-tight relative z-10 ${activePage === item.id ? 'font-bold' : ''}`}>{item.label}</span>
+                                        <span className={`text-sm tracking-tight relative z-10 ${activePage === item.id ? 'font-bold' : ''}`}>{t(item.id)}</span>
                                         {activePage === item.id && (
                                             <motion.div
                                                 layoutId="active-pill"
@@ -223,7 +225,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                         <SignOutButton>
                             <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-secondary-foreground hover:bg-red-500/10 hover:text-red-500 font-bold group border border-transparent hover:border-red-500/20 text-xs">
                                 <LogOut className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-red-500 transition-colors" />
-                                <span>Sign Out</span>
+                                <span>{t('sign_out')}</span>
                             </button>
                         </SignOutButton>
                     </div>

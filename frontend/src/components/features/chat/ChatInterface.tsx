@@ -10,13 +10,12 @@ import AudioPlayer from './AudioPlayer';
 import BenefitReceipt from './BenefitReceipt';
 import TelemetryPanel from './TelemetryPanel';
 import SchemeCard from './SchemeCard';
-import { useSettings } from '@/hooks/useSettings';
 import { useSession } from '@/hooks/useSession';
 import DocumentScorecard from './DocumentScorecard';
 import ExplainabilityCard from './ExplainabilityCard';
 import MultiAgentThoughtProcess from './MultiAgentThoughtProcess';
-import { Languages, Globe } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { useI18n } from '@/context/i18n';
 import {
     sendUnifiedQuery,
     analyzeImage,
@@ -96,18 +95,6 @@ const SUGGESTIONS = [
 
 const SESSIONS_KEY = 'jansathi_chat_sessions';
 
-const DIALECTS = [
-    { code: 'hi', name: 'Hindi (Standard)' },
-    { code: 'hi-rural', name: 'Hindi (Gramin)' },
-    { code: 'kn', name: 'Kannada' },
-    { code: 'ta', name: 'Tamil' },
-    { code: 'te', name: 'Telugu' },
-    { code: 'ml', name: 'Malayalam' },
-    { code: 'gu', name: 'Gujarati' },
-    { code: 'mr', name: 'Marathi' },
-    { code: 'pa', name: 'Punjabi' }
-];
-
 // ─── Demo fallback cache ──────────────────────────────────────────────────────
 
 const DEMO_FALLBACKS: Record<string, string> = {
@@ -121,23 +108,24 @@ const DEMO_FALLBACKS: Record<string, string> = {
 
 export default function ChatInterface() {
     const { user } = useUser();
-    const { settings } = useSettings();
     const { sessionId, token } = useSession();
-
+    const { language, t: translate } = useI18n();
     const [messages, setMessages] = useState<Message[]>([]);
     const [localSessionId, setLocalSessionId] = useState<string | null>(null);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
     const [isDemoMode, setIsDemoMode] = useState(false);
-    const [language, setLanguage] = useState(settings.language);
+    // Remove local language state in favor of context
+    // const [language, setLanguage] = useState(settings.language);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => { setLanguage(settings.language); }, [settings.language]);
+    // Sync from settings if needed, but context is primary
+    // useEffect(() => { setLanguage(settings.language); }, [settings.language]);
 
     // Restore last session from sessionStorage
     useEffect(() => {
@@ -351,24 +339,7 @@ export default function ChatInterface() {
     return (
         <div className="flex flex-col h-full w-full relative bg-transparent">
 
-            {/* Dialect Tuner */}
-            <div className="absolute top-4 left-4 z-50 flex items-center gap-2 p-1.5 bg-background/50 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
-                <div className="p-2 rounded-xl bg-primary/10">
-                    <Globe className="w-4 h-4 text-primary" />
-                </div>
-                <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="bg-transparent text-[10px] font-black uppercase tracking-widest text-foreground outline-none px-2 pr-6 appearance-none cursor-pointer"
-                >
-                    {DIALECTS.map(d => (
-                        <option key={d.code} value={d.code} className="bg-card text-foreground">{d.name}</option>
-                    ))}
-                </select>
-                <div className="pr-1 opacity-40">
-                    <Languages className="w-3 h-3" />
-                </div>
-            </div>
+            {/* Dialect tuner removed in favor of Topbar language switcher */}
 
             {/* Demo mode badge */}
             <AnimatePresence>
@@ -409,7 +380,7 @@ export default function ChatInterface() {
                                     How can <span className="text-primary">JanSathi</span> help?
                                 </h1>
                                 <p className="text-sm text-secondary-foreground max-w-lg mx-auto font-medium leading-relaxed">
-                                    Ask me anything about government schemes, documents, or your benefits.
+                                    {translate('ask_anything')}
                                 </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-8 max-w-4xl mx-auto px-2 pb-4">
                                     {SUGGESTIONS.map((s, i) => (

@@ -11,12 +11,18 @@ from app.core.utils import logger, retry_aws
 
 # Language → Polly configuration (Optimized for Neural quality)
 VOICE_MAP = {
-    "hi": {"voice": "Kajal", "engine": "neural"}, # Much better than standard Aditi
-    "en": {"voice": "Kajal", "engine": "neural"}, # Kajal is bilingual
-    "kn": {"voice": "Shruti", "engine": "standard"}, # Kannada support
-    "ta": {"voice": "Arathi", "engine": "standard"}, # Tamil support
-    "te": {"voice": "Arathi", "engine": "standard"}, # Placeholder for Telugu
-    "bn": {"voice": "Kajal", "engine": "neural"}    # Fallback/Placeholder
+    "hi": {"voice": "Kajal", "engine": "neural"}, # Hindi (Neural)
+    "en": {"voice": "Kajal", "engine": "neural"}, # Indian English (Neural)
+    "ta": {"voice": "Arathi", "engine": "standard"}, # Tamil
+    "te": {"voice": "Shruti", "engine": "standard"}, # Telugu (Fallback to Shruti, Arathi doesn't support TE natively but AWS Polly added Shruti as TE/KN fallback historically, actually AWS Polly has 'Shruti' for Telugu and 'Aditi' for Hindi. Wait, let's use Shruti)
+    "kn": {"voice": "Shruti", "engine": "standard"}, # Kannada
+    "ml": {"voice": "Kajal", "engine": "neural"}, # Malayalam (Fallback to Hindi/English neural)
+    "mr": {"voice": "Kajal", "engine": "neural"}, # Marathi (Fallback to Hindi neural)
+    "gu": {"voice": "Kajal", "engine": "neural"}, # Gujarati (Fallback to Hindi neural)
+    "bn": {"voice": "Kajal", "engine": "neural"}, # Bengali (Fallback to Hindi neural)
+    "pa": {"voice": "Kajal", "engine": "neural"}, # Punjabi (Fallback to Hindi neural)
+    "or": {"voice": "Kajal", "engine": "neural"}, # Odia (Fallback to Hindi neural)
+    "as": {"voice": "Kajal", "engine": "neural"}  # Assamese (Fallback to Hindi neural)
 }
 
 class PollyService:

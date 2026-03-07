@@ -91,16 +91,16 @@ class RuleBasedIntentClassifier(BaseIntentClassifier):
 
 class BedrockIntentClassifier(BaseIntentClassifier):
     """
-    Bedrock (Claude Haiku) intent + language classifier.
-    Returns: intent, confidence, language_detected, required_slots.
+    Bedrock (Nova Micro) intent + language classifier.
+    Uses Amazon Nova Micro via the Converse API — fast and cheap.
     Falls back to RuleBasedIntentClassifier on any AWS error.
     """
 
-    HAIKU_MODEL = "anthropic.claude-3-haiku-20240307-v1:0"
+    NOVA_MICRO_MODEL = "amazon.nova-micro-v1:0"
 
-    CLASSIFY_PROMPT = """You are an intent classifier for a multilingual Indian government services IVR system.
+    CLASSIFY_PROMPT = """You are an intent classifier for JanSathi, India's AI-powered civic assistance IVR system.
 
-Classify the following user utterance and return ONLY a JSON object (no preamble, no explanation):
+Classify the following user utterance and return ONLY a valid JSON object (no preamble, no explanation):
 
 {{
   "intent": "<apply|info|grievance|track|fallback>",
@@ -117,8 +117,7 @@ INTENT DEFINITIONS:
 - track: user wants to check status of an existing application or case
 - fallback: unclear or off-topic
 
-USER UTTERANCE: {query}
-"""
+USER UTTERANCE: {query}"""
 
     def __init__(self):
         self._bedrock = None
@@ -130,7 +129,7 @@ USER UTTERANCE: {query}
             import boto3
             region = os.getenv("AWS_REGION", "ap-south-1")
             self._bedrock = boto3.client("bedrock-runtime", region_name=region)
-            logger.info("[BedrockIntentClassifier] Client initialised")
+            logger.info("[BedrockIntentClassifier] Nova Micro client initialised")
         except Exception as e:
             logger.warning(f"[BedrockIntentClassifier] Bedrock unavailable, will use rule-based: {e}")
             self._bedrock = None
@@ -140,21 +139,22 @@ USER UTTERANCE: {query}
             return self._fallback.classify(query, language)
 
         prompt = self.CLASSIFY_PROMPT.format(query=query)
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 256,
-            "temperature": 0.0,
-            "messages": [{"role": "user", "content": prompt}],
-        })
 
+        # Nova Micro via Converse API (NOT invoke_model)
         try:
-            response = self._bedrock.invoke_model(
-                body=body,
-                modelId=self.HAIKU_MODEL,
-                accept="application/json",
-                contentType="application/json",
+            response = self._bedrock.converse(
+                modelId=self.NOVA_MICRO_MODEL,
+                messages=[{"role": "user", "content": [{"text": prompt}]}],
+                inferenceConfig={"maxTokens": 256, "temperature": 0.0},
             )
-            text = json.loads(response["body"].read())["content"][0]["text"].strip()
+            text = response["output"]["message"]["content"][0]["text"].strip()
+
+            # Strip markdown fences if present
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+
             result = json.loads(text)
             intent = result.get("intent", "info")
             confidence = float(result.get("confidence", 0.75))
@@ -167,7 +167,7 @@ USER UTTERANCE: {query}
                 "scheme_hint": result.get("scheme_hint", "unknown"),
             }
         except Exception as e:
-            logger.warning(f"[BedrockIntentClassifier] Bedrock call failed, falling back: {e}")
+            logger.warning(f"[BedrockIntentClassifier] Nova Micro call failed, falling back: {e}")
             return self._fallback.classify(query, language)
 
 

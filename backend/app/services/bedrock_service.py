@@ -27,6 +27,29 @@ class BedrockService:
         if not self.working:
             return self._get_context_based_response(query, context_text, language)
 
+        # ---- COST EFFICIENT KNOWLEDGE BASE CACHING ----
+        query_normalized = query.strip().lower()
+        
+        import hashlib
+        context_hash = ""
+        if context_text and context_text.strip():
+            context_hash = hashlib.sha256(context_text.encode('utf-8')).hexdigest()
+            
+        try:
+            from app.models.models import db, BedrockQueryCache
+            cached = db.session.query(BedrockQueryCache).filter_by(
+                query=query_normalized,
+                language=language,
+                context_hash=context_hash
+            ).first()
+            
+            if cached:
+                print(f"[BedrockService] Cache HIT for query: '{query_normalized}' -> Cost $0.00")
+                return json.loads(cached.response_json)
+        except Exception as e:
+            print(f"[BedrockService] Cache Read Error: {e}")
+        # -----------------------------------------------
+
         # Handle general questions even without specific scheme context
         has_scheme_context = context_text and context_text.strip() and "I do not have specific public data" not in context_text
         
@@ -76,11 +99,11 @@ RESPONSE TEMPLATE:
 
 Reply directly and return the response in a structured JSON format containing:
 1. "text": The simplified explanation in {language}.
-2. "metadata": {
+2. "metadata": {{
     "confidence": 0.0-1.0 score based on context match,
     "matching_criteria": ["list", "of", "matched", "requirements"],
     "privacy_protocol": "Federated Optimization Active (Local Computation)"
-}
+}}
 
 RESPONSE TEMPLATE (TEXT PART):
 ✅ **Summary**: [1-2 sentences]
@@ -182,11 +205,28 @@ Reply directly in {language}.
                 'confidence': explainability.get('confidence', 0)
             })
             
-            return {
+            response_dict = {
                 "text": text,
                 "provenance": provenance,
                 "explainability": explainability
             }
+            
+            # STORE IN CACHE FOR FUTURE QUERIES
+            try:
+                from app.models.models import db, BedrockQueryCache
+                new_cache = BedrockQueryCache(
+                    query=query_normalized,
+                    context_hash=context_hash,
+                    language=language,
+                    response_json=json.dumps(response_dict)
+                )
+                db.session.add(new_cache)
+                db.session.commit()
+                print(f"[BedrockService] Cache STORED for query: '{query_normalized}'")
+            except Exception as e:
+                print(f"[BedrockService] Cache Write Error: {e}")
+                
+            return response_dict
 
         except ClientError as e:
             error_code = e.response['Error']['Code']

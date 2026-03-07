@@ -575,3 +575,141 @@ export const getApplications = async (
     return [];
   }
 };
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KNOWLEDGE BASE API (PDF Upload + Intelligent Caching)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface KBUploadResponse {
+  document_id: string;
+  s3_uri: string;
+  status: string;
+  message: string;
+}
+
+export interface KBQueryRequest {
+  question: string;
+  language?: string;
+  user_context?: {
+    occupation?: string;
+    location_state?: string;
+    annual_income?: number;
+    land_holding_acres?: number;
+  };
+  max_results?: number;
+}
+
+export interface KBSource {
+  text: string;
+  score: number;
+  source: string;
+  type: string;
+}
+
+export interface KBQueryResponse {
+  answer: string;
+  sources: KBSource[];
+  cached: boolean;
+  cost_saved: number;
+  query_time?: string;
+  cache_age_hours?: number;
+  language: string;
+  error?: string;
+}
+
+export interface KBCacheStats {
+  total_cached_queries: number;
+  cached_last_24h: number;
+  cache_ttl_hours: number;
+  language_distribution: Record<string, number>;
+  estimated_cost_saved: number;
+  cache_enabled: boolean;
+}
+
+export interface KBHealthStatus {
+  status: string;
+  kb_id: string;
+  cache_enabled: boolean;
+  working: boolean;
+  s3_bucket: string;
+}
+
+/**
+ * Upload PDF to Bedrock Knowledge Base
+ */
+export const uploadPDFToKnowledgeBase = async (
+  file: File,
+  userId: string = 'anonymous',
+  documentType: string = 'general',
+  token?: string
+): Promise<KBUploadResponse> => {
+  const client = buildClient(token);
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('user_id', userId);
+  formData.append('document_type', documentType);
+
+  const response = await client.post<KBUploadResponse>('/api/kb/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+/**
+ * Query Knowledge Base with intelligent caching
+ */
+export const queryKnowledgeBase = async (
+  params: KBQueryRequest,
+  token?: string
+): Promise<KBQueryResponse> => {
+  const client = buildClient(token);
+  const response = await client.post<KBQueryResponse>('/api/kb/query', params);
+  return response.data;
+};
+
+/**
+ * Get Knowledge Base cache statistics
+ */
+export const getKBCacheStats = async (token?: string): Promise<KBCacheStats> => {
+  const client = buildClient(token);
+  const response = await client.get<KBCacheStats>('/api/kb/stats');
+  return response.data;
+};
+
+/**
+ * Invalidate Knowledge Base cache
+ */
+export const invalidateKBCache = async (
+  query?: string,
+  language?: string,
+  clearAll: boolean = false,
+  token?: string
+): Promise<{ deleted: number; status: string }> => {
+  const client = buildClient(token);
+  const params = new URLSearchParams();
+  if (query) params.append('query', query);
+  if (language) params.append('language', language);
+  if (clearAll) params.append('all', 'true');
+
+  const response = await client.delete(`/api/kb/cache?${params.toString()}`);
+  return response.data;
+};
+
+/**
+ * Check Knowledge Base service health
+ */
+export const getKBHealth = async (): Promise<KBHealthStatus> => {
+  try {
+    const response = await apiClient.get<KBHealthStatus>('/api/kb/health');
+    return response.data;
+  } catch {
+    return {
+      status: 'unavailable',
+      kb_id: '',
+      cache_enabled: false,
+      working: false,
+      s3_bucket: '',
+    };
+  }
+};

@@ -219,3 +219,22 @@ class CommunityPost(db.Model):
             "comments": self.comments_count,
             "time": self.timestamp.strftime("%Y-%m-%d %H:%M")
         }
+
+class BedrockQueryCache(db.Model):
+    """Cache for Amazon Bedrock Knowledge Base and RAG LLM Queries"""
+    id = db.Column(db.Integer, primary_key=True)
+    query = db.Column(db.String(500), index=True, nullable=False)
+    context_hash = db.Column(db.String(64)) # SHA-256 of context doc text
+    response_json = db.Column(db.Text, nullable=False) 
+    language = db.Column(db.String(10), default='hi')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "query": self.query,
+            "context_hash": self.context_hash,
+            "response_json": self.response_json,
+            "language": self.language,
+            "created_at": self.created_at.isoformat()
+        }

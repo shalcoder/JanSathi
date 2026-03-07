@@ -27,8 +27,11 @@ import { Menu, Sun, Moon, Search, Bell } from 'lucide-react';
 import { useUser, useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { buildClient } from '@/services/api';
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
+import { useI18n } from '@/context/i18n';
 
 export default function Home() {
+  const { t } = useI18n();
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const { getToken } = useAuth();
@@ -258,6 +261,8 @@ export default function Home() {
 
           <div className="flex items-center gap-4 lg:gap-6">
             {/* Theme Toggle */}
+            <LanguageSwitcher />
+            
             <button onClick={toggleTheme} className="p-2.5 bg-secondary/50 hover:bg-secondary rounded-xl transition-colors border border-border/50">
               {isDarkMode ?
                 <Sun className="w-5 h-5 text-amber-500" /> :

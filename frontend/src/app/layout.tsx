@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import OfflineNotice from "@/components/OfflineNotice";
 import Script from 'next/script';
+import { I18nProvider } from "@/context/i18n";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,7 +39,9 @@ export default function RootLayout({
       >
         <OfflineNotice />
         <ErrorBoundary>
-          {children}
+          <I18nProvider>
+            {children}
+          </I18nProvider>
         </ErrorBoundary>
 
         {/* Unregister Service Worker to clear poisoned cache and stale Server Action IDs */}

@@ -14,8 +14,13 @@ import { useSession } from '@/hooks/useSession';
 import DocumentScorecard from './DocumentScorecard';
 import ExplainabilityCard from './ExplainabilityCard';
 import MultiAgentThoughtProcess from './MultiAgentThoughtProcess';
+<<<<<<< HEAD
 import { useUser } from '@clerk/nextjs';
 import { useI18n } from '@/context/i18n';
+=======
+import { Languages, Globe } from 'lucide-react';
+// import { useUser } from '@clerk/nextjs';
+>>>>>>> poornachandran
 import {
     sendUnifiedQuery,
     analyzeImage,
@@ -107,7 +112,13 @@ const DEMO_FALLBACKS: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ChatInterface() {
+<<<<<<< HEAD
     const { user } = useUser();
+=======
+    // const { user } = useUser();
+    const user = { id: 'demo-user-id', fullName: 'Demo User' };
+    const { settings } = useSettings();
+>>>>>>> poornachandran
     const { sessionId, token } = useSession();
     const { language, t: translate } = useI18n();
     const [messages, setMessages] = useState<Message[]>([]);

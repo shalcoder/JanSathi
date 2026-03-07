@@ -81,8 +81,38 @@ class ReceiptService:
           }
         """
         case_id = case_id or f"JS-{datetime.now(timezone.utc).strftime('%Y-%m')}-{uuid.uuid4().hex[:6].upper()}"
-        checklist = self.generate_document_checklist(scheme_name)
         display_name = self._scheme_display_name(scheme_name)
+        checklist = self.generate_document_checklist(scheme_name)
+        
+        # Dynamic Document Gap Analysis
+        missing_gaps = []
+        csc_prep_guide = []
+        
+        if scheme_name == "pm_awas_urban" or "Awas" in display_name:
+            housing = str(slots.get("housing_status", "")).lower()
+            rural_urban = str(slots.get("rural_or_urban", "")).lower()
+            
+            if "pucca" in housing:
+                missing_gaps.append("Affidavit declaring housing status discrepancy")
+            else:
+                missing_gaps.append("Self-declaration of kutcha house ownership")
+                
+            if "rural" in rural_urban:
+                missing_gaps.append("Gram Panchayat NOC")
+                csc_prep_guide.append("Visit your local Gram Panchayat office to obtain the NOC before going to CSC.")
+            elif "urban" in rural_urban:
+                missing_gaps.append("Municipal Corporation Property Tax Receipt")
+                csc_prep_guide.append("Ensure your municipal property tax is paid and bring the latest receipt.")
+                
+            csc_prep_guide.append("Take all original documents and one set of photocopies to the nearest CSC center.")
+        else:
+            csc_prep_guide.append("Visit your nearest CSC center with the documents listed above.")
+            
+        # Merge gaps into checklist for display
+        for gap in missing_gaps:
+             if gap not in checklist:
+                 checklist.append(f"GAP: {gap}")
+
         official_link = OFFICIAL_LINKS.get(scheme_name, "https://india.gov.in")
         generated_at  = datetime.now(timezone.utc).strftime("%d %b %Y, %H:%M UTC")
 
@@ -105,8 +135,13 @@ class ReceiptService:
 
         # Build checklist items
         checklist_items = "".join(
-            f"<li style='margin:6px 0;'>📄 {doc}</li>"
+            f"<li style='margin:6px 0; color: {'#dc2626' if 'GAP:' in doc else '#374151'}; font-weight: {'600' if 'GAP:' in doc else '400'}'>📄 {doc}</li>"
             for doc in checklist
+        )
+        
+        prep_guide_items = "".join(
+            f"<li style='margin:6px 0;'>💡 {guide}</li>"
+            for guide in csc_prep_guide
         )
 
         html = f"""<!DOCTYPE html>
@@ -158,8 +193,13 @@ class ReceiptService:
   </section>
 
   <section>
-    <h3>Required Documents Checklist</h3>
+    <h3>Required Documents & Gap Analysis</h3>
     <ul class="checklist">{checklist_items}</ul>
+  </section>
+
+  <section>
+    <h3>CSC Preparation Guide</h3>
+    <ul class="checklist">{prep_guide_items}</ul>
   </section>
 
   <section>
@@ -195,6 +235,8 @@ class ReceiptService:
             "receipt_url": receipt_url,
             "receipt_html": html,
             "document_checklist": checklist,
+            "missing_document_gaps": missing_gaps,
+            "csc_prep_guide": csc_prep_guide,
             "scheme_name": display_name,
             "eligible": eligible,
             "rules_score": round(rules_score, 3),

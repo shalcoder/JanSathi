@@ -15,13 +15,13 @@ class BaseSessionStorage(ABC):
     Abstract base class for session storage.
     """
     @abstractmethod
-    def load(self) -> dict:
-        """Loads and returns all session data."""
+    def get_session(self, session_id: str) -> dict:
+        """Loads data for a specific session."""
         pass
 
     @abstractmethod
-    def save(self, data: dict):
-        """Saves session data."""
+    def put_session(self, session_id: str, data: dict):
+        """Saves data for a specific session."""
         pass
 
     @abstractmethod
@@ -33,7 +33,10 @@ class LocalJSONStorage(BaseSessionStorage):
     """
     Local JSON file implementation of session storage.
     """
-    def __init__(self, file_path="backend/agentic_engine/sessions.json"):
+    def __init__(self, file_path=None):
+        if file_path is None:
+            # Default to a file in the concurrent directory to the engine
+            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sessions.json")
         self.file_path = file_path
 
     def initialize(self):
@@ -57,6 +60,14 @@ class LocalJSONStorage(BaseSessionStorage):
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         with open(self.file_path, "w") as f:
             json.dump(data, f, indent=2)
+
+    def get_session(self, session_id: str) -> dict:
+        return self.load().get(session_id)
+
+    def put_session(self, session_id: str, data: dict):
+        sessions = self.load()
+        sessions[session_id] = data
+        self.save(sessions)
 
 class DynamoDBStorage(BaseSessionStorage):
     """

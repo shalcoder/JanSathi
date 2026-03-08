@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { fetchAuthSession, getCurrentUser, signOut as amplifySignOut } from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
 
 export function useAuth() {
     const router = useRouter();
@@ -10,22 +12,29 @@ export function useAuth() {
 
     useEffect(() => {
         checkUser();
+
+        // Listen to Auth events
+        const unsubscribe = Hub.listen('auth', ({ payload }) => {
+            switch (payload.event) {
+                case 'signedIn':
+                    checkUser();
+                    break;
+                case 'signedOut':
+                    setUser(null);
+                    break;
+            }
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const checkUser = () => {
         try {
-            const authToken = localStorage.getItem('jansathi_auth');
-            const userEmail = localStorage.getItem('jansathi_user');
-            
-            if (authToken === 'true' && userEmail) {
-                setUser({
-                    id: userEmail,
-                    name: userEmail.split('@')[0],
-                    username: userEmail
-                });
-            } else {
-                setUser(null);
-            }
+            const currentUser = await getCurrentUser();
+            setUser({
+                id: currentUser.userId,
+                name: currentUser.username,
+            });
         } catch (_error) {
             setUser(null);
         } finally {
@@ -40,11 +49,11 @@ export function useAuth() {
         router.push('/auth/signin');
     };
 
-    const requireAuth = () => {
+    const requireAuth = useCallback(() => {
         if (!loading && !user) {
             router.push('/auth/signin');
         }
-    };
+    }, [loading, user, router]);
 
     return {
         user,
@@ -54,3 +63,12 @@ export function useAuth() {
         isAuthenticated: !!user
     };
 }
+
+export const getToken = async () => {
+    try {
+        const session = await fetchAuthSession();
+        return session.tokens?.idToken?.toString() || session.tokens?.accessToken?.toString() || null;
+    } catch {
+        return null;
+    }
+};

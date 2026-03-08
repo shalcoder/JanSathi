@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Lock, CheckCircle2, FileText, Database, RefreshCw } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, getToken } from '@/hooks/useAuth';
 import { getAuditLogs, AuditRecord } from '@/services/api';
 
 export default function SecurityAuditPanel() {
   const { user, loading: isLoaded } = useAuth();
-    const getToken = async () => 'mock-token';
+    
   const [logs, setLogs] = useState<AuditRecord[]>([]);
   const [isPolling, setIsPolling] = useState(true);
 

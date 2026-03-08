@@ -29,6 +29,9 @@ from app.services.hitl_service import HITLService
 from app.services.notify_service import NotifyService
 from app.services.ivr_service import IVRService
 from app.services.rag_service import RagService
+from app.services.scheme_feed_service import SchemeFeedService
+from app.services.civic_infra_service import CivicInfraService
+from app.services.bedrock_service import PDF_CONTEXT_STORE
 from app.core.execution import process_user_input
 from app.core.middleware import require_auth, require_admin
 from app.core.schema_validator import validate_unified_event, UnifiedResponse
@@ -45,6 +48,8 @@ hitl_service = HITLService()
 notify_service = NotifyService()
 ivr_service = IVRService()
 rag_service = RagService()
+scheme_feed_service = SchemeFeedService()
+civic_infra_service = CivicInfraService()
 
 # ─── Session helpers ──────────────────────────────────────────────────────────
 
@@ -118,6 +123,62 @@ def get_session(session_id: str):
 @v1.route("/ping", methods=["GET"])
 def ping():
     return jsonify({"status": "pong"}), 200
+
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/schemes", methods=["GET"])
+@require_auth
+def personalized_schemes_feed():
+    """
+    GET /v1/schemes
+    Returns profile-aware scheme feed with official apply links and freshness metadata.
+    """
+    user_id = getattr(g, "user_id", "anonymous")
+    payload = scheme_feed_service.get_feed(user_id=user_id)
+    return jsonify(payload), 200
+
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/upload", methods=["POST"])
+def upload_document():
+    """
+    POST /v1/upload
+    Accepts multipart/form-data with 'file'. Stores parsed text in global PDF_CONTEXT_STORE
+    to be retrieved during /v1/query.
+    """
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+        
+    session_id = request.form.get("session_id")
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
+
+    try:
+        import pypdf
+        pdf_reader = pypdf.PdfReader(file)
+        text = ""
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+                
+        # Store context in memory for Bedrock Service to pick up
+        PDF_CONTEXT_STORE[session_id] = text
+        logger.info(f"Successfully cached PDF context for {session_id}")
+        
+        return jsonify({
+            "status": "success", 
+            "message": "File parsed and cached successfully",
+            "extracted_length": len(text)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error parsing PDF: {e}")
+        return jsonify({"error": "Could not parse PDF"}), 500
 
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -583,6 +644,106 @@ def get_audit_log():
     except Exception as e:
         return jsonify({"records": [], "error": str(e)}), 500
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CIVIC INFRASTRUCTURE ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/civic/life-workflow", methods=["GET"])
+def civic_life_workflow():
+    event = request.args.get("event", "crop_loss")
+    user_id = request.args.get("user_id", getattr(g, "user_id", "anonymous"))
+    return jsonify(civic_infra_service.get_life_workflow(event=event, user_id=user_id)), 200
+
+
+@v1.route("/civic/life-event-cases", methods=["POST"])
+def civic_life_event_cases_create():
+    data = request.json or {}
+    session_id = data.get("session_id", f"sess-{uuid.uuid4().hex[:8]}")
+    user_id = data.get("user_id", getattr(g, "user_id", "anonymous"))
+    language = data.get("language", "en")
+    event_key = (data.get("event_key") or "").strip().lower()
+
+    if not event_key and data.get("event_text"):
+        try:
+            from app.services.intent_service import IntentService
+            intent = IntentService().classify_intent_ivr(str(data["event_text"]), language)
+            event_key = intent.get("event_key", "crop_loss")
+        except Exception:
+            event_key = "crop_loss"
+    if not event_key:
+        event_key = "crop_loss"
+
+    payload = civic_infra_service.create_life_event_case(
+        session_id=session_id,
+        event_key=event_key,
+        user_id=user_id,
+        language=language,
+    )
+    return jsonify(payload), 201
+
+
+@v1.route("/civic/life-event-cases/<case_id>", methods=["GET"])
+def civic_life_event_case_status(case_id: str):
+    payload = civic_infra_service.get_life_event_case(case_id)
+    if payload.get("error") == "case_not_found":
+        return jsonify(payload), 404
+    return jsonify(payload), 200
+
+
+@v1.route("/civic/proactive-alerts", methods=["GET"])
+def civic_proactive_alerts():
+    user_id = request.args.get("user_id", getattr(g, "user_id", "anonymous"))
+    return jsonify(civic_infra_service.get_proactive_alerts(user_id=user_id)), 200
+
+
+@v1.route("/civic/community-insights", methods=["GET"])
+def civic_community_insights():
+    location = request.args.get("location", "India")
+    return jsonify(civic_infra_service.get_community_insights(location=location)), 200
+
+
+@v1.route("/civic/navigator", methods=["GET"])
+def civic_navigator():
+    location = request.args.get("location", "India")
+    service = request.args.get("service", "csc")
+    return jsonify(civic_infra_service.get_navigator(location=location, service=service)), 200
+
+
+@v1.route("/civic/journey", methods=["GET"])
+def civic_journey():
+    user_id = request.args.get("user_id", getattr(g, "user_id", "anonymous"))
+    session_id = request.args.get("session_id", "")
+    return jsonify(civic_infra_service.get_civic_journey(user_id=user_id, session_id=session_id)), 200
+
+
+@v1.route("/civic/artifacts", methods=["POST"])
+def civic_artifacts():
+    data = request.json or {}
+    session_id = data.get("session_id", f"sess-{uuid.uuid4().hex[:8]}")
+    workflow_name = data.get("workflow", "life_event_assist")
+    language = data.get("language", "en")
+    return jsonify(
+        civic_infra_service.create_artifacts(
+            session_id=session_id,
+            workflow_name=workflow_name,
+            language=language
+        )
+    ), 200
+
+
+@v1.route("/civic/fraud-report", methods=["POST"])
+def civic_fraud_report():
+    data = request.json or {}
+    if not data.get("details"):
+        return jsonify({"error": "details is required"}), 400
+    return jsonify(civic_infra_service.report_fraud(data)), 201
+
+
+@v1.route("/civic/impact", methods=["GET"])
+def civic_impact():
+    return jsonify(civic_infra_service.get_impact_metrics()), 200
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # COMMUNITY / FORUM ENDPOINTS 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -609,18 +770,10 @@ def create_community_post():
         data = request.json or {}
         if not data.get("title") or not data.get("content"):
             return jsonify({"error": "Title and Content are required"}), 400
-        print(f"DEBUG: Entering unified_query for session {data.get('session_id')}", flush=True)
-        response = process_user_input(
-            session_id=data.get("session_id"),
-            message=data.get("message"),
-            language=data.get("language", "hi"),
-            channel=data.get("channel", "web"),
-            user_profile=data.get("user_profile")
-        )
-        print(f"DEBUG: process_user_input returned for session {data.get('session_id')}", flush=True)
+
         new_post = CommunityPost(
-            title=data["title"],
-            content=data["content"],
+            title=str(data["title"]).strip(),
+            content=str(data["content"]).strip(),
             author=data.get("author", "Anonymous Citizen"),
             author_role=data.get("role", "Citizen"),
             location=data.get("location", "India")
@@ -815,6 +968,7 @@ def agent_invoke():
                 "mode": "agentcore",
                 "latency_ms": latency_ms,
                 "citations": result.get("citations", []),
+                "thoughts": result.get("thoughts", []),
             })
         except Exception as e:
             logger.error(f"[v1/agent/invoke] AgentCore failed, falling back to LangGraph: {e}")

@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Mic, Languages, Bot, Globe, Cpu, Database, ChevronRight, Activity, Zap, Users, AlertTriangle, CheckCircle2, Radio, Lock, FileText, Shield } from "lucide-react";
 import BackendStatus from "@/components/BackendStatus";
 import ImpactStats from "@/components/features/community/ImpactStats";
+import { useAuthenticator } from "@aws-amplify/ui-react";
+import { SimpleThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function LandingPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -46,7 +48,10 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {isAuthenticated ? (
+            {/* Theme Toggle */}
+            <SimpleThemeToggle />
+
+            {authStatus === 'authenticated' ? (
               <Link
                 href="/dashboard"
                 className="px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"

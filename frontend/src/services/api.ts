@@ -134,7 +134,21 @@ export interface UnifiedQueryResponse {
     asr_confidence?: number;
     cache_hit?: boolean;
     token_count?: number;
+    thoughts?: Thought[];
   };
+  citations?: Citation[];
+}
+
+export interface Thought {
+  type: "rationale" | "tool_call" | "observation";
+  text?: string;
+  tool?: string;
+  input?: string;
+}
+
+export interface Citation {
+  text: string;
+  sources: string[];
 }
 
 export interface ApplyRequest {
@@ -205,7 +219,8 @@ interface RawAgentResponse {
   mode?: string;
   model?: string;
   latency_ms?: number;
-  citations?: any[];
+  citations?: Citation[];
+  thoughts?: Thought[];
   provenance?: string;
 }
 
@@ -220,7 +235,7 @@ export const sendUnifiedQuery = async (
   const response = await client.post<RawAgentResponse>("/v1/agent/invoke", {
     session_id: params.session_id,
     message: params.input.text || "",
-    language: params.metadata?.lang || "hi",
+    language: params.metadata?.lang || "en",
     channel: params.channel || "web",
     userId: params.metadata?.user_id,
   });
@@ -236,13 +251,14 @@ export const sendUnifiedQuery = async (
     benefit_receipt: data.benefit_receipt,
     confidence: data.confidence || 0.9,
     audio_url: data.audio_url,
+    // Carry over any extra fields like citations or provenance if they exist
+    ...(data.citations ? { citations: data.citations } : {}),
+    ...(data.provenance ? { provenance: data.provenance } : { provenance: "AI Analysis" }),
     debug: {
       model: data.mode || data.model || "agentcore",
       latency_ms: data.latency_ms || 0,
-    },
-    // Carry over any extra fields like citations or provenance if they exist
-    ...(data.citations ? { citations: data.citations } : {}),
-    ...(data.provenance ? { provenance: data.provenance } : { provenance: "AI Analysis" })
+      thoughts: data.thoughts
+    }
   };
 };
 
@@ -507,37 +523,228 @@ export interface MarketRate {
 
 export const getMarketRates = async (): Promise<MarketRate[]> => {
   try {
-    const response = await apiClient.get("/v1/market-rates");
+    const response = await apiClient.get("/market-rates");
     return response.data;
-  } catch (err: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Market rates not available, using mock data');
-    }
-    // Return mock data as fallback
-    return [
-      { commodity: "Wheat", price: 2100, unit: "quintal", market: "Delhi Mandi", trend: "up" },
-      { commodity: "Rice", price: 1950, unit: "quintal", market: "Punjab Mandi", trend: "stable" },
-    ];
+  } catch {
+    return [];
   }
 };
 
-export const getSchemes = async (): Promise<Record<string, unknown>> => {
+export interface LiveScheme {
+  id: string;
+  title: string;
+  benefit: string;
+  ministry: string;
+  category: string;
+  keywords: string[];
+  apply_link: string;
+  official_source: string;
+  eligibility_status: "eligible" | "likely_eligible" | "check_criteria";
+  eligibility_score: number;
+  why_recommended?: string[];
+  last_updated_at?: string;
+}
+
+export interface LiveSchemesResponse {
+  schemes: LiveScheme[];
+  count: number;
+  personalization?: {
+    user_id: string;
+    profile_found: boolean;
+    engine: string;
+  };
+  meta?: {
+    generated_at: string;
+    refresh_interval_seconds: number;
+    data_sources: string[];
+  };
+}
+
+export const getSchemes = async (token?: string): Promise<LiveSchemesResponse> => {
   try {
-    const response = await apiClient.get("/v1/schemes");
+    const client = buildClient(token);
+    const response = await client.get<LiveSchemesResponse>("/v1/schemes");
     return response.data;
-  } catch (err: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Schemes endpoint not available, using mock data');
-    }
-    // Return mock data as fallback
-    return {
-      schemes: {
-        pm_kisan: { display_name: "PM-Kisan Samman Nidhi", description: "Direct income support for farmers" },
-        pm_awas: { display_name: "PM Awas Yojana", description: "Housing for all" },
-      },
-      count: 2
-    };
+  } catch {
+    return { schemes: [], count: 0 };
   }
+};
+
+export interface LifeWorkflowResponse {
+  event_key: string;
+  event_label: string;
+  workflow_steps: string[];
+  suggested_schemes: string[];
+  profile_context: Record<string, unknown>;
+}
+
+export interface ProactiveAlert {
+  id: string;
+  title: string;
+  message: string;
+  priority: "high" | "medium" | "low";
+  channel: string;
+}
+
+export interface ProactiveAlertsResponse {
+  alerts: ProactiveAlert[];
+  count: number;
+}
+
+export interface CommunityInsightsResponse {
+  location: string;
+  posts_analyzed: number;
+  top_scheme_topics: Array<{ topic: string; count: number }>;
+  common_document_issue: string;
+  recommended_action: string;
+}
+
+export interface CivicNavigatorResponse {
+  service: string;
+  location: string;
+  nearest_center: {
+    name: string;
+    address: string;
+    hours: string;
+    contact: string;
+    maps_url: string;
+  };
+  required_documents: string[];
+}
+
+export interface CivicJourneyResponse {
+  journey: Array<{ stage: string; status: string; updated_at?: string | null }>;
+}
+
+export interface LifeEventStep {
+  step_id: string;
+  title: string;
+  service_key: string;
+  status: "pending" | "active" | "completed" | "blocked";
+  reason?: string;
+  eta_minutes?: number;
+  updated_at?: string;
+}
+
+export interface LifeEventCaseResponse {
+  case_id: string;
+  session_id: string;
+  user_id?: string;
+  event_key: string;
+  event_label: string;
+  status: "queued" | "in_progress" | "completed" | "blocked";
+  current_step: number;
+  suggested_schemes: string[];
+  steps: LifeEventStep[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CivicImpactMetrics {
+  citizens_served: number;
+  applications_processed: number;
+  community_posts: number;
+  fraud_reports: number;
+  estimated_benefits_unlocked_inr: number;
+  estimated_trips_avoided: number;
+  grievances_resolved: number;
+}
+
+export const getLifeWorkflow = async (
+  eventKey: string,
+  userId?: string,
+  token?: string
+): Promise<LifeWorkflowResponse> => {
+  const client = buildClient(token);
+  const suffix = userId ? `&user_id=${encodeURIComponent(userId)}` : "";
+  const response = await client.get<LifeWorkflowResponse>(`/v1/civic/life-workflow?event=${encodeURIComponent(eventKey)}${suffix}`);
+  return response.data;
+};
+
+export const createLifeEventCase = async (
+  payload: { session_id: string; event_key?: string; event_text?: string; user_id?: string; language?: string },
+  token?: string
+): Promise<LifeEventCaseResponse> => {
+  const client = buildClient(token, payload.session_id);
+  const response = await client.post<LifeEventCaseResponse>("/v1/civic/life-event-cases", payload);
+  return response.data;
+};
+
+export const getLifeEventCase = async (
+  caseId: string,
+  token?: string
+): Promise<LifeEventCaseResponse> => {
+  const client = buildClient(token);
+  const response = await client.get<LifeEventCaseResponse>(`/v1/civic/life-event-cases/${encodeURIComponent(caseId)}`);
+  return response.data;
+};
+
+export const getProactiveAlerts = async (
+  userId?: string,
+  token?: string
+): Promise<ProactiveAlertsResponse> => {
+  const client = buildClient(token);
+  const query = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
+  const response = await client.get<ProactiveAlertsResponse>(`/v1/civic/proactive-alerts${query}`);
+  return response.data;
+};
+
+export const getCommunityInsights = async (
+  location: string,
+  token?: string
+): Promise<CommunityInsightsResponse> => {
+  const client = buildClient(token);
+  const response = await client.get<CommunityInsightsResponse>(`/v1/civic/community-insights?location=${encodeURIComponent(location)}`);
+  return response.data;
+};
+
+export const getCivicNavigator = async (
+  location: string,
+  service: string = "csc",
+  token?: string
+): Promise<CivicNavigatorResponse> => {
+  const client = buildClient(token);
+  const response = await client.get<CivicNavigatorResponse>(
+    `/v1/civic/navigator?location=${encodeURIComponent(location)}&service=${encodeURIComponent(service)}`
+  );
+  return response.data;
+};
+
+export const getCivicJourney = async (
+  params: { userId?: string; sessionId?: string },
+  token?: string
+): Promise<CivicJourneyResponse> => {
+  const client = buildClient(token);
+  const q = new URLSearchParams();
+  if (params.userId) q.set("user_id", params.userId);
+  if (params.sessionId) q.set("session_id", params.sessionId);
+  const suffix = q.toString() ? `?${q.toString()}` : "";
+  const response = await client.get<CivicJourneyResponse>(`/v1/civic/journey${suffix}`);
+  return response.data;
+};
+
+export const createCivicArtifacts = async (
+  payload: { session_id: string; workflow: string; language?: string },
+  token?: string
+): Promise<{ packet_id: string; artifacts: Array<{ type: string; status: string }> }> => {
+  const client = buildClient(token, payload.session_id);
+  const response = await client.post("/v1/civic/artifacts", payload);
+  return response.data;
+};
+
+export const reportFraud = async (
+  payload: { location: string; details: string; amount?: number; contact?: string },
+  token?: string
+): Promise<{ report_id: string }> => {
+  const client = buildClient(token);
+  const response = await client.post("/v1/civic/fraud-report", payload);
+  return response.data;
+};
+
+export const getCivicImpact = async (token?: string): Promise<CivicImpactMetrics> => {
+  const client = buildClient(token);
+  const response = await client.get<CivicImpactMetrics>("/v1/civic/impact");
+  return response.data;
 };
 
 export const seedDatabase = async (): Promise<unknown> => {
@@ -672,5 +879,29 @@ export const getApplications = async (
     return response.data;
   } catch {
     return [];
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCUMENT UPLOAD (Bedrock Context)
+// ─────────────────────────────────────────────────────────────────────────────
+export const uploadDocumentContext = async (
+  file: File,
+  sessionId: string,
+  token?: string
+): Promise<{ status: string; extracted_length: number }> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("session_id", sessionId);
+
+  const client = buildClient(token, sessionId);
+  try {
+    const response = await client.post("/v1/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  } catch (error) {
+    console.warn("Failed to upload document context", error);
+    throw error;
   }
 };

@@ -19,14 +19,15 @@ import {
     ArrowRight,
     User
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, getToken } from '@/hooks/useAuth';
+import { SUPPORTED_LANGUAGES, getLanguageName } from '@/lib/languages';
 import { useRouter } from 'next/navigation';
 import { buildClient } from '@/services/api';
 
 const ProfilePage = () => {
     const router = useRouter();
     const { user, loading: isLoaded } = useAuth();
-    const getToken = async () => 'mock-token';
+    
     
     // Track API state
     const [isLoading, setIsLoading] = useState(true);
@@ -69,22 +70,21 @@ const ProfilePage = () => {
                 if (data) {
                     // Split full name if present
                     const names = (data.full_name || '').split(' ');
-                    const firstName = names[0] || user.firstName || 'Citizen';
-                    const lastName = names.length > 1 ? names.slice(1).join(' ') : (user.lastName || '');
+                    const firstName = names[0] || user.name || 'Citizen';
+                    const lastName = names.length > 1 ? names.slice(1).join(' ') : '';
                     
                     const loc = data.village ? `${data.village}, ${data.district}` : (data.district || 'Update Location');
                     
                     // Helper functions for options
-                    const langMap: Record<string, string> = { 'hi': 'Hindi', 'en': 'English', 'ta': 'Tamil', 'kn': 'Kannada' };
                     setProfile(prev => ({
                         ...prev,
                         firstName,
                         lastName,
                         full_name: data.full_name || '',
                         phone: data.phone || '',
-                        email: user.primaryEmailAddress?.emailAddress || '',
+                        email: '', // Cognito email requires fetchUserAttributes
                         location: loc,
-                        language: langMap[data.preferred_language] || 'Hindi',
+                        language: getLanguageName(data.preferred_language),
                         preferred_language: data.preferred_language || 'hi',
                         occupation: data.occupation || 'Farmer',
                         category: data.category || 'General',
@@ -113,7 +113,7 @@ const ProfilePage = () => {
         };
 
         loadProfile();
-    }, [isLoaded, user, getToken, router]);
+    }, [isLoaded, user, router]);
 
     // 2. Save profile to backend
     const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -500,10 +500,9 @@ const ProfilePage = () => {
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-60">Preferred Language</label>
                                         <select value={editForm.preferred_language} onChange={(e) => setEditForm(prev => ({ ...prev, preferred_language: e.target.value }))} className="w-full bg-secondary/30 border border-border rounded-xl px-4 py-3 text-foreground font-bold outline-none focus:border-primary appearance-none">
-                                            <option value="hi">Hindi</option>
-                                            <option value="en">English</option>
-                                            <option value="ta">Tamil</option>
-                                            <option value="kn">Kannada</option>
+                                            {SUPPORTED_LANGUAGES.map(lang => (
+                                                <option key={lang.code} value={lang.code}>{lang.native} ({lang.name})</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <button type="submit" disabled={isSaving} className="w-full py-4 mt-4 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm flex items-center justify-center disabled:opacity-50">

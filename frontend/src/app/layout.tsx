@@ -5,6 +5,7 @@ import "./globals.css";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import OfflineNotice from "@/components/OfflineNotice";
 import { I18nProvider } from "@/context/i18n";
+import { ThemeProvider } from "@/context/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,13 +30,16 @@ export default function RootLayout({
         <meta name="description" content="JanSathi AI - Government scheme assistant for rural India" />
       </head>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased scrollbar-none`}
       >
         <OfflineNotice />
         <ErrorBoundary>
-          <I18nProvider>
-            {children}
-          </I18nProvider>
+          <ThemeProvider>
+            <I18nProvider>
+              {children}
+            </I18nProvider>
+          </ThemeProvider>
         </ErrorBoundary>
       </body>
     </html>

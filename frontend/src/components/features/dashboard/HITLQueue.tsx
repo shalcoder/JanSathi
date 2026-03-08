@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, UserCheck, XCircle, Clock, Eye, RefreshCw, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, getToken } from '@/hooks/useAuth';
 import { getHitlCases, resolveHitlCase, HitlCase } from '@/services/api';
 
 export default function HITLQueue() {
   const { user, loading: isLoaded } = useAuth();
-    const getToken = async () => 'mock-token';
+    
   const [queue, setQueue] = useState<HitlCase[]>([]);
   const [isPolling, setIsPolling] = useState(true);
   const [resolvingId, setResolvingId] = useState<string | null>(null);

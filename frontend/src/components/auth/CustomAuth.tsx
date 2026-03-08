@@ -25,6 +25,8 @@ const MicrosoftIcon = () => (
     </svg>
 );
 
+import { signInWithRedirect } from 'aws-amplify/auth';
+
 interface CustomAuthProps {
     mode?: "signIn" | "signUp";
 }
@@ -32,16 +34,18 @@ interface CustomAuthProps {
 export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
     const router = useRouter();
 
-    const handleOAuth = async (strategy: "oauth_google" | "oauth_microsoft") => {
-        console.log("OAuth strategy selected:", strategy);
-        // Default to routing them to the base page which contains the Authenticator
-        router.push(mode === "signIn" ? "/sign-in" : "/sign-up");
+    const handleOAuth = async (provider: any) => {
+        try {
+            await signInWithRedirect({ provider });
+        } catch (error) {
+            console.error(`Sign In Error:`, error);
+            router.push(mode === "signIn" ? "/auth/signin" : "/auth/signup");
+        }
     };
 
     const handleEmailClick = () => {
-        router.push(mode === "signIn" ? "/sign-in" : "/sign-up");
+        router.push(mode === "signIn" ? "/auth/signin" : "/auth/signup");
     };
-    // But aligning with the image request:
 
     return (
         <motion.div
@@ -69,7 +73,7 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
                 <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => handleOAuth("oauth_google")}
+                    onClick={() => handleOAuth("Google")}
                     className="flex items-center justify-center gap-3 w-full bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm shadow-sm"
                 >
                     <GoogleIcon />
@@ -79,7 +83,7 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
                 <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => handleOAuth("oauth_microsoft")}
+                    onClick={() => handleOAuth("Microsoft")}
                     className="flex items-center justify-center gap-3 w-full bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm shadow-sm"
                 >
                     <MicrosoftIcon />
@@ -101,7 +105,7 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
                     <motion.button
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
-                        onClick={() => router.push(mode === "signIn" ? "/sign-in/sso" : "/sign-up/sso")}
+                        onClick={() => router.push(mode === "signIn" ? "/auth/signin" : "/auth/signup")}
                         className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 text-foreground py-3 rounded-xl border border-border/50 transition-all font-bold text-sm"
                     >
                         <Lock className="w-4 h-4 text-secondary-foreground" />
@@ -115,7 +119,7 @@ export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
 
             {/* Footer Action */}
             <button
-                onClick={() => router.push(mode === "signUp" ? "/sign-in" : "/sign-up")}
+                onClick={() => router.push(mode === "signUp" ? "/auth/signin" : "/auth/signup")}
                 className="flex items-center justify-center gap-2 w-full bg-transparent hover:bg-secondary/50 text-secondary-foreground hover:text-foreground py-3 rounded-xl border border-transparent hover:border-border/50 transition-all font-bold text-sm tracking-wide group"
             >
                 {mode === "signUp" ? (

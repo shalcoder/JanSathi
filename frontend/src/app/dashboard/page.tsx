@@ -21,19 +21,31 @@ import BenefitReceiptViewer from "@/components/features/dashboard/BenefitReceipt
 import SecurityAuditPanel from "@/components/features/dashboard/SecurityAuditPanel";
 import PhoneEmulatorPage from "@/components/features/dashboard/PhoneEmulatorPage";
 import ImpactMode from "@/components/features/dashboard/ImpactMode";
-import FederatedLearningStatus from "@/components/features/dashboard/FederatedLearningStatus";
 import MarketPrices from "@/components/features/dashboard/MarketPrices";
-import { Menu, Sun, Moon, Search, Bell } from 'lucide-react';
+import { Menu, Search, Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import ThemeToggle from '@/components/ui/ThemeToggle';
+
+const SHOW_DEMO_FLOW = process.env.NEXT_PUBLIC_SHOW_DEMO_FLOW !== 'false';
+const DEFAULT_DASHBOARD_PAGE = SHOW_DEMO_FLOW ? 'overview' : 'assistant';
+const LEGACY_PAGE_ALIAS: Record<string, string> = {
+  overview: 'ops-command',
+  'ivr-console': 'ops-command',
+  'phone-emulator': 'ops-simulation',
+  simulator: 'ops-simulation',
+  hitl: 'ops-verification',
+  security: 'ops-verification',
+  receipts: 'ops-impact',
+  impact: 'ops-impact',
+};
 
 export default function Home() {
   const router = useRouter();
   const { user, requireAuth, loading: authLoading } = useAuth();
   
-  const [activePage, setActivePage] = useState('overview');
+  const [activePage, setActivePage] = useState(DEFAULT_DASHBOARD_PAGE);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -44,6 +56,11 @@ export default function Home() {
     { title: "System Update", time: "5h ago", desc: "JanSathi v2.5 features live now.", type: "info" }
   ]);
   const [unreadCount, setUnreadCount] = useState(3);
+
+  const normalizePage = (page: string): string => {
+    if (!SHOW_DEMO_FLOW) return page;
+    return LEGACY_PAGE_ALIAS[page] || page;
+  };
 
   const getNotificationColor = (type: string) => {
     switch (type) {
@@ -85,44 +102,73 @@ export default function Home() {
   }, [router]);
 
   useEffect(() => {
-    const initializeTheme = () => {
-      if (typeof window === 'undefined') return;
-      const root = window.document.documentElement;
-      const initialColorValue = localStorage.getItem('jansathi-theme') || 'dark';
-
-      if (initialColorValue === 'dark') {
-        root.classList.add('dark');
-        setIsDarkMode(true);
-      } else {
-        root.classList.remove('dark');
-        setIsDarkMode(false);
-      }
-    };
-    initializeTheme();
-    
     // Using setTimeout to safely trigger the mount state change after the initial render cycle
     const timer = setTimeout(() => setIsMounted(true), 10);
     return () => clearTimeout(timer);
   }, []);
 
-  const toggleTheme = () => {
-    if (typeof window === 'undefined') return;
-    const root = window.document.documentElement;
-    if (isDarkMode) {
-      root.classList.remove('dark');
-      localStorage.setItem('jansathi-theme', 'light');
-      setIsDarkMode(false);
-    } else {
-      root.classList.add('dark');
-      localStorage.setItem('jansathi-theme', 'dark');
-      setIsDarkMode(true);
-    }
-  };
-
   const renderContent = () => {
     switch (activePage) {
+      case 'ops-command':
+        return (
+          <div className="space-y-8">
+            <OverviewPage onNavigate={(p) => setActivePage(normalizePage(p))} />
+            <IVRConsole />
+          </div>
+        );
+      case 'ops-simulation':
+        return (
+          <div className="space-y-8">
+            <PhoneEmulatorPage />
+            <CallSimulator />
+          </div>
+        );
+      case 'ops-verification':
+        return (
+          <div className="space-y-8">
+            <HITLQueue />
+            <SecurityAuditPanel />
+          </div>
+        );
+      case 'ops-impact':
+        return (
+          <div className="space-y-8">
+            <BenefitReceiptViewer />
+            <ImpactMode />
+          </div>
+        );
       case 'overview':
-        return <OverviewPage onNavigate={setActivePage} />;
+      case 'ivr-console':
+        return (
+          <div className="space-y-8">
+            <OverviewPage onNavigate={(p) => setActivePage(normalizePage(p))} />
+            <IVRConsole />
+          </div>
+        );
+      case 'phone-emulator':
+      case 'simulator':
+        return (
+          <div className="space-y-8">
+            <PhoneEmulatorPage />
+            <CallSimulator />
+          </div>
+        );
+      case 'hitl':
+      case 'security':
+        return (
+          <div className="space-y-8">
+            <HITLQueue />
+            <SecurityAuditPanel />
+          </div>
+        );
+      case 'receipts':
+      case 'impact':
+        return (
+          <div className="space-y-8">
+            <BenefitReceiptViewer />
+            <ImpactMode />
+          </div>
+        );
       case 'assistant':
       case 'dashboard': // Legacy fallback
         return <ChatInterface />;
@@ -142,26 +188,10 @@ export default function Home() {
         return <HelpPage />;
       case 'ivr':
         return <IVRMonitor />;
-      case 'ivr-console':
-        return <IVRConsole />;
-      case 'simulator':
-        return <CallSimulator />;
-      case 'hitl':
-        return <HITLQueue />;
-      case 'receipts':
-        return <BenefitReceiptViewer />;
-      case 'security':
-        return <SecurityAuditPanel />;
-      case 'phone-emulator':
-        return <PhoneEmulatorPage />;
-      case 'impact':
-        return <ImpactMode />;
-      case 'federated-learning':
-        return <FederatedLearningStatus />;
       case 'market-prices':
         return <MarketPrices />;
       default:
-        return <OverviewPage onNavigate={setActivePage} />;
+        return SHOW_DEMO_FLOW ? <OverviewPage onNavigate={setActivePage} /> : <ChatInterface />;
     }
   };
 
@@ -195,15 +225,15 @@ export default function Home() {
           <Sidebar
             activePage={activePage}
             onPageChange={(p) => {
-              setActivePage(p);
+              setActivePage(normalizePage(p));
               setIsSidebarOpen(false);
             }}
             onNewChat={() => {
               sessionStorage.removeItem('current_jansathi_session');
-              if (activePage === 'dashboard') {
+              if (activePage === 'assistant') {
                 window.location.reload();
               } else {
-                setActivePage('dashboard');
+                setActivePage('assistant');
               }
             }}
           />
@@ -242,13 +272,7 @@ export default function Home() {
 
           <div className="flex items-center gap-4 lg:gap-6">
             {/* Theme Toggle */}
-            
-            <button onClick={toggleTheme} className="p-2.5 bg-secondary/50 hover:bg-secondary rounded-xl transition-colors border border-border/50">
-              {isDarkMode ?
-                <Sun className="w-5 h-5 text-amber-500" /> :
-                <Moon className="w-5 h-5 text-indigo-500" />
-              }
-            </button>
+            <ThemeToggle />
 
             {/* Notification Bell & Dropdown */}
             <div className="relative">
@@ -316,8 +340,8 @@ export default function Home() {
         </header>
 
         {/* Dynamic Page Rendering */}
-        <div className={`flex-1 overflow-x-hidden ${activePage === 'dashboard' ? 'p-0' : 'overflow-y-auto p-4 sm:p-8 lg:p-12'} scrollbar-none`}>
-          <div className={`${activePage === 'dashboard' ? 'h-full w-full' : 'max-w-6xl mx-auto min-h-full pb-20'}`}>
+        <div className={`flex-1 overflow-x-hidden ${(activePage === 'dashboard' || activePage === 'assistant') ? 'p-0' : 'overflow-y-auto p-4 sm:p-8 lg:p-12'} scrollbar-none`}>
+          <div className={`${(activePage === 'dashboard' || activePage === 'assistant') ? 'h-full w-full' : 'max-w-6xl mx-auto min-h-full pb-20'}`}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={activePage}

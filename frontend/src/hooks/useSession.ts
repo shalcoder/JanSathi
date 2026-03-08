@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, getToken } from '@/hooks/useAuth';
 import { initSession } from '@/services/api';
 
 const SESSION_STORAGE_KEY = 'jansathi_session_id';
@@ -21,7 +21,7 @@ export interface UseSessionReturn {
  */
 export function useSession(): UseSessionReturn {
     const { isAuthenticated: isSignedIn } = useAuth();
-    const getToken = async () => 'mock-token'; // or get valid Amplify token here if needed
+     // or get valid Amplify token here if needed
     const [sessionId, setSessionId] = useState<string | null>(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem(SESSION_STORAGE_KEY);

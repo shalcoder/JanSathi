@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, getToken } from '@/hooks/useAuth';
 import { User, MapPin, Briefcase, FileText, CheckCircle2, Languages, ArrowRight, ArrowLeft } from 'lucide-react';
 import { buildClient } from '@/services/api';
+import { SUPPORTED_LANGUAGES } from '@/lib/languages';
 
 const STEPS = [
   { id: 'personal', title: 'Personal Details', icon: User },
@@ -18,7 +19,7 @@ const STEPS = [
 export default function OnboardingWizard() {
   const router = useRouter();
   const { user, loading: isLoaded } = useAuth();
-  const getToken = async () => 'mock-token';
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -322,26 +323,21 @@ export default function OnboardingWizard() {
                     </p>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-                    {[
-                      { id: 'hi', label: 'Hindi (हिन्दी)', local: 'हिन्दी' },
-                      { id: 'en', label: 'English', local: 'English' },
-                      { id: 'ta', label: 'Tamil (தமிழ்)', local: 'தமிழ்' },
-                      { id: 'kn', label: 'Kannada (ಕನ್ನಡ)', local: 'ಕನ್ನಡ' },
-                    ].map((lang) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
+                    {SUPPORTED_LANGUAGES.map((lang) => (
                       <div 
-                        key={lang.id}
-                        onClick={() => handleChange('preferred_language', lang.id)}
+                        key={lang.code}
+                        onClick={() => handleChange('preferred_language', lang.code)}
                         className={`p-4 rounded-xl border text-center cursor-pointer transition-all ${
-                          formData.preferred_language === lang.id 
+                          formData.preferred_language === lang.code 
                             ? 'bg-blue-500/10 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)]' 
                             : 'bg-secondary/30 border-border/50 hover:bg-secondary/50'
                         }`}
                       >
-                        <p className={`font-bold text-lg mb-1 ${formData.preferred_language === lang.id ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`}>
-                          {lang.local}
+                        <p className={`font-bold text-lg mb-1 ${formData.preferred_language === lang.code ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`}>
+                          {lang.native}
                         </p>
-                        <p className="text-xs text-secondary-foreground opacity-60 uppercase tracking-widest">{lang.label}</p>
+                        <p className="text-xs text-secondary-foreground opacity-60 uppercase tracking-widest">{lang.name}</p>
                       </div>
                     ))}
                   </div>

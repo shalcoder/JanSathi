@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Download, FileText, CheckCircle, Share2, Printer, Loader2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, getToken } from '@/hooks/useAuth';
 import { getAuditLogs, AuditRecord } from '@/services/api';
 
 export default function BenefitReceiptViewer() {
   const { user, loading: isLoaded } = useAuth();
-    const getToken = async () => 'mock-token';
+    
   const [receiptLog, setReceiptLog] = useState<AuditRecord | null>(null);
   const [isPolling, setIsPolling] = useState(true);
 

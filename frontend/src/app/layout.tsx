@@ -7,8 +7,8 @@ import "@aws-amplify/ui-react/styles.css";
 import { configureAmplify } from "@/lib/cognito";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import OfflineNotice from "@/components/OfflineNotice";
-import Script from 'next/script';
 import { I18nProvider } from "@/context/i18n";
+import { ThemeProvider } from "@/context/theme";
 
 // Initialize Cognito
 configureAmplify();
@@ -36,13 +36,16 @@ export default function RootLayout({
         <meta name="description" content="JanSathi AI - Government scheme assistant for rural India" />
       </head>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased scrollbar-none`}
       >
         <OfflineNotice />
         <ErrorBoundary>
-          <I18nProvider>
-            {children}
-          </I18nProvider>
+          <ThemeProvider>
+            <I18nProvider>
+              {children}
+            </I18nProvider>
+          </ThemeProvider>
         </ErrorBoundary>
 
         {/* Unregister Service Worker to clear poisoned cache and stale Server Action IDs */}

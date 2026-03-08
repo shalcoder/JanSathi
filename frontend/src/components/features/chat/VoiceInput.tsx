@@ -7,9 +7,25 @@ interface VoiceInputProps {
     onTranscript: (text: string) => void;
     isProcessing: boolean;
     compact?: boolean;
+    language?: string;
 }
 
-export default function VoiceInput({ onTranscript, isProcessing, compact = false }: VoiceInputProps) {
+const localeMap: Record<string, string> = {
+    en: 'en-IN',
+    hi: 'hi-IN',
+    ta: 'ta-IN',
+    te: 'te-IN',
+    kn: 'kn-IN',
+    ml: 'ml-IN',
+    mr: 'mr-IN',
+    bn: 'bn-IN',
+    gu: 'gu-IN',
+    pa: 'pa-IN',
+    or: 'or-IN',
+    as: 'as-IN',
+};
+
+export default function VoiceInput({ onTranscript, isProcessing, compact = false, language = 'hi' }: VoiceInputProps) {
     const [isListening, setIsListening] = useState(false);
     const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -28,7 +44,7 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
                 const recognitionInstance = new (SpeechRecognitionAPI as any)();
                 recognitionInstance.continuous = false;
                 recognitionInstance.interimResults = false;
-                recognitionInstance.lang = 'hi-IN'; // Defaulting to Hindi/India mixed
+                recognitionInstance.lang = localeMap[language] || 'hi-IN';
 
                 recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
                     const transcript = event.results[0][0].transcript;
@@ -64,7 +80,7 @@ export default function VoiceInput({ onTranscript, isProcessing, compact = false
                 setTimeout(() => setError('Voice input not supported in this browser.'), 0);
             }
         }
-    }, []);
+    }, [language]);
 
     const toggleListening = useCallback(() => {
         if (!recognition) return;

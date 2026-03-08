@@ -38,7 +38,7 @@ class Config:
     AWS_REGION = get_secret('AWS_REGION', 'us-east-1')
     
     # CORS
-    ALLOWED_ORIGINS = get_secret('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+    ALLOWED_ORIGINS = get_secret('ALLOWED_ORIGINS', 'http://localhost:3000,http://jansathi-frontend-098999664345-1772954261.s3-website-us-east-1.amazonaws.com,https://dglfy6xfryumm.cloudfront.net').split(',')
     
     # Rate Limiting (Free Tier safe)
     RATELIMIT_DEFAULT = "200 per day"

@@ -29,6 +29,8 @@ def create_app():
     origins = [
         "http://localhost:3000",
         "https://jansathi.vercel.app",
+        "http://jansathi-frontend-098999664345-1772954261.s3-website-us-east-1.amazonaws.com",
+        "https://dglfy6xfryumm.cloudfront.net",
     ]
     CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
     

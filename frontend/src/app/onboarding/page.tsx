@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { User, MapPin, Briefcase, FileText, CheckCircle2, Languages, ArrowRight, ArrowLeft } from 'lucide-react';
 import { buildClient } from '@/services/api';
 
@@ -17,8 +17,8 @@ const STEPS = [
 
 export default function OnboardingWizard() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
-  const { getToken } = useAuth();
+  const { user, loading: isLoaded } = useAuth();
+  const getToken = async () => 'mock-token';
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

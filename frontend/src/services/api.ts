@@ -176,6 +176,20 @@ export interface IVRSession {
  * Main entry: send text or audio to the backend and get a unified response.
  * Pass `token` (Clerk JWT) and `sessionId` so they are forwarded as headers.
  */
+interface RawAgentResponse {
+  session_id: string;
+  response_text: string;
+  turn_id?: string;
+  benefit_receipt?: BenefitReceipt;
+  confidence?: number;
+  audio_url?: string;
+  mode?: string;
+  model?: string;
+  latency_ms?: number;
+  citations?: any[];
+  provenance?: string;
+}
+
 export const sendUnifiedQuery = async (
   params: UnifiedQueryRequest,
   token?: string,
@@ -184,7 +198,7 @@ export const sendUnifiedQuery = async (
   const client = buildClient(token, sessionId ?? params.session_id);
   
   // Route to the new intelligent agent endpoint
-  const response = await client.post<any>("/v1/agent/invoke", {
+  const response = await client.post<RawAgentResponse>("/v1/agent/invoke", {
     session_id: params.session_id,
     message: params.input.text || "",
     language: params.metadata?.lang || "hi",
@@ -204,9 +218,12 @@ export const sendUnifiedQuery = async (
     confidence: data.confidence || 0.9,
     audio_url: data.audio_url,
     debug: {
-      model: data.mode || "agentcore",
+      model: data.mode || data.model || "agentcore",
       latency_ms: data.latency_ms || 0,
-    }
+    },
+    // Carry over any extra fields like citations or provenance if they exist
+    ...(data.citations ? { citations: data.citations } : {}),
+    ...(data.provenance ? { provenance: data.provenance } : { provenance: "AI Analysis" })
   };
 };
 

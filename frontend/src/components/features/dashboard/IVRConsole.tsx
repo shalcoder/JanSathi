@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, AlertTriangle, CheckCircle2, RefreshCw, Clock, Mic, FileText, Radio } from 'lucide-react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { getIvrSessions, IvrSession } from '@/services/api';
 
 export default function IVRConsole() {
-  const { getToken } = useAuth();
+  const { user, loading: isLoaded } = useAuth();
+    const getToken = async () => 'mock-token';
   const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
   const [sessions, setSessions] = useState<IvrSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);

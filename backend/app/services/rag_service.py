@@ -263,7 +263,7 @@ class RagService:
             
         return final_results
 
-    def _hybrid_search(self, query, top_k=5, threshold=0.45, user_profile=None):
+    def _hybrid_search(self, query, top_k=5, threshold=0.25, user_profile=None):
         """
         Combines TF-IDF Semantic similarity with Keyword overlap.
         Enriched with User Profile boosting for personalization.

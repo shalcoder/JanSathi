@@ -23,8 +23,7 @@ import {
     Zap,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useUser, UserButton, SignedIn, SignedOut, SignInButton, SignOutButton } from '@clerk/nextjs';
-import { useI18n } from '@/context/i18n';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ChatSession {
     id: string;
@@ -41,7 +40,7 @@ interface SidebarProps {
 const SESSIONS_KEY = 'jansathi_chat_sessions';
 
 export default function Sidebar({ activePage, onPageChange, onNewChat }: SidebarProps) {
-    const { t } = useI18n();
+    const { user, signOut } = useAuth();
     const [sessions, setSessions] = useState<ChatSession[]>([]);
 
     useEffect(() => {
@@ -101,7 +100,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     ];
 
     return (
-        <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-background lg:bg-transparent border-r border-border/60 relative z-20 transition-all duration-500">
+        <div className="h-full w-full flex flex-col justify-between py-6 px-4 bg-background lg:bg-transparent border-r border-border/60 relative z-20 transition-all duration-500 font-[family-name:var(--font-outfit)]">
 
             <div className="space-y-6 overflow-y-auto scrollbar-none pb-8 h-full">
                 {/* Brand Logo */}
@@ -121,7 +120,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                     className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all hover:bg-primary/90 active:scale-95 shadow-md shadow-primary/20 hover:shadow-lg"
                 >
                     <PlusCircle className="w-4 h-4" />
-                    <span>{t('new_chat')}</span>
+                    <span>New Chat</span>
                 </button>
 
                 {/* Main Navigation */}
@@ -145,7 +144,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                                             <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-50"></div>
                                         )}
                                         <item.icon className={`w-4 h-4 relative z-10 ${activePage === item.id ? item.color : 'opacity-60 group-hover:opacity-100 group-hover:text-foreground transition-all duration-300 group-hover:scale-110'}`} />
-                                        <span className={`text-sm tracking-tight relative z-10 ${activePage === item.id ? 'font-bold' : ''}`}>{t(item.id)}</span>
+                                        <span className={`text-sm tracking-tight relative z-10 ${activePage === item.id ? 'font-bold' : ''}`}>{item.label}</span>
                                         {activePage === item.id && (
                                             <motion.div
                                                 layoutId="active-pill"
@@ -219,14 +218,15 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">D</div>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <UserProfileName />
+                            <UserProfileName user={user} />
                         </div>
-                        <SignOutButton>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-secondary-foreground hover:bg-red-500/10 hover:text-red-500 font-bold group border border-transparent hover:border-red-500/20 text-xs">
-                                <LogOut className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-red-500 transition-colors" />
-                                <span>{t('sign_out')}</span>
-                            </button>
-                        </SignOutButton>
+                        <button 
+                            onClick={signOut}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-secondary-foreground hover:bg-red-500/10 hover:text-red-500 font-bold group border border-transparent hover:border-red-500/20 text-xs"
+                        >
+                            <LogOut className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-red-500 transition-colors" />
+                            <span>Sign Out</span>
+                        </button>
                     </div>
                 </div>
                 {/* </SignedIn> */}
@@ -250,13 +250,11 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     );
 }
 
-function UserProfileName() {
-    // const { user } = useUser();
-    const user = { fullName: "Demo User" };
+function UserProfileName({ user }: { user: any }) {
     return (
         <>
             <p className="text-sm font-bold text-foreground truncate tracking-tight">
-                {user?.fullName || "JanSathi Citizen"}
+                {user?.name || "JanSathi Citizen"}
             </p>
             <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-2 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />

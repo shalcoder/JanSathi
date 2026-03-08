@@ -1,0 +1,19 @@
+{"timestamp": "2026-03-08T06:06:13.714276Z", "level": "INFO", "logger": "jansathi.middleware", "message": "JanSathi middleware registered: correlation IDs, request logging, auth decorators ready.", "module": "middleware", "function": "register_middleware", "line": 218}
+{"timestamp": "2026-03-08T06:06:13.714497Z", "level": "INFO", "logger": "jansathi.middleware", "message": "JanSathi middleware registered: correlation IDs, request logging, auth decorators ready.", "module": "middleware", "function": "register_middleware", "line": 218}
+{"timestamp": "2026-03-08T06:06:14.778646Z", "level": "INFO", "logger": "botocore.credentials", "message": "Found credentials in environment variables.", "module": "credentials", "function": "load", "line": 1252}
+{"timestamp": "2026-03-08T06:06:14.983087Z", "level": "INFO", "logger": "app.services.notify_service", "message": "[NotifyService] SNS client initialised", "module": "notify_service", "function": "_init_sns", "line": 58}
+{"timestamp": "2026-03-08T06:06:18.180200Z", "level": "INFO", "logger": "jansathi.middleware", "message": "JanSathi middleware registered: correlation IDs, request logging, auth decorators ready.", "module": "middleware", "function": "register_middleware", "line": 218}
+{"timestamp": "2026-03-08T06:06:18.180308Z", "level": "INFO", "logger": "jansathi.middleware", "message": "JanSathi middleware registered: correlation IDs, request logging, auth decorators ready.", "module": "middleware", "function": "register_middleware", "line": 218}
+Testing retrieve_knowledge tool...
+Kendra Error: Parameter validation failed:
+Invalid length for parameter IndexId, value: 24, valid min length: 36
+DEBUG: [Search] No RAG matches above 0.25. Falling back to search-based answer.
+
+--- Result ---
+{
+  "success": true,
+  "context_chunks": [
+    "I do not have specific public data on this yet. Please visit india.gov.in for official details."
+  ],
+  "source_count": 1
+}

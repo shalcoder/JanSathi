@@ -6,9 +6,10 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Mic, Languages, Bot, Globe, Cpu, Database, ChevronRight, Activity, Zap, Users, AlertTriangle, CheckCircle2, Radio, Lock, FileText, Shield } from "lucide-react";
 import BackendStatus from "@/components/BackendStatus";
 import ImpactStats from "@/components/features/community/ImpactStats";
-// import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 
 export default function LandingPage() {
+  const { authStatus } = useAuthenticator(context => [context.authStatus]);
   return (
     <main className="min-h-screen bg-background text-foreground overflow-x-hidden font-[family-name:var(--font-outfit)] selection:bg-primary/30 relative">
 
@@ -39,15 +40,23 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* <SignedOut> */}
-            <Link
-              href="/dashboard"
-              className="px-6 py-2.5 bg-foreground text-background dark:bg-white dark:text-black rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
-            >
-              Enter App
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            {/* </SignedOut> */}
+            {authStatus === 'authenticated' ? (
+              <Link
+                href="/dashboard"
+                className="px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
+              >
+                Go to Dashboard
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <Link
+                href="/auth/signin"
+                className="px-6 py-2.5 bg-foreground text-background dark:bg-white dark:text-black rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
+              >
+                Sign In
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
 
             {/* <SignedIn>
               <div className="flex items-center gap-4">
@@ -106,7 +115,7 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="text-lg md:text-xl text-secondary-foreground/80 max-w-2xl mb-12 leading-relaxed font-medium"
         >
-          A <strong className="text-foreground">Telecom-Native Agentic Infrastructure</strong>. Speak in your language via a simple phone call, and our <span className="text-primary font-bold">10-Layer Agentic Pipeline</span> instantly connects you to schemes, market prices, and public services.
+          A <strong className="text-foreground">Telecom-Native Agentic Infrastructure</strong>. Speak naturally via a simple phone call, and our <span className="text-primary font-bold">10-Layer Agentic Pipeline</span> instantly connects you to schemes, market prices, and public services.
         </motion.p>
 
         <motion.div
@@ -115,31 +124,29 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.5 }}
           className="flex flex-col sm:flex-row gap-4 items-center w-full justify-center"
         >
-          {/* <SignedOut> */}
-          <Link
-            href="/dashboard"
-            className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-            <span className="relative flex items-center justify-center gap-2">
-              Start Chat
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </span>
-          </Link>
-          {/* </SignedOut> */}
-
-          {/* <SignedIn>
+          {authStatus === 'authenticated' ? (
             <Link
               href="/dashboard"
               className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
               <span className="relative flex items-center justify-center gap-2">
-                Go to Dashboard
+                Open Dashboard
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </Link>
-          </SignedIn> */}
+          ) : (
+            <Link
+              href="/auth/signin"
+              className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <span className="relative flex items-center justify-center gap-2">
+                Get Started
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+          )}
 
           <a
             href="#mission"
@@ -214,7 +221,7 @@ export default function LandingPage() {
           <ProcessStep
             number="01"
             title="Toll-Free Voice Call"
-            desc="Dial the number and speak naturally in local languages. No apps, no internet needed."
+            desc="Dial the number and speak naturally. No apps, no internet needed."
             icon={<Mic className="w-6 h-6 text-white" />}
             color="bg-orange-500"
           />
@@ -504,7 +511,7 @@ export default function LandingPage() {
                 <Link href="/contact" className="hover:text-primary transition-colors flex items-center gap-2">Contact Us</Link>
               </li>
               <li>
-                <Link href="/region" className="hover:text-primary transition-colors flex items-center gap-2"><Globe className="w-4 h-4" /> India Regional Node</Link>
+                <Link href="/region" className="hover:text-primary transition-colors flex items-center gap-2"><Globe className="w-4 h-4" /> Global Node</Link>
               </li>
               <li>
                 <Link href="/security" className="hover:text-primary transition-colors flex items-center gap-2"><Lock className="w-4 h-4" /> Secure & Encrypted</Link>

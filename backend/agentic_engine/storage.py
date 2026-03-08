@@ -129,10 +129,16 @@ class DynamoDBStorage(BaseSessionStorage):
         """
         if self.table is None:
             self.initialize()
+            
+        import json
+        from decimal import Decimal
+        # Convert floats to Decimals
+        session_data_dyn = json.loads(json.dumps(session_data), parse_float=Decimal)
+
         expires_at = int(time.time()) + _SESSION_TTL_SECONDS
         self.table.put_item(Item={
             "session_id": session_id,
-            "data": session_data,
+            "data": session_data_dyn,
             "expires_at": expires_at,  # DynamoDB TTL attribute
         })
         logger.debug(f"[DynamoDBStorage] Session {session_id} written, TTL={expires_at}")
@@ -153,7 +159,17 @@ class DynamoDBStorage(BaseSessionStorage):
         if expires_at and int(time.time()) > expires_at:
             logger.info(f"[DynamoDBStorage] Session {session_id} locally expired (TTL={expires_at})")
             return None
-        return item.get("data", {})
+            
+        import json
+        from decimal import Decimal
+        class DecimalEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, Decimal):
+                    return float(obj)
+                return super(DecimalEncoder, self).default(obj)
+                
+        data = item.get("data", {})
+        return json.loads(json.dumps(data, cls=DecimalEncoder))
 
     def load(self) -> dict:
         """

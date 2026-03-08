@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { Mail, Lock, LogIn, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -31,41 +30,17 @@ interface CustomAuthProps {
 }
 
 export default function CustomAuth({ mode = "signUp" }: CustomAuthProps) {
-    // const { signIn, isLoaded: isSignInLoaded } = useSignIn();
-    // const { signUp, isLoaded: isSignUpLoaded } = useSignUp();
-    const isSignInLoaded = true;
-    const isSignUpLoaded = true;
     const router = useRouter();
 
     const handleOAuth = async (strategy: "oauth_google" | "oauth_microsoft") => {
-        /*
-        if (mode === "signIn") {
-            if (!isSignInLoaded) return;
-            await signIn.authenticateWithRedirect({
-                strategy,
-                redirectUrl: "/sso-callback",
-                redirectUrlComplete: "/dashboard",
-            });
-        } else {
-            if (!isSignUpLoaded) return;
-            await signUp.authenticateWithRedirect({
-                strategy,
-                redirectUrl: "/sso-callback",
-                redirectUrlComplete: "/dashboard",
-            });
-        }
-        */
         console.log("OAuth strategy selected:", strategy);
-        router.push("/dashboard");
+        // Default to routing them to the base page which contains the Authenticator
+        router.push(mode === "signIn" ? "/sign-in" : "/sign-up");
     };
 
     const handleEmailClick = () => {
-        // Redirect to a dedicated email entry page or toggle state
-        // For simplicity, we can route to the specific Clerk page for email
-        router.push(mode === "signIn" ? "/sign-in/email" : "/sign-up/email");
+        router.push(mode === "signIn" ? "/sign-in" : "/sign-up");
     };
-
-    // For now, simple toggles or specific routes for email/sso could be implemented
     // But aligning with the image request:
 
     return (

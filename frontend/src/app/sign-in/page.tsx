@@ -1,13 +1,25 @@
 'use client';
 
-import { SignIn } from "@clerk/nextjs";
+import { Authenticator } from "@aws-amplify/ui-react";
+import "@aws-amplify/ui-react/styles.css";
 import CustomAuth from "@/components/auth/CustomAuth";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SignInPage() {
     const params = useParams();
+    const router = useRouter();
+    const { isAuthenticated, loading } = useAuth();
+    
+    useEffect(() => {
+        if (!loading && isAuthenticated) {
+            router.push('/dashboard');
+        }
+    }, [isAuthenticated, loading, router]);
+
     const isRoot = !params?.['sign-in'] || params['sign-in'].length === 0;
 
     return (
@@ -65,29 +77,27 @@ export default function SignInPage() {
                             <CustomAuth mode="signIn" />
                         </div>
                     ) : (
-                        <SignIn
-                            appearance={{
-                                layout: {
-                                    socialButtonsPlacement: 'top',
-                                },
-                                elements: {
-                                    rootBox: "w-full max-w-md",
-                                    card: "bg-card backdrop-blur-2xl border border-border/50 shadow-2xl rounded-[2rem] p-6 w-full",
-                                    headerTitle: "text-foreground text-2xl font-bold mb-1",
-                                    headerSubtitle: "text-secondary-foreground text-sm mb-6",
-                                    socialButtonsBlockButton: "bg-secondary border border-border/50 hover:bg-secondary/80 text-foreground rounded-xl mb-3",
-                                    formButtonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-3 font-bold w-full",
-                                    formFieldInput: "bg-secondary border border-border/50 text-foreground rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent",
-                                    formFieldLabel: "text-secondary-foreground font-medium",
-                                    footerActionText: "text-secondary-foreground",
-                                    footerActionLink: "text-primary hover:text-primary/80 font-bold ml-1",
-                                    dividerLine: "bg-border/50",
-                                    dividerText: "text-secondary-foreground text-xs",
-                                    identityPreviewText: "text-foreground",
-                                    identityPreviewEditButton: "text-primary hover:text-primary/80",
-                                }
-                            }}
-                        />
+                        <div className="w-full max-w-md bg-card backdrop-blur-2xl border border-border/50 shadow-2xl rounded-[2rem] p-6">
+                            <Authenticator initialState="signIn">
+                                {({ signOut, user }) => (
+                                    <div className="text-center">
+                                        <h2 className="text-xl font-bold mb-4 text-foreground">Welcome {user?.username}</h2>
+                                        <button 
+                                            onClick={() => router.push('/dashboard')}
+                                            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-3 font-bold w-full mb-3"
+                                        >
+                                            Go to Dashboard
+                                        </button>
+                                        <button 
+                                            onClick={signOut}
+                                            className="bg-secondary border border-border/50 hover:bg-secondary/80 text-foreground rounded-xl py-3 font-bold w-full"
+                                        >
+                                            Sign out
+                                        </button>
+                                    </div>
+                                )}
+                            </Authenticator>
+                        </div>
                     )}
                 </div>
             </div>

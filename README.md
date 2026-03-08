@@ -53,7 +53,6 @@ No app. No smartphone. No middleman. No literacy required.
 | Multi-lingual IVR          | Hindi, Tamil, English — expandable to 10+ Indian languages             |
 | Web Phone Emulator         | Browser-based phone with mic, DTMF keypad, call timer, live transcript |
 | Amazon Connect Integration | Full IVR telephony via AWS Connect + Lambda webhook                    |
-| Knowledge Base System      | Upload PDFs, query with AI, intelligent caching (85% cost reduction)   |
 
 ### 🤖 AI & Agent Engine
 
@@ -63,8 +62,6 @@ No app. No smartphone. No middleman. No literacy required.
 | Slot Collection FSM        | Conversational question-answer loop to collect scheme-specific data            |
 | Deterministic Rules Engine | Eligibility evaluated against official Government Orders — no AI hallucination |
 | Agentic RAG Retrieval      | Amazon Kendra retrieves live government scheme documents                       |
-| Bedrock Knowledge Base     | Upload PDFs, query with AI, semantic search with intelligent caching           |
-| Query Caching System       | 85% cost reduction through intelligent response caching (SQLite/DynamoDB)      |
 | Grievance Auto-Draft       | Bedrock LLM generates a formal grievance letter with reference ID              |
 | Personalization Engine     | Adapts tone and suggestions by state, income, occupation, language             |
 
@@ -152,7 +149,6 @@ JanSathi/
 │   └── src/
 │       ├── app/
 │       │   ├── dashboard/      # Protected dashboard
-│       │   ├── knowledge-base/ # Knowledge Base feature (NEW)
 │       │   └── (auth)/         # Clerk auth pages
 │       └── components/
 │           ├── features/
@@ -163,9 +159,6 @@ JanSathi/
 │           │   │   ├── ImpactMode.tsx          # Impact metrics dashboard
 │           │   │   ├── OverviewPage.tsx        # Admin command center
 │           │   │   └── ...
-│           │   ├── knowledge-base/             # Knowledge Base components (NEW)
-│           │   │   ├── KnowledgeBaseUpload.tsx # PDF upload interface
-│           │   │   └── KnowledgeBaseQuery.tsx  # Query interface with caching
 │           │   └── chat/
 │           │       └── BenefitReceipt.tsx      # Eligibility receipt display
 │           └── layout/
@@ -174,32 +167,24 @@ JanSathi/
 ├── backend/                    # Flask + Python
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── v1_routes.py              # All /v1/* endpoints
-│   │   │   └── knowledge_base_routes.py  # Knowledge Base API (NEW)
+│   │   │   └── v1_routes.py    # All /v1/* endpoints
 │   │   ├── core/
 │   │   │   └── execution.py    # Main agentic execution pipeline
 │   │   ├── services/
 │   │   │   ├── intent_service.py        # Bedrock + keyword classification
 │   │   │   ├── bedrock_service.py       # Claude LLM integration
-│   │   │   ├── knowledge_base_service.py # KB with caching (NEW)
 │   │   │   ├── rag_service.py           # Amazon Kendra RAG
 │   │   │   ├── rules_engine.py          # Deterministic eligibility engine
 │   │   │   ├── receipt_service.py       # HTML receipt + S3 upload
 │   │   │   ├── notify_service.py        # AWS SNS SMS dispatch
 │   │   │   ├── personalization_service.py # Profile-aware prompting
-│   │   │   ├── cache_service.py         # Query caching service (NEW)
 │   │   │   └── hitl_service.py          # Human-in-the-loop queue
-│   │   ├── models/
-│   │   │   └── models.py        # BedrockQueryCache model (NEW)
 │   │   └── data/
 │   │       └── schemes_config.yaml      # Scheme definitions (slots + rules)
 │   ├── agentic_engine/
 │   │   ├── workflow_engine.py   # FSM orchestration
 │   │   ├── state_machine.py     # Valid state transitions
 │   │   └── session_manager.py   # Session persistence
-│   ├── docs/                    # Documentation (NEW)
-│   │   ├── kb_quick_start.md    # Knowledge Base setup guide
-│   │   └── knowledge_base_caching.md # Caching implementation details
 │   └── main.py
 │
 ├── infrastructure/              # AWS CDK stacks
@@ -207,72 +192,7 @@ JanSathi/
 │       ├── api_stack.py
 │       └── frontend_stack.py
 │
-├── docs/                        # Deployment documentation (NEW)
-│   └── AWS_FRONTEND_DEPLOYMENT.md
-│
 └── scripts/                    # Dev utilities
-```
-
----
-
-## 🚀 AWS Deployment
-
-### Frontend Deployment (S3 + CloudFront)
-
-The frontend is deployed on AWS using S3 for static hosting and CloudFront for CDN and client-side routing support.
-
-#### Deployment Steps:
-
-1. **Build Static Export**:
-```bash
-cd frontend
-npm run build
-# Extracts static files to out/ folder
-.\extract-static.ps1
-```
-
-2. **Upload to S3**:
-```bash
-aws s3 sync out/ s3://frontend-jansathi/ --delete --region us-east-1
-```
-
-3. **Configure CloudFront**:
-   - Origin: `frontend-jansathi.s3-website-us-east-1.amazonaws.com`
-   - Default root object: `index.html`
-   - Custom error responses:
-     - 403 → `/index.html` (200 status)
-     - 404 → `/index.html` (200 status)
-   - Viewer protocol: Redirect HTTP to HTTPS
-
-4. **Access Website**:
-   - S3 endpoint: `http://frontend-jansathi.s3-website-us-east-1.amazonaws.com`
-   - CloudFront: `https://YOUR-DISTRIBUTION-ID.cloudfront.net`
-
-#### Cost Estimate:
-- S3 Storage: ~$0.50/month
-- CloudFront: ~$1-2/month (low traffic)
-- Total: **~$2-3/month**
-
-#### Documentation:
-- Detailed guide: `frontend/CLOUDFRONT_SETUP.md`
-- Quick start: `frontend/S3_DEPLOYMENT_READY.md`
-- Console guide: `frontend/S3_CONSOLE_DEPLOYMENT.md`
-
-### Backend Deployment
-
-**Current**: Deployed on Render.com at `https://jansathi.onrender.com`
-
-**Planned**: Migration to AWS Lambda + API Gateway or ECS for full AWS integration
-
-#### Environment Variables Required:
-```env
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-AWS_REGION=ap-south-1
-BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
-BEDROCK_KB_ID=your_kb_id
-DATABASE_URL=your_database_url
-STORAGE_TYPE=dynamodb  # or local for development
 ```
 
 ---
@@ -338,11 +258,6 @@ AWS_REGION=ap-south-1
 BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
 INTENT_CLASSIFIER=rule_based       # or "bedrock" for LLM classification
 KENDRA_INDEX_ID=your_kendra_index  # or "mock-index" for local
-
-# Knowledge Base (NEW)
-BEDROCK_KB_ID=your_knowledge_base_id
-ENABLE_KB_CACHING=true
-CACHE_TTL_HOURS=24
 
 # Storage
 STORAGE_TYPE=local                 # or "dynamodb"
@@ -416,73 +331,6 @@ CLERK_SECRET_KEY=sk_...
     "latency_ms": 420,
     "risk_score": 0.1
   }
-}
-```
-
-#### Knowledge Base Endpoints (NEW)
-
-#### `POST /api/knowledge-base/upload` — Upload PDF to Knowledge Base
-
-```json
-{
-  "file": "<PDF file>",
-  "metadata": {
-    "title": "PM-Kisan Guidelines 2024",
-    "category": "scheme"
-  }
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data_source_id": "ds-abc123",
-  "message": "Document uploaded successfully"
-}
-```
-
-#### `POST /api/knowledge-base/query` — Query Knowledge Base with Caching
-
-```json
-{
-  "query": "What are PM-Kisan eligibility criteria?",
-  "knowledge_base_id": "kb-abc123"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "answer": "PM-Kisan eligibility requires...",
-  "sources": [
-    {
-      "title": "PM-Kisan Guidelines",
-      "excerpt": "...",
-      "uri": "s3://..."
-    }
-  ],
-  "cached": false,
-  "cost_saved": 0.0
-}
-```
-
-#### `GET /api/knowledge-base/analytics` — Get Caching Analytics
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "total_queries": 150,
-  "cache_hits": 128,
-  "cache_hit_rate": 85.3,
-  "total_cost_saved": 12.45,
-  "avg_response_time_cached": 45,
-  "avg_response_time_uncached": 1200
 }
 ```
 
@@ -612,12 +460,6 @@ While the system is advanced, the following items reflect the current engineerin
 *   **API Contract Normalization (L1 Enforcement)**:
     *   **Status**: **IMPLEMENTED**.
     *   **Detail**: Centralized `schema_validator.py` now enforces the `UnifiedEventObject` contract on all core `/v1/` routes.
-*   **Knowledge Base with Intelligent Caching**:
-    *   **Status**: **IMPLEMENTED**.
-    *   **Detail**: Full PDF upload, semantic search via AWS Bedrock Knowledge Base, intelligent query caching achieving 85% cost reduction. Supports both SQLite (local) and DynamoDB (production).
-*   **Frontend AWS Deployment**:
-    *   **Status**: **DEPLOYED**.
-    *   **Detail**: Next.js frontend deployed to AWS S3 + CloudFront with full client-side routing support. Static export optimized for production.
 
 ### 🚧 In Progress / Pending
 
@@ -636,21 +478,17 @@ While the system is advanced, the following items reflect the current engineerin
 *   **Rate Limiting & WAF**:
     *   **Status**: API Gateway is configured, but specific throttling rules and AWS WAF protection are not yet deployed.
     *   **Need**: Defining `UsagePlan` and `Throttling` quotas to prevent abuse.
-*   **Backend AWS Deployment**:
-    *   **Status**: Backend currently deployed on Render.com.
-    *   **Need**: Migration to AWS Lambda + API Gateway or ECS for full AWS integration.
 
 ---
 
 ## 🗺️ Roadmap
 
-| Phase                 | Features                                                                        | Status      |
-| --------------------- | ------------------------------------------------------------------------------- | ----------- |
-| **Phase 1**           | Voice IVR, PM-Kisan, PM Awas, E-Shram, Grievance, Web Emulator                 | ✅ Complete |
-| **Phase 2**           | Knowledge Base with caching, AWS S3 + CloudFront deployment                     | ✅ Complete |
-| **Phase 3 (Current)** | DigiLocker integration, CSC submission packet, 8 more states                    | 🚧 In Progress |
-| **Phase 4**           | State e-District API integration, multi-district RAG index, Backend AWS migration | 📋 Planned  |
-| **Phase 5**           | National civic interoperability layer, UIDAI linkage                            | 📋 Planned  |
+| Phase                 | Features                                                       |
+| --------------------- | -------------------------------------------------------------- |
+| **Phase 1 (Current)** | Voice IVR, PM-Kisan, PM Awas, E-Shram, Grievance, Web Emulator |
+| **Phase 2**           | DigiLocker integration, CSC submission packet, 8 more states   |
+| **Phase 3**           | State e-District API integration, multi-district RAG index     |
+| **Phase 4**           | National civic interoperability layer, UIDAI linkage           |
 
 ---
 

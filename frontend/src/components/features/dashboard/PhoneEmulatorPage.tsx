@@ -10,7 +10,7 @@ import SMSSimulator, { SMSMessage } from './SMSSimulator';
 import TelemetryPanel, { TelemetryData } from './TelemetryPanel';
 import { buildClient } from '@/services/api';
 import { useSession } from '@/hooks/useSession';
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ const LANGUAGES = [
 
 export default function PhoneEmulatorPage() {
   const { sessionId, token } = useSession();
-  const { user } = useUser();
+  const { user, loading: isLoaded } = useAuth();
 
   const [callState, setCallState] = useState<CallState>('idle');
   const [lang, setLang] = useState('hi-IN');

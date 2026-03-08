@@ -1,0 +1,28 @@
+Latest log stream: 2026/03/08/[$LATEST]f0ac58ae41614aa1b6b50e24ff864a6d
+
+INIT_START Runtime Version: python:3.11.mainlinev2.v3	Runtime Version ARN: arn:aws:lambda:us-east-1::runtime:0de7d4de4aef04631dc8443fb686ab8bf14de4d4a348cb0d407cce5f48aef7d8
+[WARNING]	2026-03-08T06:30:40.519Z		LAMBDA_WARNING: Unhandled exception. The most likely cause is an issue in the function code. However, in rare cases, a Lambda runtime update can cause unexpected function behavior. For functions using managed runtimes, runtime updates can be triggered by a function change, or can be applied automatically. To determine if the runtime has been updated, check the runtime version in the INIT_START log entry. If this error correlates with a change in the runtime version, you may be able to mitigate this error by temporarily rolling back to the previous runtime version. For more information, see https://docs.aws.amazon.com/lambda/latest/dg/runtimes-update.html
+[ERROR] Runtime.HandlerNotFound: Handler 'handler' missing on module 'lambda_handler'
+Traceback (most recent call last):
+INIT_REPORT Init Duration: 218.08 ms	Phase: init	Status: error	Error Type: Runtime.HandlerNotFound
+[WARNING]	2026-03-08T06:30:40.706Z		LAMBDA_WARNING: Unhandled exception. The most likely cause is an issue in the function code. However, in rare cases, a Lambda runtime update can cause unexpected function behavior. For functions using managed runtimes, runtime updates can be triggered by a function change, or can be applied automatically. To determine if the runtime has been updated, check the runtime version in the INIT_START log entry. If this error correlates with a change in the runtime version, you may be able to mitigate this error by temporarily rolling back to the previous runtime version. For more information, see https://docs.aws.amazon.com/lambda/latest/dg/runtimes-update.html
+[ERROR] Runtime.HandlerNotFound: Handler 'handler' missing on module 'lambda_handler'
+Traceback (most recent call last):
+INIT_REPORT Init Duration: 165.17 ms	Phase: invoke	Status: error	Error Type: Runtime.HandlerNotFound
+START RequestId: 941222b8-9cbe-477a-97d0-5e91975272e6 Version: $LATEST
+END RequestId: 941222b8-9cbe-477a-97d0-5e91975272e6
+REPORT RequestId: 941222b8-9cbe-477a-97d0-5e91975272e6	Duration: 174.70 ms	Billed Duration: 175 ms	Memory Size: 1024 MB	Max Memory Used: 47 MB	Status: error	Error Type: Runtime.HandlerNotFound
+[WARNING]	2026-03-08T06:30:48.812Z		LAMBDA_WARNING: Unhandled exception. The most likely cause is an issue in the function code. However, in rare cases, a Lambda runtime update can cause unexpected function behavior. For functions using managed runtimes, runtime updates can be triggered by a function change, or can be applied automatically. To determine if the runtime has been updated, check the runtime version in the INIT_START log entry. If this error correlates with a change in the runtime version, you may be able to mitigate this error by temporarily rolling back to the previous runtime version. For more information, see https://docs.aws.amazon.com/lambda/latest/dg/runtimes-update.html
+[ERROR] Runtime.HandlerNotFound: Handler 'handler' missing on module 'lambda_handler'
+Traceback (most recent call last):
+INIT_REPORT Init Duration: 162.49 ms	Phase: invoke	Status: error	Error Type: Runtime.HandlerNotFound
+START RequestId: 88947927-b439-44be-9492-9c63f0d13754 Version: $LATEST
+END RequestId: 88947927-b439-44be-9492-9c63f0d13754
+REPORT RequestId: 88947927-b439-44be-9492-9c63f0d13754	Duration: 172.64 ms	Billed Duration: 173 ms	Memory Size: 1024 MB	Max Memory Used: 47 MB	Status: error	Error Type: Runtime.HandlerNotFound
+[WARNING]	2026-03-08T06:31:22.334Z		LAMBDA_WARNING: Unhandled exception. The most likely cause is an issue in the function code. However, in rare cases, a Lambda runtime update can cause unexpected function behavior. For functions using managed runtimes, runtime updates can be triggered by a function change, or can be applied automatically. To determine if the runtime has been updated, check the runtime version in the INIT_START log entry. If this error correlates with a change in the runtime version, you may be able to mitigate this error by temporarily rolling back to the previous runtime version. For more information, see https://docs.aws.amazon.com/lambda/latest/dg/runtimes-update.html
+[ERROR] Runtime.HandlerNotFound: Handler 'handler' missing on module 'lambda_handler'
+Traceback (most recent call last):
+INIT_REPORT Init Duration: 162.33 ms	Phase: invoke	Status: error	Error Type: Runtime.HandlerNotFound
+START RequestId: cd854c5d-b9d4-4f8b-b47e-614a15168bad Version: $LATEST
+END RequestId: cd854c5d-b9d4-4f8b-b47e-614a15168bad
+REPORT RequestId: cd854c5d-b9d4-4f8b-b47e-614a15168bad	Duration: 171.21 ms	Billed Duration: 172 ms	Memory Size: 1024 MB	Max Memory Used: 47 MB	Status: error	Error Type: Runtime.HandlerNotFound

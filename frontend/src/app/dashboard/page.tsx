@@ -24,26 +24,18 @@ import ImpactMode from "@/components/features/dashboard/ImpactMode";
 import FederatedLearningStatus from "@/components/features/dashboard/FederatedLearningStatus";
 import MarketPrices from "@/components/features/dashboard/MarketPrices";
 import { Menu, Sun, Moon, Search, Bell } from 'lucide-react';
-// import { useUser, useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { buildClient } from '@/services/api';
-import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
-import { useI18n } from '@/context/i18n';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
-  const { t } = useI18n();
   const router = useRouter();
-  // const { user, isLoaded } = useUser();
-  // const { getToken } = useAuth();
-  const user = { firstName: "Demo", lastName: "User", imageUrl: "" };
-  const isLoaded = true;
-  const getToken = async () => "mock-token";
-  proxy: true;
+  const { user, requireAuth, loading: authLoading } = useAuth();
+  
   const [activePage, setActivePage] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Semantic notification types
   const [notifications, setNotifications] = useState([
@@ -89,38 +81,12 @@ export default function Home() {
 
   // Initialize and check user
   useEffect(() => {
-    /*
-    async function checkProfile() {
-      if (!isLoaded || !user) return;
-
-      try {
-        const token = await getToken();
-        if (!token) return;
-
-        const api = buildClient(token);
-        const res = await api.get('/v1/profile');
-        if (res.data?.profile?.profile_complete === false) {
-          router.push('/onboarding');
-        } else {
-          setIsLoadingProfile(false);
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
-        console.error("Failed to check profile status:", err);
-        // If profile doesn't exist (404) or there is an issue fetching it for a new user, redirect to onboarding directly
-        if (err.response?.status === 404 || err.response?.status === 400 || (err.response && err.response.data && String(err.response.data.detail).includes('not found'))) {
-          router.push('/onboarding');
-          return; // Keep loading state true to prevent flashing while routing
-        }
-        setIsLoadingProfile(false);
-      }
-    }
-    checkProfile();
-    */
-  }, [isLoaded, user, router, getToken]);
+    // Profile check logic removed
+  }, [router]);
 
   useEffect(() => {
     const initializeTheme = () => {
+      if (typeof window === 'undefined') return;
       const root = window.document.documentElement;
       const initialColorValue = localStorage.getItem('jansathi-theme') || 'dark';
 
@@ -133,9 +99,14 @@ export default function Home() {
       }
     };
     initializeTheme();
+    
+    // Using setTimeout to safely trigger the mount state change after the initial render cycle
+    const timer = setTimeout(() => setIsMounted(true), 10);
+    return () => clearTimeout(timer);
   }, []);
 
   const toggleTheme = () => {
+    if (typeof window === 'undefined') return;
     const root = window.document.documentElement;
     if (isDarkMode) {
       root.classList.remove('dark');
@@ -194,7 +165,11 @@ export default function Home() {
     }
   };
 
-  if (isLoadingProfile) {
+  useEffect(() => {
+    requireAuth();
+  }, [user, authLoading, requireAuth]);
+
+  if (!isMounted || authLoading || !user) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -203,7 +178,7 @@ export default function Home() {
   }
 
   return (
-    <main className="h-screen w-full flex bg-background text-foreground overflow-hidden relative selection:bg-primary/20 transition-colors">
+    <main className="h-screen w-full flex bg-background text-foreground overflow-hidden relative selection:bg-primary/20 transition-colors font-[family-name:var(--font-outfit)]">
 
       {/* Simplified Background */}
       <div className="fixed inset-0 z-[-1] bg-background"></div>
@@ -267,7 +242,6 @@ export default function Home() {
 
           <div className="flex items-center gap-4 lg:gap-6">
             {/* Theme Toggle */}
-            <LanguageSwitcher />
             
             <button onClick={toggleTheme} className="p-2.5 bg-secondary/50 hover:bg-secondary rounded-xl transition-colors border border-border/50">
               {isDarkMode ?
@@ -332,12 +306,12 @@ export default function Home() {
               </AnimatePresence>
             </div>
 
-            {/* User Identity - Clerk Avatar */}
             <div className="hidden sm:block">
               {/* <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 shadow-sm" } }} /> */}
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">D</div>
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </div>
             </div>
-            proxy: true;
           </div>
         </header>
 

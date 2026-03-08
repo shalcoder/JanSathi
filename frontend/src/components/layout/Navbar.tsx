@@ -1,6 +1,6 @@
 'use client';
 
-// import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+// import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 import { Ghost } from "lucide-react";
 
 export default function Navbar() {

@@ -53,8 +53,8 @@ def _get_session_manager() -> SessionManager:
     
     if storage_type == "dynamodb":
         from agentic_engine.storage import DynamoDBStorage
-        table_name = os.getenv("DYNAMODB_SESSIONS_TABLE", "JanSathi-Conversations")
-        region = os.getenv("AWS_REGION", "ap-south-1")
+        table_name = os.getenv("DYNAMODB_SESSIONS_TABLE", "JanSathi-Sessions")
+        region = os.getenv("AWS_REGION", "us-east-1")
         return SessionManager(DynamoDBStorage(table_name, region))
     else:
         from agentic_engine.storage import LocalJSONStorage

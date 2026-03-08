@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, CheckCircle, XCircle, FileText, ChevronRight } from 'lucide-react';
 import { getApplications, getApplicationsBySession } from '@/services/api';
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { useSession } from '@/hooks/useSession';
 
 interface Application {
@@ -17,7 +17,7 @@ interface Application {
 export default function ApplicationsPage() {
     const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useUser();
+    const { user, loading: isLoaded } = useAuth();
     const { sessionId, token } = useSession();
     const userId = user?.id || 'demo-user';
 

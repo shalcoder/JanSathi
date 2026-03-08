@@ -9,9 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.10.3",
-    "@clerk/themes": "^2.4.52",
-    "@ducanh2912/next-pwa": "^10.2.9",
+    "@aws-amplify/ui-react": "^6.15.1",
+    "@ducanh2912/next-pwa": "^10.2.6",
+    "aws-amplify": "^6.16.2",
     "axios": "^1.13.4",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.0",
@@ -33,5 +33,8 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.4"
   }
 }

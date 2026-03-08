@@ -2,11 +2,16 @@
 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
+import { Authenticator } from "@aws-amplify/ui-react";
+import "@aws-amplify/ui-react/styles.css";
+import { configureAmplify } from "@/lib/cognito";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import OfflineNotice from "@/components/OfflineNotice";
 import Script from 'next/script';
 import { I18nProvider } from "@/context/i18n";
+
+// Initialize Cognito
+configureAmplify();
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,10 +22,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-import { dark } from "@clerk/themes";
 
 export default function RootLayout({
   children,
@@ -50,20 +51,9 @@ export default function RootLayout({
     </html>
   );
 
-  // Wrap with Clerk if a key is provided
-  // Note: key is guaranteed by next.config.ts fallback for build, and real env for deploy
-  if (!PUBLISHABLE_KEY) {
-    return content;
-  }
-
   return (
-    <ClerkProvider
-      publishableKey={PUBLISHABLE_KEY}
-      appearance={{
-        baseTheme: dark,
-      }}
-    >
+    <Authenticator.Provider>
       {content}
-    </ClerkProvider>
+    </Authenticator.Provider>
   );
 }

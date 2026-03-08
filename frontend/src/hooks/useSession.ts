@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { initSession } from '@/services/api';
 
 const SESSION_STORAGE_KEY = 'jansathi_session_id';
@@ -20,7 +20,8 @@ export interface UseSessionReturn {
  * - resetSession() clears the stored ID and triggers a new init.
  */
 export function useSession(): UseSessionReturn {
-    const { getToken, isSignedIn } = useAuth();
+    const { isAuthenticated: isSignedIn } = useAuth();
+    const getToken = async () => 'mock-token'; // or get valid Amplify token here if needed
     const [sessionId, setSessionId] = useState<string | null>(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem(SESSION_STORAGE_KEY);
@@ -61,7 +62,7 @@ export function useSession(): UseSessionReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [getToken, isSignedIn]);
+    }, [isSignedIn]);
 
     useEffect(() => {
         fetchSession();

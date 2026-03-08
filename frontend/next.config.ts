@@ -9,7 +9,7 @@ const withPWA = withPWAModule({
 });
 
 const isProduction = process.env.NODE_ENV === "production";
-const isStaticExport = process.env.STATIC_EXPORT === "true";
+const isStaticExport = true; // Enforced for AWS S3 deployment
 
 const nextConfig: NextConfig = {
   // Static export for S3 + CloudFront deployment (Only if explicitly requested)

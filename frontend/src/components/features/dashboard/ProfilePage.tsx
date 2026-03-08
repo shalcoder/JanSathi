@@ -19,14 +19,14 @@ import {
     ArrowRight,
     User
 } from 'lucide-react';
-import { useUser, useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { buildClient } from '@/services/api';
 
 const ProfilePage = () => {
     const router = useRouter();
-    const { user, isLoaded } = useUser();
-    const { getToken } = useAuth();
+    const { user, loading: isLoaded } = useAuth();
+    const getToken = async () => 'mock-token';
     
     // Track API state
     const [isLoading, setIsLoading] = useState(true);

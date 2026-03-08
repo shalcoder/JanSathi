@@ -14,13 +14,7 @@ import { useSession } from '@/hooks/useSession';
 import DocumentScorecard from './DocumentScorecard';
 import ExplainabilityCard from './ExplainabilityCard';
 import MultiAgentThoughtProcess from './MultiAgentThoughtProcess';
-<<<<<<< HEAD
-import { useUser } from '@clerk/nextjs';
-import { useI18n } from '@/context/i18n';
-=======
-import { Languages, Globe } from 'lucide-react';
-// import { useUser } from '@clerk/nextjs';
->>>>>>> poornachandran
+import { useAuth } from '@/hooks/useAuth';
 import {
     sendUnifiedQuery,
     analyzeImage,
@@ -92,10 +86,10 @@ type Message = {
 };
 
 const SUGGESTIONS = [
-    { title: "PM Awas Yojana", desc: "Sarkari Makan (Housing)", style: "bento-1x1" },
-    { title: "E-Shram Registry", desc: "Majdoor Labh (Worker Benefits)", style: "bento-1x1" },
-    { title: "PM-Kisan Status", desc: "Kheti Sahayata (Farmer Aid)", style: "bento-1x1" },
-    { title: "Ration Card", desc: "Khadya Suraksha (Food Security)", style: "bento-1x1" }
+    { title: "PM Awas Yojana", desc: "Government Housing", style: "bento-1x1" },
+    { title: "E-Shram Registry", desc: "Worker Benefits", style: "bento-1x1" },
+    { title: "PM-Kisan Status", desc: "Farmer Aid", style: "bento-1x1" },
+    { title: "Ration Card", desc: "Food Security", style: "bento-1x1" }
 ];
 
 const SESSIONS_KEY = 'jansathi_chat_sessions';
@@ -112,15 +106,8 @@ const DEMO_FALLBACKS: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ChatInterface() {
-<<<<<<< HEAD
-    const { user } = useUser();
-=======
-    // const { user } = useUser();
-    const user = { id: 'demo-user-id', fullName: 'Demo User' };
-    const { settings } = useSettings();
->>>>>>> poornachandran
+    const { user } = useAuth();
     const { sessionId, token } = useSession();
-    const { language, t: translate } = useI18n();
     const [messages, setMessages] = useState<Message[]>([]);
     const [localSessionId, setLocalSessionId] = useState<string | null>(null);
     const [inputText, setInputText] = useState('');
@@ -195,7 +182,8 @@ export default function ChatInterface() {
     const handleSend = async (text: string = inputText) => {
         if ((!text.trim() && !selectedImage) || isLoading) return;
 
-        const activeSid = sessionId || localSessionId || Date.now().toString();
+        const activeSid = localSessionId || sessionId || Date.now().toString();
+        
         if (!localSessionId) {
             setLocalSessionId(activeSid);
             sessionStorage.setItem('current_jansathi_session', activeSid);
@@ -226,7 +214,7 @@ export default function ChatInterface() {
         try {
             if (selectedImage) {
                 // Image analysis (legacy endpoint kept)
-                const data = await analyzeImage(selectedImage, language);
+                const data = await analyzeImage(selectedImage, 'en');
                 clearTimeout(fallbackTimer);
                 setSelectedImage(null);
                 setImagePreview(null);
@@ -250,7 +238,7 @@ export default function ChatInterface() {
                         session_id: activeSid,
                         channel: 'web',
                         input: { text },
-                        metadata: { lang: language, user_id: user?.id || 'anonymous' }
+                        metadata: { lang: 'en', user_id: user?.id || 'anonymous' }
                     },
                     token ?? undefined,
                     activeSid
@@ -391,7 +379,7 @@ export default function ChatInterface() {
                                     How can <span className="text-primary">JanSathi</span> help?
                                 </h1>
                                 <p className="text-sm text-secondary-foreground max-w-lg mx-auto font-medium leading-relaxed">
-                                    {translate('ask_anything')}
+                                    Ask about schemes, application status, or upload a document for verification.
                                 </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-8 max-w-4xl mx-auto px-2 pb-4">
                                     {SUGGESTIONS.map((s, i) => (
@@ -463,7 +451,7 @@ export default function ChatInterface() {
                                                 )}
 
                                                 {/* Message text */}
-                                                <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed font-medium">
+                                                <div className="prose prose-sm dark:prose-invert max-w-none text-[#020617] dark:text-[#fafafa] leading-relaxed font-medium">
                                                     <ReactMarkdown
                                                         remarkPlugins={[remarkGfm]}
                                                         components={{
@@ -493,7 +481,7 @@ export default function ChatInterface() {
                                                             ),
                                                         }}
                                                     >
-                                                        {msg.text}
+                                                        {msg.text || (msg.isTyping ? "" : "Generating response...")}
                                                     </ReactMarkdown>
                                                 </div>
 

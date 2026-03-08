@@ -2,8 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getCurrentUser, signOut as amplifySignOut } from 'aws-amplify/auth';
-import { Hub } from 'aws-amplify/utils';
 
 export function useAuth() {
     const router = useRouter();
@@ -12,30 +10,22 @@ export function useAuth() {
 
     useEffect(() => {
         checkUser();
-        
-        // Listen to Auth events
-        const unsubscribe = Hub.listen('auth', ({ payload }) => {
-            switch (payload.event) {
-                case 'signedIn':
-                    checkUser();
-                    break;
-                case 'signedOut':
-                    setUser(null);
-                    break;
-            }
-        });
-        
-        return () => unsubscribe();
     }, []);
 
-    const checkUser = async () => {
+    const checkUser = () => {
         try {
-            const currentUser = await getCurrentUser();
-            setUser({
-                id: currentUser.userId,
-                name: currentUser.username,
-                // Email/attributes require fetchUserAttributes() normally, but keeping simple for now
-            });
+            const authToken = localStorage.getItem('jansathi_auth');
+            const userEmail = localStorage.getItem('jansathi_user');
+            
+            if (authToken === 'true' && userEmail) {
+                setUser({
+                    id: userEmail,
+                    name: userEmail.split('@')[0],
+                    username: userEmail
+                });
+            } else {
+                setUser(null);
+            }
         } catch (_error) {
             setUser(null);
         } finally {
@@ -43,8 +33,10 @@ export function useAuth() {
         }
     };
 
-    const signOut = async () => {
-        await amplifySignOut();
+    const signOut = () => {
+        localStorage.removeItem('jansathi_auth');
+        localStorage.removeItem('jansathi_user');
+        setUser(null);
         router.push('/auth/signin');
     };
 

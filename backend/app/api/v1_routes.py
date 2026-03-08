@@ -990,3 +990,91 @@ def test_rag_query():
             "status": "error",
             "error": str(e)
         }), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SCHEMES ENDPOINT - Return available schemes
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/schemes", methods=["GET"])
+def get_schemes():
+    """
+    GET /v1/schemes
+    Returns list of available government schemes from schemes_config.yaml
+    """
+    try:
+        import yaml
+        config_path = os.path.join(os.path.dirname(__file__), '../data/schemes_config.yaml')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+        
+        schemes = config.get('schemes', {})
+        return jsonify({"schemes": schemes, "count": len(schemes)})
+    except Exception as e:
+        logger.error(f"Failed to load schemes: {e}")
+        return jsonify({"schemes": {}, "count": 0, "error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MARKET RATES ENDPOINT - Mock market rates for farmers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/market-rates", methods=["GET"])
+def get_market_rates():
+    """
+    GET /v1/market-rates
+    Returns current market rates for agricultural products (mock data)
+    """
+    mock_rates = [
+        {"commodity": "Wheat", "price": 2100, "unit": "quintal", "market": "Delhi Mandi", "trend": "up"},
+        {"commodity": "Rice", "price": 1950, "unit": "quintal", "market": "Punjab Mandi", "trend": "stable"},
+        {"commodity": "Cotton", "price": 6500, "unit": "quintal", "market": "Gujarat Mandi", "trend": "down"},
+        {"commodity": "Sugarcane", "price": 350, "unit": "quintal", "market": "UP Mandi", "trend": "up"},
+        {"commodity": "Potato", "price": 800, "unit": "quintal", "market": "West Bengal", "trend": "stable"},
+    ]
+    return jsonify(mock_rates)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADMIN SEED ENDPOINT - Seed database with test data
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/admin/seed", methods=["POST"])
+@require_admin
+def seed_database():
+    """
+    POST /v1/admin/seed
+    Seeds database with test data for development
+    """
+    try:
+        # Add some test data
+        from app.models.models import db, CommunityPost
+        
+        test_posts = [
+            {
+                "title": "PM-Kisan Success Story",
+                "content": "Received my first installment within 2 weeks!",
+                "author": "Ramesh Kumar",
+                "category": "success"
+            },
+            {
+                "title": "Document Checklist Help",
+                "content": "What documents are needed for PM Awas Yojana?",
+                "author": "Priya Sharma",
+                "category": "question"
+            }
+        ]
+        
+        for post_data in test_posts:
+            post = CommunityPost(**post_data)
+            db.session.add(post)
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Database seeded successfully",
+            "posts_added": len(test_posts)
+        })
+    except Exception as e:
+        logger.error(f"Failed to seed database: {e}")
+        return jsonify({"error": str(e)}), 500

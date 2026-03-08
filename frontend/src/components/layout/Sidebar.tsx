@@ -180,22 +180,24 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                                 <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-wider">No history yet</p>
                             </div>
                         ) : (
-                            sessions.map((session) => (
-                                <button
-                                    key={session.id}
-                                    onClick={() => {
-                                        onPageChange('dashboard');
-                                        window.dispatchEvent(new CustomEvent('load-chat-session', { detail: session.id }));
-                                    }}
-                                    className="w-full text-left px-4 py-3 rounded-lg hover:bg-secondary/50 transition-colors group flex items-center gap-3"
-                                >
-                                    <div className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary shrink-0" />
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[13px] font-bold text-foreground truncate group-hover:text-primary transition-colors tracking-tight">{session.title}</p>
-                                        <p className="text-[10px] text-secondary-foreground font-medium opacity-40 uppercase tracking-tighter mt-1">{new Date(session.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
-                                    </div>
-                                </button>
-                            ))
+                            <>
+                                {sessions.map((session) => (
+                                    <button
+                                        key={session.id}
+                                        onClick={() => {
+                                            onPageChange('dashboard');
+                                            window.dispatchEvent(new CustomEvent('load-chat-session', { detail: session.id }));
+                                        }}
+                                        className="w-full text-left px-4 py-3 rounded-lg hover:bg-secondary/50 transition-colors group flex items-center gap-3"
+                                    >
+                                        <div className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[13px] font-bold text-foreground truncate group-hover:text-primary transition-colors tracking-tight">{session.title}</p>
+                                            <p className="text-[10px] text-secondary-foreground font-medium opacity-40 uppercase tracking-tighter mt-1">{new Date(session.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </>
                         )}
                     </div>
                 </div>

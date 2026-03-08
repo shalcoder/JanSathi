@@ -66,7 +66,7 @@ export default function BenefitReceipt({
             </div>
 
             {/* Rules */}
-            {receipt.rules.length > 0 && (
+            {receipt.rules && receipt.rules.length > 0 && (
                 <div className="px-4 py-3 border-b border-white/5">
                     <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">
                         Eligibility Rules
@@ -83,7 +83,7 @@ export default function BenefitReceipt({
             )}
 
             {/* Sources */}
-            {receipt.sources.length > 0 && (
+            {receipt.sources && receipt.sources.length > 0 && (
                 <div className="px-4 py-3 border-b border-white/5">
                     <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">
                         Sources

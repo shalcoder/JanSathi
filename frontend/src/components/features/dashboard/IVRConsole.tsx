@@ -24,7 +24,10 @@ export default function IVRConsole() {
           setSessions(data);
         }
       } catch (err) {
-        console.error("Failed to poll IVR sessions:", err);
+        // Silently handle - getIvrSessions already returns empty array on error
+        if (process.env.NODE_ENV === 'development') {
+          console.debug("IVR sessions polling (no active sessions)");
+        }
       }
     };
 

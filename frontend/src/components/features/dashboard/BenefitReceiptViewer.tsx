@@ -28,7 +28,10 @@ export default function BenefitReceiptViewer() {
           setReceiptLog(latestEligible);
         }
       } catch (err) {
-        console.error("Failed to fetch receipt data", err);
+        // Silently handle - getAuditLogs already returns empty array on error
+        if (process.env.NODE_ENV === 'development') {
+          console.debug("Receipt data polling (no receipts available)");
+        }
       }
     };
 

@@ -28,7 +28,7 @@ export function useAuth() {
         return () => unsubscribe();
     }, []);
 
-    const checkUser = async () => {
+    const checkUser = () => {
         try {
             const currentUser = await getCurrentUser();
             setUser({
@@ -42,8 +42,10 @@ export function useAuth() {
         }
     };
 
-    const signOut = async () => {
-        await amplifySignOut();
+    const signOut = () => {
+        localStorage.removeItem('jansathi_auth');
+        localStorage.removeItem('jansathi_user');
+        setUser(null);
         router.push('/auth/signin');
     };
 

@@ -18,7 +18,10 @@ export default function SecurityAuditPanel() {
         // show most recent first
         setLogs(data.reverse().slice(0, 50));
       } catch (err) {
-        console.error("Failed to fetch audit logs", err);
+        // Silently handle - getAuditLogs already returns empty array on error
+        if (process.env.NODE_ENV === 'development') {
+          console.debug("Audit logs polling (no logs available)");
+        }
       }
     };
 

@@ -1,20 +1,48 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Lock } from 'lucide-react';
-import { Authenticator, useAuthenticator, View, Text, Heading, Button, useTheme } from '@aws-amplify/ui-react';
-import '@aws-amplify/ui-react/styles.css';
+import { ArrowLeft, Lock, Mail, KeyRound } from 'lucide-react';
 
 export default function SignIn() {
     const router = useRouter();
-    const { authStatus } = useAuthenticator(context => [context.authStatus]);
+    const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    useEffect(() => {
-        if (authStatus === 'authenticated') {
-            router.push('/dashboard');
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+
+        try {
+            if (activeTab === 'signup' && password !== confirmPassword) {
+                setError('Passwords do not match');
+                setLoading(false);
+                return;
+            }
+
+            // For demo purposes, allow any email/password
+            // In production, this would call your backend API
+            if (email && password) {
+                // Store a simple auth token
+                localStorage.setItem('jansathi_auth', 'true');
+                localStorage.setItem('jansathi_user', email);
+                
+                // Redirect to dashboard
+                router.push('/dashboard');
+            } else {
+                setError('Please fill in all fields');
+            }
+        } catch (err) {
+            setError('Authentication failed. Please try again.');
+        } finally {
+            setLoading(false);
         }
     }, [authStatus, router]);
 
@@ -76,6 +104,87 @@ export default function SignIn() {
                             )}
                         </Authenticator>
                     </div>
+
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {error && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+                                {error}
+                            </div>
+                        )}
+
+                        <div>
+                            <label htmlFor="email" className="block text-xs font-semibold text-secondary-foreground uppercase tracking-wider mb-2">
+                                Email
+                            </label>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-foreground" />
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full pl-11 pr-4 py-3 bg-background/50 border border-border/50 rounded-xl text-foreground placeholder:text-secondary-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    placeholder="your.email@example.com"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label htmlFor="password" className="block text-xs font-semibold text-secondary-foreground uppercase tracking-wider mb-2">
+                                Password
+                            </label>
+                            <div className="relative">
+                                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-foreground" />
+                                <input
+                                    id="password"
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full pl-11 pr-4 py-3 bg-background/50 border border-border/50 rounded-xl text-foreground placeholder:text-secondary-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    placeholder="••••••••"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {activeTab === 'signup' && (
+                            <div>
+                                <label htmlFor="confirmPassword" className="block text-xs font-semibold text-secondary-foreground uppercase tracking-wider mb-2">
+                                    Confirm Password
+                                </label>
+                                <div className="relative">
+                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-foreground" />
+                                    <input
+                                        id="confirmPassword"
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="w-full pl-11 pr-4 py-3 bg-background/50 border border-border/50 rounded-xl text-foreground placeholder:text-secondary-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-3 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? 'Please wait...' : activeTab === 'signin' ? 'Sign in' : 'Create Account'}
+                        </button>
+                    </form>
+
+                    {activeTab === 'signin' && (
+                        <div className="mt-4 text-center">
+                            <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                                Forgot your password?
+                            </Link>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-secondary/10 p-4 text-center border-t border-border/50">

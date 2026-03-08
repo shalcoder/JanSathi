@@ -21,7 +21,10 @@ export default function HITLQueue() {
           setQueue(data);
         }
       } catch (err) {
-        console.error("Failed to fetch HITL cases", err);
+        // Silently handle - getHitlCases already returns empty array on error
+        if (process.env.NODE_ENV === 'development') {
+          console.debug("HITL cases polling (no pending cases)");
+        }
       }
     };
 

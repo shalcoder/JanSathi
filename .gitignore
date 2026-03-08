@@ -64,3 +64,6 @@ logs/
 *.log
 frontend/build_error*.txt
 
+
+backend/agentic_engine/receipts/
+backend/agentic_engine/sessions.json

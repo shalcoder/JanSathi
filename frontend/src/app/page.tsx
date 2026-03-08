@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, Mic, Languages, Bot, Globe, Cpu, Database, ChevronRight, Activity, Zap, Users, AlertTriangle, CheckCircle2, Radio, Lock, FileText, Shield } from "lucide-react";
@@ -10,7 +10,14 @@ import { useAuthenticator } from "@aws-amplify/ui-react";
 import { SimpleThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function LandingPage() {
-  const { authStatus } = useAuthenticator(context => [context.authStatus]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const authToken = localStorage.getItem('jansathi_auth');
+    setIsAuthenticated(authToken === 'true');
+  }, []);
+
   return (
     <main className="min-h-screen bg-background text-foreground overflow-x-hidden font-[family-name:var(--font-outfit)] selection:bg-primary/30 relative">
 
@@ -128,7 +135,7 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.5 }}
           className="flex flex-col sm:flex-row gap-4 items-center w-full justify-center"
         >
-          {authStatus === 'authenticated' ? (
+          {isAuthenticated ? (
             <Link
               href="/dashboard"
               className="group relative w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden"

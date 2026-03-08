@@ -363,15 +363,60 @@ def process_user_input(message: str, session_id: str, language: str = "hi",
         except Exception as e:
             return _error_resp(e)
 
-    # ── 6d. INFO / FALLBACK → send to FSM (which will do RAG if connected) ──────
-    logger.info(f"[Execution] Info/fallback intent → FSM + RAG")
+    # ── 6d. INFO / FALLBACK → Smart RAG Pipeline ──────────────────────────────
+    logger.info(f"[Execution] Info/fallback intent → Smart RAG Pipeline")
     try:
-        print("DEBUG: Calling engine.handle_input...", flush=True)
-        result = _engine.handle_input(session_id=session_id, user_input=message)
-        print("DEBUG: engine.handle_input finished.", flush=True)
+        from app.services.smart_rag_service import SmartRAGService
+        
+        smart_rag = SmartRAGService()
+        rag_result = smart_rag.query(
+            user_query=message,
+            language=language,
+            user_profile=user_profile,
+            session_id=session_id
+        )
+        
+        # Build response in FSM format
+        response_text = rag_result['answer']
+        
+        # Add learning indicator if this was a new answer
+        if rag_result.get('learned'):
+            learning_note = "\n\n💡 This answer has been added to our knowledge base for future queries." if language == 'en' else "\n\n💡 यह उत्तर भविष्य के प्रश्नों के लिए हमारे ज्ञान आधार में जोड़ दिया गया है।"
+            response_text += learning_note
+        
+        # Format result to match FSM structure
+        result = {
+            "response": response_text,
+            "response_text": response_text,
+            "action_type": "INFORMATION_PROVIDED",
+            "current_state": "INFO_QUERY",
+            "is_terminal": False,
+            "requires_input": True,
+            "session_data": {},
+            "telemetry": {
+                "intent": "information",
+                "confidence": rag_result['confidence'],
+                "source": rag_result['source'],
+                "learned": rag_result.get('learned', False),
+                **rag_result.get('telemetry', {})
+            },
+            "sources": rag_result.get('sources', []),
+        }
+        
+        logger.info(f"[SmartRAG] Source: {rag_result['source']} | Confidence: {rag_result['confidence']:.2f} | Learned: {rag_result.get('learned', False)}")
+        
         return _enrich_result(result, session_id, language, scheme_name=scheme_name)
+        
     except Exception as e:
-        return _error_resp(e)
+        logger.warning(f"[SmartRAG] Failed, falling back to FSM: {e}")
+        # Fallback to original FSM behavior
+        try:
+            print("DEBUG: Calling engine.handle_input...", flush=True)
+            result = _engine.handle_input(session_id=session_id, user_input=message)
+            print("DEBUG: engine.handle_input finished.", flush=True)
+            return _enrich_result(result, session_id, language, scheme_name=scheme_name)
+        except Exception as e2:
+            return _error_resp(e2)
 
 
 # ── Helper: enrich FSM result with receipt if terminal ─────────────────────────

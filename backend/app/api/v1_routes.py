@@ -874,3 +874,119 @@ def agent_invoke():
             "response_text": "⚠️ System error. Please visit india.gov.in",
         }), 500
 
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SMART RAG ADMIN ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@v1.route("/admin/rag/stats", methods=["GET"])
+@require_admin
+def get_rag_stats():
+    """
+    GET /v1/admin/rag/stats
+    
+    Returns statistics about the Smart RAG service:
+    - Kendra hits vs Bedrock generations
+    - Cache performance
+    - Learned Q&A pairs stored
+    """
+    try:
+        from app.services.smart_rag_service import SmartRAGService
+        
+        smart_rag = SmartRAGService()
+        stats = smart_rag.get_stats()
+        
+        return jsonify({
+            "status": "success",
+            "stats": stats,
+            "timestamp": time.time()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"RAG stats error: {e}")
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
+
+
+@v1.route("/admin/rag/sync-kendra", methods=["POST"])
+@require_admin
+def trigger_kendra_sync():
+    """
+    POST /v1/admin/rag/sync-kendra
+    
+    Triggers Kendra data source sync to index newly learned Q&A pairs.
+    This should be called periodically or after a batch of new Q&A pairs.
+    """
+    try:
+        from app.services.smart_rag_service import SmartRAGService
+        
+        smart_rag = SmartRAGService()
+        success = smart_rag.trigger_kendra_sync()
+        
+        if success:
+            return jsonify({
+                "status": "success",
+                "message": "Kendra sync triggered successfully",
+                "timestamp": time.time()
+            }), 200
+        else:
+            return jsonify({
+                "status": "warning",
+                "message": "Kendra sync not configured or failed",
+                "hint": "Set KENDRA_DATA_SOURCE_ID environment variable"
+            }), 200
+            
+    except Exception as e:
+        logger.error(f"Kendra sync error: {e}")
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
+
+
+@v1.route("/admin/rag/test-query", methods=["POST"])
+@require_admin
+def test_rag_query():
+    """
+    POST /v1/admin/rag/test-query
+    Body: { "query": "...", "language": "en" }
+    
+    Test the Smart RAG pipeline with a specific query.
+    Returns detailed breakdown of the RAG process.
+    """
+    try:
+        data = request.get_json() or {}
+        query = data.get('query', '')
+        language = data.get('language', 'en')
+        
+        if not query:
+            return jsonify({
+                "status": "error",
+                "error": "Query is required"
+            }), 400
+        
+        from app.services.smart_rag_service import SmartRAGService
+        
+        smart_rag = SmartRAGService()
+        result = smart_rag.query(
+            user_query=query,
+            language=language,
+            session_id="admin-test"
+        )
+        
+        return jsonify({
+            "status": "success",
+            "query": query,
+            "result": result,
+            "timestamp": time.time()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"RAG test query error: {e}")
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500

@@ -1,0 +1,435 @@
+
+🗣️ User says: "I want to check my eligibility for PM Kisan."
+🤖 Agent Payload:
+{
+  "correlation_id": "9da0a9a0-6627-4b9c-8925-b3b25211e0c7",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/03fabaf2-9224-45a6-ad2f-7581360af0b7.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171557Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=dba432742ab0d6fd2a2dade154b68df86a1bcb8f90032ed16bc6dbe5484687e6",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 66.61,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "I need a few details for PM-Kisan Samman Nidhi.\n\nWhich state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+    "session_id": "test-session-pmkisan-1772817347",
+    "transcript": "I want to check my eligibility for PM Kisan."
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "Uttar Pradesh"
+🤖 Agent Payload:
+{
+  "correlation_id": "7851dd0d-2d7a-4dc2-b56c-f456f25eb29c",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/0b182c9f-91df-4965-8282-b3263b4999ae.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171620Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1924b3ffba50f36e57c671eb2e8600751cbad5d202cd84413e04c011005835bc",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 33.82,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+    "session_id": "test-session-pmkisan-1772817347",
+    "transcript": "Uttar Pradesh"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "1.5"
+🤖 Agent Payload:
+{
+  "correlation_id": "439bd1e3-6f89-4704-8dc1-1c9ceebbb345",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/86b47aa6-fdbd-478e-b707-102eb0fba0c5.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171642Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=8e8f47908c62496dbbdd4597b76dcc85ec0593074eba0eb6be6c39694011b71c",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 32.83,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+    "session_id": "test-session-pmkisan-1772817347",
+    "transcript": "1.5"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "150000"
+🤖 Agent Payload:
+{
+  "correlation_id": "d806bbec-104e-4ac9-9b75-5dd4babac8d5",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/92ac67c1-4af7-444b-8c36-0926d5e01286.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171707Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=cbd6d88ad540c348c3a084d9c1d7d141835f4aa44bce72a8e0b9ab235af2ece3",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 16.6,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+    "session_id": "test-session-pmkisan-1772817347",
+    "transcript": "150000"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "1234"
+🤖 Agent Payload:
+{
+  "correlation_id": "70ddc4bc-505c-46d4-8c13-05e24ce2b0c5",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/114d9b9d-684d-45e7-a64a-81191139b26c.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171735Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5c5e40ef58d78df9bd14264600fb3133713fd514f3db4e4e655c04252c7d3db8",
+    "benefit_receipt": {
+      "confidence": 1.0,
+      "eligible": true,
+      "rules": [
+        {
+          "citation": "PM-Kisan Guidelines Section 2.1",
+          "label": "Land < 2 hectares",
+          "pass": true,
+          "required_value": 2,
+          "rule": "land_hectares lt 2",
+          "user_value": 1.5
+        },
+        {
+          "citation": "PM-Kisan Guidelines Section 2.3",
+          "label": "Annual Income < \u20b92L",
+          "pass": true,
+          "required_value": 200000,
+          "rule": "income_annual lt 200000",
+          "user_value": 150000.0
+        }
+      ],
+      "scheme_name": "PM-Kisan Samman Nidhi",
+      "sources": [
+        {
+          "page": 3,
+          "title": "PM-Kisan Official Guidelines",
+          "url": "https://pmkisan.gov.in/documents/Revised_PM-KISAN_Operational_Guidelines.pdf"
+        }
+      ]
+    },
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 2596.84,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "\u2705 You are eligible for PM-Kisan Samman Nidhi!\nWould you like to submit your application? (Yes/No)",
+    "session_id": "test-session-pmkisan-1772817347",
+    "transcript": "1234"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "I want to apply for PM Awas Yojana."
+🤖 Agent Payload:
+{
+  "correlation_id": "90001926-a3d1-48ac-bc53-d8663e022dbb",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/cd5f41cb-db43-4051-b6cf-33ad49b4e682.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171743Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=9bbed7643b487fbd0386fcc6b8b2f78cc27a0cfd584baa671968d7d96f41e263",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 59.17,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "I need a few details for PM Awas Yojana (Urban).\n\nWhich state do you live in?",
+    "session_id": "test-session-awas-1772817456",
+    "transcript": "I want to apply for PM Awas Yojana."
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "Maharashtra"
+🤖 Agent Payload:
+{
+  "correlation_id": "2a5c8658-8844-4ca8-adaa-9953e6460d9c",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/0d070d33-8c28-4710-b9ed-3915fdd7aa84.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171753Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=713e80c55feb772024eecd576296aea135194d0fda950fc4605e72aebbb81beb",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 43.76,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "What is your annual family income in rupees?",
+    "session_id": "test-session-awas-1772817456",
+    "transcript": "Maharashtra"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "100000"
+🤖 Agent Payload:
+{
+  "correlation_id": "83bebea7-95de-4fa7-93e0-d3a96131a07a",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/7b272912-fd72-4797-8f23-f3735ef6120a.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171801Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=9cee6ee8d1085278764381887ab858385914cc56c4f63c4d2ffe782ed23c97b2",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 38.87,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "Do you currently own a pucca (permanent) house or live in a kutcha house? (pucca/kutcha)",
+    "session_id": "test-session-awas-1772817456",
+    "transcript": "100000"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "kutcha"
+🤖 Agent Payload:
+{
+  "correlation_id": "f5a74d7f-27e2-4864-9723-5f1a69410f40",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/e8c637aa-2eea-4482-8d83-295cd33facb6.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171812Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=c29c6eea709144b1ce8d83cd68598999a2cff339bf285b029223990f84edf1d8",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 38.93,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "Do you live in a rural or urban area? (rural/urban)",
+    "session_id": "test-session-awas-1772817456",
+    "transcript": "kutcha"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "rural"
+🤖 Agent Payload:
+{
+  "correlation_id": "26861528-6628-4240-86a2-1aa73fbcbd47",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/f6a36b30-5207-4e6b-9e7c-35988524fb68.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171828Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=2ea1bdba85360c60b0734c4f06b7500eaba6ccb1889e9c66fb4cae7d22b8a2a5",
+    "benefit_receipt": {
+      "confidence": 1.0,
+      "eligible": true,
+      "rules": [
+        {
+          "citation": "PMAY-U Guidelines 2.0",
+          "label": "Annual Income \u2264 \u20b918L (MIG-II cap)",
+          "pass": true,
+          "required_value": 1800000,
+          "rule": "family_income lte 1800000",
+          "user_value": 100000.0
+        },
+        {
+          "citation": "PMAY-U Section 3",
+          "label": "Does not own pucca house",
+          "pass": true,
+          "required_value": "pucca",
+          "rule": "housing_status ne pucca",
+          "user_value": "kutcha"
+        }
+      ],
+      "scheme_name": "PM Awas Yojana (Urban)",
+      "sources": [
+        {
+          "title": "PMAY-U Official Site",
+          "url": "https://pmaymis.gov.in"
+        }
+      ]
+    },
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 1539.94,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "\u2705 You are eligible for PM Awas Yojana (Urban)!\nWould you like to submit your application? (Yes/No)",
+    "session_id": "test-session-awas-1772817456",
+    "transcript": "rural"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "My PM-Kisan payment has not arrived yet for January."
+🤖 Agent Payload:
+{
+  "correlation_id": "b2ad4983-24c8-4ec9-8cb4-ddd9e8030643",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/3c436279-10a3-470f-9f3b-8ac81d167c14.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171928Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=8834cc887192dcf771c03a4612909575bc18fc134f6c39d7a5c45391e8d852fe",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 51.07,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "I need a few details for PM-Kisan Samman Nidhi.\n\nWhich state do you live in? / \u0906\u092a \u0915\u093f\u0938 \u0930\u093e\u091c\u094d\u092f \u092e\u0947\u0902 \u0930\u0939\u0924\u0947 \u0939\u0948\u0902?",
+    "session_id": "test-session-grievance-1772817509",
+    "transcript": "My PM-Kisan payment has not arrived yet for January."
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "APP-987654"
+🤖 Agent Payload:
+{
+  "correlation_id": "bb54cfad-cfdc-44ef-8aca-aec59f028af2",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/3c38507e-7300-4a51-94ce-6d57b55feac8.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171938Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=e4e963c7c36e86f62b3bf3ff4549fe2f4441ea69c582d46749a8329ef05b39ad",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 40.65,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "How many hectares of farm land do you own? / \u0906\u092a\u0915\u0947 \u092a\u093e\u0938 \u0915\u093f\u0924\u0928\u0940 \u0939\u0947\u0915\u094d\u091f\u0947\u092f\u0930 \u091c\u092e\u0940\u0928 \u0939\u0948?",
+    "session_id": "test-session-grievance-1772817509",
+    "transcript": "APP-987654"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "Lucknow"
+🤖 Agent Payload:
+{
+  "correlation_id": "8d637db9-8dfd-4f90-893e-e29fa777bdc7",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/b3e1290a-7d1b-4010-b066-8fb3ba82f719.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T171959Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=6ef205c779872753bf4d2f19d51b0fa1158711036a6c52e5e70f25e701b98106",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 41.34,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "What is your annual family income in rupees? / \u0935\u093e\u0930\u094d\u0937\u093f\u0915 \u092a\u093e\u0930\u093f\u0935\u093e\u0930\u093f\u0915 \u0906\u092f \u0915\u094d\u092f\u093e \u0939\u0948?",
+    "session_id": "test-session-grievance-1772817509",
+    "transcript": "Lucknow"
+  },
+  "message": "Success",
+  "status": "success"
+}
+
+🗣️ User says: "November 2024"
+🤖 Agent Payload:
+{
+  "correlation_id": "d9139eb1-df39-470c-a47e-32ed411eab0d",
+  "data": {
+    "audio_url": "https://jansathi-audio-bucket-1770462916.s3.amazonaws.com/tts/f5fcddc2-59d4-4b56-95bd-1f318a206b1e.mp3?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARODGW73MSTKPDOPD%2F20260306%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260306T172020Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1dddd85c5ecd2f74ce13c579defa0907c7c061883d367cdfd671c6367600114f",
+    "benefit_receipt": null,
+    "channel": "ivr",
+    "confidence": 0.9,
+    "debug": {
+      "asr_confidence": 1.0,
+      "cache_hit": false,
+      "latency_ms": 33.71,
+      "model": "claude-3-haiku / rule-based",
+      "rules_override": false
+    },
+    "is_terminal": false,
+    "language": "en",
+    "requires_input": true,
+    "response_text": "Please say the last 4 digits of your Aadhaar number / \u0906\u0927\u093e\u0930 \u0915\u0947 \u0905\u0902\u0924\u093f\u092e 4 \u0905\u0902\u0915 \u092c\u0924\u093e\u090f\u0902",
+    "session_id": "test-session-grievance-1772817509",
+    "transcript": "November 2024"
+  },
+  "message": "Success",
+  "status": "success"
+}

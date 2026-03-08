@@ -122,6 +122,23 @@ Suggest official portals (india.gov.in, myscheme.gov.in). Respond in {language}.
                 "provenance": provenance,
                 "explainability": explainability,
             }
+            
+            # STORE IN CACHE FOR FUTURE QUERIES
+            try:
+                from app.models.models import db, BedrockQueryCache
+                new_cache = BedrockQueryCache(
+                    query=query_normalized,
+                    context_hash=context_hash,
+                    language=language,
+                    response_json=json.dumps(response_dict)
+                )
+                db.session.add(new_cache)
+                db.session.commit()
+                print(f"[BedrockService] Cache STORED for query: '{query_normalized}'")
+            except Exception as e:
+                print(f"[BedrockService] Cache Write Error: {e}")
+                
+            return response_dict
 
         except ClientError as e:
             error_code = e.response['Error']['Code']

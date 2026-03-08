@@ -12,38 +12,14 @@ const isProduction = process.env.NODE_ENV === "production";
 const isStaticExport = true; // Enforced for AWS S3 deployment
 
 const nextConfig: NextConfig = {
-  // Static export for S3 + CloudFront deployment (Only if explicitly requested)
-  ...(isStaticExport && { output: "export" }),
+  // Static export for S3 + CloudFront deployment
+  output: "export",
 
   // Environment variables available in browser
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://jansathi.onrender.com",
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_Y2xlcmsuY2xlcmsuY29tJ",
   },
-
-  // Rewrites only work in dev mode (not with static export)
-  ...(!isProduction && {
-    async rewrites() {
-      return [
-        {
-          source: "/query",
-          destination: "https://jansathi.onrender.com/query",
-        },
-        {
-          source: "/health",
-          destination: "https://jansathi.onrender.com/health",
-        },
-        {
-          source: "/schemes",
-          destination: "https://jansathi.onrender.com/schemes",
-        },
-        {
-          source: "/analyze",
-          destination: "https://jansathi.onrender.com/analyze",
-        },
-      ];
-    },
-  }),
 
   // Image optimization disabled for static export
   images: {

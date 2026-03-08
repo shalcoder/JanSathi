@@ -82,6 +82,12 @@ def create_app():
     except ImportError:
         pass
 
+    # Register Knowledge Base Blueprint (PDF Upload + Intelligent Caching)
+    try:
+        from app.api.knowledge_base_routes import kb_bp
+        app.register_blueprint(kb_bp)
+    except ImportError:
+        pass
 
     # Create SQLite tables only in local dev mode
     if not USE_DYNAMODB:

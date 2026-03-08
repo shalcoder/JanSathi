@@ -64,3 +64,8 @@ logs/
 *.log
 frontend/build_error*.txt
 
+echo "frontend/frontend-jansathi.zip" >> .gitignore
+echo "frontend/.next/" >> .gitignore
+echo "frontend/out/" >> .gitignore
+echo "backend/test_debug_output.txt" >> .gitignore
+echo "*.zip" >> .gitignore

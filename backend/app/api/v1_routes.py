@@ -815,6 +815,7 @@ def agent_invoke():
                 "mode": "agentcore",
                 "latency_ms": latency_ms,
                 "citations": result.get("citations", []),
+                "thoughts": result.get("thoughts", []),
             })
         except Exception as e:
             logger.error(f"[v1/agent/invoke] AgentCore failed, falling back to LangGraph: {e}")

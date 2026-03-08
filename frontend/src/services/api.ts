@@ -112,10 +112,22 @@ export interface UnifiedQueryResponse {
   debug?: {
     model: string;
     latency_ms: number;
-    asr_confidence?: number;
-    cache_hit?: boolean;
     token_count?: number;
+    thoughts?: Thought[];
   };
+  citations?: Citation[];
+}
+
+export interface Thought {
+  type: "rationale" | "tool_call" | "observation";
+  text?: string;
+  tool?: string;
+  input?: string;
+}
+
+export interface Citation {
+  text: string;
+  sources: string[];
 }
 
 export interface ApplyRequest {
@@ -186,7 +198,8 @@ interface RawAgentResponse {
   mode?: string;
   model?: string;
   latency_ms?: number;
-  citations?: any[];
+  citations?: Citation[];
+  thoughts?: Thought[];
   provenance?: string;
 }
 
@@ -217,13 +230,14 @@ export const sendUnifiedQuery = async (
     benefit_receipt: data.benefit_receipt,
     confidence: data.confidence || 0.9,
     audio_url: data.audio_url,
+    // Carry over any extra fields like citations or provenance if they exist
+    ...(data.citations ? { citations: data.citations } : {}),
+    ...(data.provenance ? { provenance: data.provenance } : { provenance: "AI Analysis" }),
     debug: {
       model: data.mode || data.model || "agentcore",
       latency_ms: data.latency_ms || 0,
-    },
-    // Carry over any extra fields like citations or provenance if they exist
-    ...(data.citations ? { citations: data.citations } : {}),
-    ...(data.provenance ? { provenance: data.provenance } : { provenance: "AI Analysis" })
+      thoughts: data.thoughts
+    }
   };
 };
 

@@ -21,6 +21,8 @@ import {
     applyForBenefit,
     type UnifiedQueryResponse,
     type BenefitReceipt as BenefitReceiptType,
+    type Thought,
+    type Citation,
 } from '@/services/api';
 import { enqueue, registerOnlineFlush, type QueuedAction } from '@/services/offlineQueue';
 
@@ -82,6 +84,7 @@ type Message = {
     confidence?: number;
     turnId?: string;
     debugInfo?: UnifiedQueryResponse['debug'];
+    citations?: Citation[];
     applyStatus?: 'idle' | 'applying' | 'applied' | 'queued';
 };
 
@@ -101,6 +104,87 @@ const DEMO_FALLBACKS: Record<string, string> = {
     'PM Awas Yojana': 'PM Awas Yojana (Urban) offers housing assistance for EWS/LIG/MIG categories. Apply via pmaymis.gov.in.',
     'Ration Card': 'A Ration Card gives access to subsidised food grains under the National Food Security Act. Apply at your local Ration office.',
     'E-Shram Registry': 'E-Shram is a national database for unorganised workers. Register at eshram.gov.in to get a UAN and access benefits.',
+};
+
+// ─── Citations & Thoughts ─────────────────────────────────────────────────────
+
+const CitationsList = ({ citations }: { citations: Citation[] }) => {
+    if (!citations?.length) return null;
+    return (
+        <div className="mt-4 pt-4 border-t border-border/10">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                <ExternalLink className="w-3 h-3 text-primary" />
+                Verified Citations
+            </h4>
+            <div className="flex flex-wrap gap-2">
+                {citations.map((c, idx) => (
+                    <a
+                        key={idx}
+                        href={c.sources[0]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/50 border border-border/50 text-[11px] font-bold text-foreground hover:bg-secondary transition-colors"
+                        title={c.text}
+                    >
+                        Source {idx + 1}
+                        <ExternalLink className="w-2.5 h-2.5 opacity-50" />
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const ThoughtPanel = ({ thoughts }: { thoughts: Thought[] }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    if (!thoughts?.length) return null;
+
+    return (
+        <div className="mt-4">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/5 border border-accent/20 text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent/10 transition-colors"
+            >
+                <Sparkles className="w-3 h-3" />
+                {isOpen ? 'Hide Research Process' : 'View Thinking Process'}
+            </button>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="mt-3 p-4 rounded-xl bg-accent/[0.03] border border-accent/10 space-y-3">
+                            {thoughts.map((t, idx) => (
+                                <div key={idx} className="flex gap-3 text-[11px] leading-relaxed">
+                                    <div className="mt-1 shrink-0">
+                                        {t.type === 'rationale' && <Sparkles className="w-3 h-3 text-amber-500" />}
+                                        {t.type === 'tool_call' && <CheckCircle2 className="w-3 h-3 text-primary" />}
+                                        {t.type === 'observation' && <Shield className="w-3 h-3 text-emerald-500" />}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="font-black uppercase tracking-widest text-[9px] opacity-40">
+                                            {t.type.replace('_', ' ')}
+                                        </div>
+                                        <div className="text-foreground/80 font-medium italic">
+                                            {t.type === 'tool_call' ? `Executing: ${t.tool}` : t.text}
+                                        </div>
+                                        {t.input && (
+                                            <div className="px-2 py-1 rounded bg-background/50 border border-border/20 font-mono text-[9px] break-all opacity-60">
+                                                {t.input}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -255,6 +339,7 @@ export default function ChatInterface() {
                     confidence: response.confidence,
                     turnId: response.turn_id,
                     debugInfo: response.debug,
+                    citations: response.citations,
                     timestamp: new Date(),
                     isTyping: true,
                     applyStatus: 'idle'
@@ -557,6 +642,14 @@ export default function ChatInterface() {
                                                     <div className="mt-6 pt-6 border-t border-border/10">
                                                         <AudioPlayer src={(msg.audioUrl || msg.audio)!} />
                                                     </div>
+                                                )}
+
+                                                {/* ── Bedrock Trace: Citations & Thoughts ─────── */}
+                                                {msg.citations && (
+                                                    <CitationsList citations={msg.citations} />
+                                                )}
+                                                {msg.debugInfo?.thoughts && (
+                                                    <ThoughtPanel thoughts={msg.debugInfo.thoughts} />
                                                 )}
 
                                                 {/* ── NEW: Telemetry Panel ─────────────────────── */}

@@ -63,30 +63,73 @@ def invoke_agentcore(
     response_text = ""
     citations = []
     
+    thoughts = []
+    
     # We use a loop because Return Control can happen multiple times in one turn
     # (e.g. Agent calls intent, then calls RAG after getting intent)
     while True:
         try:
             # Prepare invoke arguments
-            kwargs = {
+            invoke_kwargs = {
                 "agentId": AGENT_ID,
                 "agentAliasId": AGENT_ALIAS_ID,
                 "sessionId": session_id,
                 "sessionState": session_state,
-                "enableTrace": os.getenv("AGENTCORE_TRACE", "false").lower() == "true",
+                "enableTrace": True, # Always enable trace for the thought panel
             }
             if input_text:
-                kwargs["inputText"] = input_text
+                invoke_kwargs["inputText"] = input_text
                 # After first call, we don't send inputText anymore if we are returning control results
                 input_text = None
 
-            response = client.invoke_agent(**kwargs)
+            response = client.invoke_agent(**invoke_kwargs)
 
             # Process the event stream
             return_control = None
             
             for event in response.get("completion", []):
-                if "chunk" in event:
+                # ── Trace Event ──────────────────────────────────────────────
+                if "trace" in event:
+                    trace = event["trace"].get("trace", {})
+                    # Orchestration Trace
+                    if "orchestrationTrace" in trace:
+                        orch = trace["orchestrationTrace"]
+                        if "rationale" in orch:
+                            thoughts.append({
+                                "type": "rationale",
+                                "text": orch["rationale"].get("text", "")
+                            })
+                        if "invocationInput" in orch:
+                            inv = orch["invocationInput"]
+                            if "actionGroupInvocationInput" in inv:
+                                ag = inv["actionGroupInvocationInput"]
+                                thoughts.append({
+                                    "type": "tool_call",
+                                    "tool": ag.get("actionGroupName", ""),
+                                    "input": ag.get("apiPath", "")
+                                })
+                            elif "functionInvocationInput" in inv:
+                                fn = inv["functionInvocationInput"]
+                                thoughts.append({
+                                    "type": "tool_call",
+                                    "tool": fn.get("function", ""),
+                                    "input": str(fn.get("parameters", []))
+                                })
+                        if "observation" in orch:
+                            obs = orch["observation"]
+                            if "actionGroupInvocationOutput" in obs:
+                                thoughts.append({
+                                    "type": "observation",
+                                    "text": "Action Group execution complete."
+                                })
+                            elif "finalResponse" in obs:
+                                thoughts.append({
+                                    "type": "observation",
+                                    "text": "Final response generated."
+                                })
+
+                # ── Chunk Event ──────────────────────────────────────────────
+                elif "chunk" in event:
                     chunk = event["chunk"]
                     if "bytes" in chunk:
                         response_text += chunk["bytes"].decode("utf-8")
@@ -101,6 +144,7 @@ def invoke_agentcore(
                                 ],
                             })
                 
+                # ── Return Control Event ─────────────────────────────────────
                 elif "returnControl" in event:
                     return_control = event["returnControl"]
 
@@ -120,6 +164,12 @@ def invoke_agentcore(
                         param_dict["session_id"] = session_id 
                         
                         logger.info(f"[AgentCore] Dispatching tool: {tool_name}")
+                        thoughts.append({
+                            "type": "tool_call",
+                            "tool": tool_name,
+                            "input": str(param_dict)
+                        })
+                        
                         result = dispatch_tool(tool_name, param_dict)
                         
                         # Correct Bedrock schema for Function Result
@@ -133,6 +183,10 @@ def invoke_agentcore(
                                     }
                                 }
                             }
+                        })
+                        thoughts.append({
+                            "type": "observation",
+                            "text": f"Tool {tool_name} returned success." if result.get("success") else f"Tool {tool_name} failed: {result.get('error')}"
                         })
 
                 # Prepare session_state for the next iteration with tool results
@@ -169,5 +223,6 @@ def invoke_agentcore(
         "response": response_text.strip(),
         "session_id": session_id,
         "citations": citations,
+        "thoughts": thoughts,
         "mode": "agentcore",
     }

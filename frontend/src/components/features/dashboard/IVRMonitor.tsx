@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, Play, Radio, RefreshCw, ArrowRight } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, getToken } from '@/hooks/useAuth';
 import { getIVRSessions, type IVRSession } from '@/services/api';
 
 const CHANNEL_COLORS = {
@@ -42,7 +42,7 @@ const MOCK_SESSIONS: IVRSession[] = [
 
 export default function IVRMonitor() {
     const { user, loading: isLoaded } = useAuth();
-    const getToken = async () => 'mock-token';
+    
     const [sessions, setSessions] = useState<IVRSession[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDemoData, setIsDemoData] = useState(false);

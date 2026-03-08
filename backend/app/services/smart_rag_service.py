@@ -121,7 +121,8 @@ class SmartRAGService:
             user_query, 
             language, 
             kendra_context=kendra_result.get('raw_text', ''),
-            user_profile=user_profile
+            user_profile=user_profile,
+            session_id=session_id
         )
         
         if bedrock_result['success']:
@@ -237,7 +238,8 @@ class SmartRAGService:
     
     def _generate_with_bedrock(self, query: str, language: str, 
                                kendra_context: str = '', 
-                               user_profile: Optional[Dict] = None) -> Dict:
+                               user_profile: Optional[Dict] = None,
+                               session_id: Optional[str] = None) -> Dict:
         """
         Generate answer using Bedrock when Kendra confidence is low.
         """
@@ -273,7 +275,8 @@ class SmartRAGService:
                 query=query,
                 context_text=full_context,
                 language=language,
-                intent="INFORMATION"
+                intent="INFORMATION",
+                session_id=session_id
             )
             
             return {

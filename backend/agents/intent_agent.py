@@ -21,6 +21,7 @@ from .state import JanSathiState
 from .nova_client import nova_converse_json, build_user_message, NOVA_MICRO
 
 logger = logging.getLogger(__name__)
+SUPPORTED_LANGUAGES = {"hi", "en", "ta", "kn", "te", "mr", "bn", "gu", "pa", "or"}
 
 # ── Slot schemas per intent+scheme ────────────────────────────────────────────
 SCHEME_SLOTS = {
@@ -69,7 +70,7 @@ def intent_agent(state: JanSathiState) -> JanSathiState:
     """
     session_id = state.get("session_id", "unknown")
     query = state.get("user_query", "")
-    language = state.get("language", "hi")
+    requested_language = state.get("language", "hi")
 
     logger.info(f"[IntentAgent] session={session_id} query='{query[:80]}'")
 
@@ -79,14 +80,14 @@ def intent_agent(state: JanSathiState) -> JanSathiState:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
         from app.services.intent_service import RuleBasedIntentClassifier
         rule_clf = RuleBasedIntentClassifier()
-        rule_result = rule_clf.classify(query, language)
+        rule_result = rule_clf.classify(query, requested_language)
         intent = rule_result.get("intent", "fallback")
         confidence = float(rule_result.get("confidence", 0.0))
         scheme_hint = rule_result.get("scheme_hint", "unknown")
-        lang_detected = rule_result.get("language_detected", language)
+        lang_detected = rule_result.get("language_detected", requested_language)
     except Exception as e:
         logger.warning(f"[IntentAgent] Rule-based classifier failed: {e}")
-        intent, confidence, scheme_hint, lang_detected = "fallback", 0.0, "unknown", language
+        intent, confidence, scheme_hint, lang_detected = "fallback", 0.0, "unknown", requested_language
 
     # ── Step 2: If confidence < 0.75, escalate to Nova Micro ─────────────────
     if confidence < 0.75:
@@ -114,12 +115,21 @@ def intent_agent(state: JanSathiState) -> JanSathiState:
         f"confidence={confidence:.2f} scheme={scheme_hint} slots={required_slots}"
     )
 
+    # Preserve caller-selected language for responses.
+    # Keep detected language separately for analytics/debugging only.
+    response_language = (
+        requested_language
+        if requested_language in SUPPORTED_LANGUAGES
+        else (lang_detected if lang_detected in SUPPORTED_LANGUAGES else "en")
+    )
+
     updated = dict(state)
     updated.update({
         "intent": intent,
         "intent_confidence": confidence,
         "scheme_hint": scheme_hint,
-        "language": lang_detected,
+        "language": response_language,
+        "language_detected": lang_detected,
         "required_slots": required_slots,
     })
     return updated

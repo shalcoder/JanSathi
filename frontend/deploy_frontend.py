@@ -36,7 +36,21 @@ def deploy_frontend():
         if code in ('BucketAlreadyOwnedByYou', 'BucketAlreadyExists'):
             print("Bucket already exists.")
         elif code == 'AccessDenied':
-            print("AccessDenied for CreateBucket. Assuming bucket exists and is accessible.")
+            print("AccessDenied for CreateBucket. Verifying bucket exists...")
+            try:
+                s3.head_bucket(Bucket=bucket_name)
+                print("Bucket confirmed to exist and is accessible.")
+            except ClientError as head_err:
+                head_code = head_err.response['Error']['Code']
+                if head_code in ('404', 'NoSuchBucket', 'NoSuchKey'):
+                    print(f"\nERROR: Bucket '{bucket_name}' does not exist and could not be created (AccessDenied).")
+                    print("Fix one of the following:")
+                    print("  1. Attach 's3:CreateBucket' permission to the jansathi-app IAM user, OR")
+                    print("  2. Create the bucket manually via AWS CLI:")
+                    print(f"       aws s3 mb s3://{bucket_name} --region {region}")
+                    return
+                else:
+                    print(f"  Warning: Could not verify bucket ({head_code}). Proceeding anyway...")
         else:
             print(f"S3 Error: {e}")
 

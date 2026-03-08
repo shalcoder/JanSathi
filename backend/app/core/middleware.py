@@ -62,9 +62,9 @@ def log_request_lifecycle(response):
 _DEV_BYPASS_ENABLED = os.getenv("ENABLE_DEV_BYPASS", "false").lower() == "true"
 _IS_PROD = os.getenv("NODE_ENV", "development") == "production"
 
-def _decode_clerk_jwt(token: str) -> Optional[dict]:
+def _decode_cognito_jwt(token: str) -> Optional[dict]:
     """
-    Decode and verify a Clerk-issued JWT.
+    Decode and verify a Cognito-issued JWT.
     Bypass only if ENABLE_DEV_BYPASS is true AND not in production environment.
     """
     if _DEV_BYPASS_ENABLED and not _IS_PROD:
@@ -75,10 +75,14 @@ def _decode_clerk_jwt(token: str) -> Optional[dict]:
         import jwt
         import requests as req
 
-        jwks_url = os.getenv("CLERK_JWKS_URL")
-        if not jwks_url:
-            logger.warning("CLERK_JWKS_URL not set — auth verification skipped.")
+        region = os.getenv("AWS_REGION", "us-east-1")
+        pool_id = os.getenv("COGNITO_USER_POOL_ID")
+        
+        if not pool_id:
+            logger.warning("COGNITO_USER_POOL_ID not set — auth verification failed.")
             return {"sub": "unverified-user", "role": "user"}
+
+        jwks_url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
 
         jwks = req.get(jwks_url, timeout=5).json()
         header = jwt.get_unverified_header(token)
@@ -92,9 +96,12 @@ def _decode_clerk_jwt(token: str) -> Optional[dict]:
             token,
             public_key,
             algorithms=["RS256"],
-            options={"verify_exp": True},
+            options={"verify_exp": True, "verify_aud": False},
         )
-        return payload
+        return {
+            "sub": payload.get("sub", payload.get("username", "unknown")),
+            "role": "user" # Cognito:groups could be mapped here natively
+        }
     except Exception as e:
         logger.warning(f"JWT decode failed: {e}")
         return None
@@ -117,7 +124,7 @@ def require_auth(f):
             }), 401
 
         token = auth_header.split(" ", 1)[1]
-        payload = _decode_clerk_jwt(token)
+        payload = _decode_cognito_jwt(token)
         if payload is None:
             return jsonify({
                 "error": "Unauthorized",

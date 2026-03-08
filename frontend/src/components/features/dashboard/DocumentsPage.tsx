@@ -19,7 +19,7 @@ import {
     X,
     Camera
 } from 'lucide-react';
-import { analyzeImage, getPresignedUpload } from '@/services/api';
+import { analyzeImage, getPresignedUpload, uploadDocumentContext } from '@/services/api';
 import { useSession } from '@/hooks/useSession';
 
 
@@ -98,17 +98,38 @@ const DocumentsPage = () => {
                 console.warn('[DocumentsPage] S3 upload failed, continuing with local analysis:', uploadErr);
             }
 
-            // Step 3 – Analyse with Vision AI
+            // Step 3 – Document Analysis (Vision for Image, Text extraction for PDF)
             setUploadProgress(90);
-            const data = await analyzeImage(file, 'hi');
-            setVisionResult(data.analysis.text);
+            
+            let summaryText = "";
+            let infoType = "";
+
+            if (file.type === "application/pdf") {
+                // PDF Parsing for Bedrock Cache
+                try {
+                    const uploadResult = await uploadDocumentContext(file, sessionId || 'anonymous', token ?? undefined);
+                    summaryText = `PDF Document indexed successfully. Extracted ${uploadResult.extracted_length} characters. You can now chat regarding this document.`;
+                    infoType = "PDF Extraction";
+                    setVisionResult(summaryText);
+                } catch (err) {
+                    console.warn('[DocumentsPage] PDF Context upload failed:', err);
+                    summaryText = "PDF indexed but could not extract full text context.";
+                    infoType = "PDF Basic";
+                }
+            } else {
+                // Vision AI for images
+                const data = await analyzeImage(file, 'hi');
+                summaryText = data.analysis.text;
+                infoType = "Vision Extraction";
+                setVisionResult(summaryText);
+            }
             setUploadProgress(100);
 
             const newRecord = {
                 id: Date.now(),
                 name: file.name,
                 language: 'hi',
-                summary: data.analysis.text.substring(0, 100) + '...',
+                summary: summaryText.substring(0, 100) + '...',
                 date: new Date().toISOString()
             };
             saveHistory([newRecord, ...history]);

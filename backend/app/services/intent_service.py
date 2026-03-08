@@ -9,6 +9,7 @@ VALID_INTENTS = {
     "info",
     "grievance",
     "track",
+    "life_event",
     # legacy aliases kept for backward compat
     "scheme_lookup",
     "eligibility_check",
@@ -62,9 +63,38 @@ class RuleBasedIntentClassifier(BaseIntentClassifier):
         "case status", "where is my", "case id", "check status",
         "mera status", "meri application",
     ]
+    LIFE_EVENT_KEYWORDS = {
+        "crop_loss": [
+            "crop failed", "crop loss", "fasal kharab", "फसल खराब", "my crop failed",
+            "pest attack", "drought loss", "crop damaged",
+        ],
+        "child_birth": [
+            "baby was born", "new child", "child birth", "delivery happened", "बच्चा हुआ",
+            "newborn", "birth certificate for baby",
+        ],
+        "job_loss": [
+            "lost my job", "job loss", "no work", "काम छूट गया", "unemployed",
+            "laid off", " बेरोजगार", " बेरोज़गार",
+        ],
+    }
+
+    def _detect_life_event(self, msg: str) -> str:
+        for event_key, terms in self.LIFE_EVENT_KEYWORDS.items():
+            if any(term in msg for term in terms):
+                return event_key
+        return "unknown"
 
     def classify(self, query: str, language: str = "hi") -> dict:
         msg = query.lower()
+        detected_event = self._detect_life_event(msg)
+        if detected_event != "unknown":
+            return {
+                "intent": "life_event",
+                "confidence": 0.92,
+                "language_detected": language,
+                "scheme_hint": "unknown",
+                "event_key": detected_event,
+            }
 
         # Scheme-specific apply keywords take HIGHEST priority
         if any(k in msg for k in self.SCHEME_APPLY_KEYWORDS):
@@ -103,11 +133,12 @@ class BedrockIntentClassifier(BaseIntentClassifier):
 Classify the following user utterance and return ONLY a valid JSON object (no preamble, no explanation):
 
 {{
-  "intent": "<apply|info|grievance|track|fallback>",
+  "intent": "<apply|info|grievance|track|life_event|fallback>",
   "confidence": <0.0-1.0>,
   "language_detected": "<hi|ta|kn|en|other>",
   "required_slots": ["<slot1>", "<slot2>"],
-  "scheme_hint": "<pm_kisan|pm_awas_urban|e_shram|unknown>"
+  "scheme_hint": "<pm_kisan|pm_awas_urban|e_shram|unknown>",
+  "event_key": "<crop_loss|child_birth|job_loss|unknown>"
 }}
 
 INTENT DEFINITIONS:
@@ -115,6 +146,7 @@ INTENT DEFINITIONS:
 - info: user wants information about a scheme, documents, or process
 - grievance: user has a complaint or problem (payment not received, rejection, etc.)
 - track: user wants to check status of an existing application or case
+- life_event: user describes a life event that should trigger a civic workflow (crop loss, child birth, job loss)
 - fallback: unclear or off-topic
 
 USER UTTERANCE: {query}"""
@@ -165,6 +197,7 @@ USER UTTERANCE: {query}"""
                 "language_detected": lang_detected,
                 "required_slots": result.get("required_slots", []),
                 "scheme_hint": result.get("scheme_hint", "unknown"),
+                "event_key": result.get("event_key", "unknown"),
             }
         except Exception as e:
             logger.warning(f"[BedrockIntentClassifier] Nova Micro call failed, falling back: {e}")
@@ -202,9 +235,10 @@ class IntentService:
                 "language_detected": result.get("language_detected", "hi"),
                 "required_slots": result.get("required_slots", []),
                 "scheme_hint": result.get("scheme_hint", "unknown"),
+                "event_key": result.get("event_key", "unknown"),
             }
         except Exception:
-            return {"intent": "fallback", "confidence": 0.0, "language_detected": "hi", "required_slots": [], "scheme_hint": "unknown"}
+            return {"intent": "fallback", "confidence": 0.0, "language_detected": "hi", "required_slots": [], "scheme_hint": "unknown", "event_key": "unknown"}
 
     def classify_intent(self, query: str) -> dict:
         """Legacy entry point (no language param) — kept for backward compat."""

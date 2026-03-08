@@ -2,7 +2,12 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Camera, X, Sparkles, Shield, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Send, Camera, X, Sparkles, Shield, ExternalLink,    Search,
+    Globe,
+    ShieldCheck,
+    Activity,
+    CheckCircle2,
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import VoiceInput from './VoiceInput';
@@ -183,6 +188,53 @@ const ThoughtPanel = ({ thoughts }: { thoughts: Thought[] }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
+        </div>
+    );
+};
+
+const TaskWorkflow = ({ active }: { active: boolean }) => {
+    const [step, setStep] = useState(0);
+    const steps = [
+        { label: 'Intent Classification', icon: Search },
+        { label: 'Kendra Retrieval', icon: Globe },
+        { label: 'Rules Evaluation', icon: ShieldCheck },
+        { label: 'Risk Assessment', icon: Activity },
+        { label: 'Synthesis', icon: Sparkles }
+    ];
+
+    useEffect(() => {
+        if (!active) return;
+        const interval = setInterval(() => {
+            setStep(s => (s < steps.length - 1 ? s + 1 : s));
+        }, 1500);
+        return () => clearInterval(interval);
+    }, [active, steps.length]);
+
+    if (!active) return null;
+
+    return (
+        <div className="mt-4 p-4 rounded-2xl bg-primary/5 border border-primary/10 space-y-4">
+            <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Agentic Pipeline Status</span>
+                <span className="text-[10px] font-mono text-primary/60">{Math.round(((step + 1) / steps.length) * 100)}%</span>
+            </div>
+            <div className="flex gap-1">
+                {steps.map((s, idx) => (
+                    <div
+                        key={idx}
+                        className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${idx <= step ? 'bg-primary' : 'bg-primary/10'}`}
+                    />
+                ))}
+            </div>
+            <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center animate-pulse">
+                    {React.createElement(steps[step].icon, { className: "w-4 h-4 text-primary" })}
+                </div>
+                <div>
+                    <div className="text-sm font-bold text-foreground">{steps[step].label}</div>
+                    <div className="text-[11px] text-muted-foreground">Orchestrating multi-agent swarm...</div>
+                </div>
+            </div>
         </div>
     );
 };
@@ -625,6 +677,24 @@ export default function ChatInterface() {
                                                         }
                                                         onAskAgain={() => handleAskAgain(msg)}
                                                     />
+                                                )}
+
+                                                {/* Helper suggestion for thinking state */}
+                                                {isLoading && isThinking && !messages.some(m => m.isTyping && m.role === 'assistant') && (
+                                                    <div className="max-w-[85%] sm:max-w-md">
+                                                        <div className="flex gap-3">
+                                                            <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                                                                <Activity className="w-4 h-4 text-primary animate-pulse" />
+                                                            </div>
+                                                            <div className="space-y-3 flex-1">
+                                                                <div className="bg-secondary/30 rounded-2xl p-4 border border-border/50 animate-pulse">
+                                                                    <div className="h-4 bg-foreground/10 rounded w-3/4 mb-2"></div>
+                                                                    <div className="h-4 bg-foreground/10 rounded w-1/2"></div>
+                                                                </div>
+                                                                <TaskWorkflow active={isLoading} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 )}
 
                                                 {/* Apply status badge */}

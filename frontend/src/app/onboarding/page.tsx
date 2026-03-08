@@ -43,13 +43,13 @@ export default function OnboardingWizard() {
     preferred_language: 'hi',
   });
 
-  // Pre-fill from Clerk if available
+  // Pre-fill from Cognito if available
   useEffect(() => {
-    if (isLoaded && user) {
+    if (!isLoaded && user) {
       setFormData(prev => ({
         ...prev,
-        full_name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-        phone: user.primaryPhoneNumber?.phoneNumber || '',
+        full_name: user.name || '',
+        phone: '', // Cognito doesn't provide phone directly without fetchUserAttributes
       }));
     }
   }, [isLoaded, user]);

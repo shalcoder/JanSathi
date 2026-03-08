@@ -132,7 +132,7 @@ export default function PhoneEmulatorPage() {
   const sendToBackend = useCallback(async (text: string) => {
     const sid = sessionId || `emulator-${Date.now()}`;
     const userProfile = {
-      name: user?.fullName,
+      name: user?.name,
       state: 'up',
       occupation: 'farmer',
       income_bracket: 'low',

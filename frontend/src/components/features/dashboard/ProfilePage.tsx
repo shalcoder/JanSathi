@@ -69,8 +69,8 @@ const ProfilePage = () => {
                 if (data) {
                     // Split full name if present
                     const names = (data.full_name || '').split(' ');
-                    const firstName = names[0] || user.firstName || 'Citizen';
-                    const lastName = names.length > 1 ? names.slice(1).join(' ') : (user.lastName || '');
+                    const firstName = names[0] || user.name || 'Citizen';
+                    const lastName = names.length > 1 ? names.slice(1).join(' ') : '';
                     
                     const loc = data.village ? `${data.village}, ${data.district}` : (data.district || 'Update Location');
                     
@@ -82,7 +82,7 @@ const ProfilePage = () => {
                         lastName,
                         full_name: data.full_name || '',
                         phone: data.phone || '',
-                        email: user.primaryEmailAddress?.emailAddress || '',
+                        email: '', // Cognito email requires fetchUserAttributes
                         location: loc,
                         language: langMap[data.preferred_language] || 'Hindi',
                         preferred_language: data.preferred_language || 'hi',

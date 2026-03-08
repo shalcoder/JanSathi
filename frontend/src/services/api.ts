@@ -112,6 +112,8 @@ export interface UnifiedQueryResponse {
   debug?: {
     model: string;
     latency_ms: number;
+    asr_confidence?: number;
+    cache_hit?: boolean;
     token_count?: number;
     thoughts?: Thought[];
   };

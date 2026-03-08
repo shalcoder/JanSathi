@@ -1,182 +1,67 @@
-'use client';
-
-import React, { useState, useEffect, useCallback } from "react";
-import { MessageSquare, ThumbsUp, MapPin, Users, AlertTriangle, ShieldAlert } from "lucide-react";
-import { motion } from "framer-motion";
-import { buildClient, getCommunityInsights, reportFraud, type CommunityInsightsResponse } from "@/services/api";
+import React, { useState, useEffect } from 'react';
+import { MessageSquare, ThumbsUp, MapPin, Users } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Post {
-    id?: number | string;
     title: string;
     content: string;
     author: string;
     time: string;
     likes: number;
     comments: number;
-    timestamp?: string;
-    location?: string;
-    author_role?: string;
 }
-
-const LOCAL_FORUM_POSTS_KEY = "jansathi_local_forum_posts";
-const FALLBACK_LOCATION = "Varanasi";
-
-const normalizePost = (raw: Partial<Post>): Post => {
-    const fallbackTime =
-        typeof raw.timestamp === "string"
-            ? raw.timestamp.replace("T", " ").slice(0, 16)
-            : new Date().toISOString().replace("T", " ").slice(0, 16);
-
-    return {
-        id: raw.id,
-        title: (raw.title || "").trim(),
-        content: (raw.content || "").trim(),
-        author: (raw.author || "JanSathi User").trim(),
-        time: (raw.time || fallbackTime).trim(),
-        likes: Number(raw.likes ?? 0),
-        comments: Number(raw.comments ?? 0),
-        timestamp: raw.timestamp,
-        location: raw.location,
-        author_role: raw.author_role,
-    };
-};
-
-const MOCK_POSTS: Post[] = [
-    normalizePost({
-        title: "PM-Kisan payment received successfully!",
-        content: "Just received my 16th installment of ₹2000. The process was smooth and payment came directly to my account. Thank you JanSathi for helping me check my eligibility!",
-        author: "Ramesh Kumar",
-        time: "2 hours ago",
-        likes: 12,
-        comments: 3
-    }),
-    normalizePost({
-        title: "Need help with Ayushman Bharat card",
-        content: "My family is eligible for Ayushman Bharat but we're having trouble getting the card issued. Has anyone faced similar issues? What documents are required?",
-        author: "Priya Devi",
-        time: "5 hours ago",
-        likes: 8,
-        comments: 7
-    }),
-    normalizePost({
-        title: "Weather warning for farmers",
-        content: "Local meteorology department has issued heavy rain warning for next 3 days. Fellow farmers, please take care of your crops and livestock.",
-        author: "Agricultural Officer",
-        time: "1 day ago",
-        likes: 25,
-        comments: 12
-    }),
-];
 
 export default function CommunityPage() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [newPost, setNewPost] = useState({ title: "", content: "" });
+    const [newPost, setNewPost] = useState({ title: '', content: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [insights, setInsights] = useState<CommunityInsightsResponse | null>(null);
-    const [fraudDetails, setFraudDetails] = useState("");
-    const [fraudAmount, setFraudAmount] = useState("");
-    const location = FALLBACK_LOCATION;
-
-    const loadLocalPosts = (): Post[] => {
-        try {
-            const raw = localStorage.getItem(LOCAL_FORUM_POSTS_KEY);
-            if (!raw) return [];
-            const parsed = JSON.parse(raw);
-            if (!Array.isArray(parsed)) return [];
-            return parsed.map((post) => normalizePost(post));
-        } catch {
-            return [];
-        }
-    };
-
-    const storeLocalPost = (post: Post) => {
-        const localPosts = loadLocalPosts();
-        const next = [post, ...localPosts].slice(0, 50);
-        localStorage.setItem(LOCAL_FORUM_POSTS_KEY, JSON.stringify(next));
-    };
-
-    const fetchPosts = useCallback(async () => {
-        setError(null);
-        try {
-            const localPosts = loadLocalPosts();
-            const api = buildClient();
-            const response = await api.get(`/v1/community/posts?location=${encodeURIComponent(location)}`);
-            const data = Array.isArray(response.data) ? response.data : [];
-            const remotePosts = data.map((post) => normalizePost(post));
-            const mergedPosts = [...localPosts, ...remotePosts];
-            setPosts(mergedPosts.length > 0 ? mergedPosts : MOCK_POSTS);
-        } catch (err) {
-            console.error("Failed to fetch posts:", err);
-            const localPosts = loadLocalPosts();
-            setPosts(localPosts.length > 0 ? localPosts : MOCK_POSTS);
-            setError("Using local forum data. Backend connection unavailable.");
-        } finally {
-            setLoading(false);
-        }
-    }, [location]);
+    const location = "Varanasi"; // Mock location for now, usually from user profile
 
     const handleCreatePost = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newPost.title.trim() || !newPost.content.trim()) return;
+        if (!newPost.title || !newPost.content) return;
 
         setIsSubmitting(true);
-        setError(null);
         try {
-            const api = buildClient();
-            const response = await api.post("/v1/community/posts", {
-                title: newPost.title.trim(),
-                content: newPost.content.trim(),
-                location,
-                author: "JanSathi User",
-                role: "Citizen",
+            const response = await fetch('/api/community/posts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: newPost.title,
+                    content: newPost.content,
+                    location: location,
+                    author: "JanSathi User", // In real app, from user profile
+                    role: "Citizen"
+                })
             });
-            const data = response.data;
-            if (data?.status === "success" && data?.post) {
-                setPosts((prev) => [normalizePost(data.post), ...prev]);
+            const data = await response.json();
+            if (data.status === 'success') {
+                setPosts([data.post, ...posts]);
                 setIsModalOpen(false);
-                setNewPost({ title: "", content: "" });
-            } else {
-                setError("Post could not be published.");
+                setNewPost({ title: '', content: '' });
             }
-        } catch (err) {
-            console.error("Failed to create post:", err);
-            const localPost = normalizePost({
-                id: `local-${Date.now()}`,
-                title: newPost.title.trim(),
-                content: newPost.content.trim(),
-                location,
-                author: "JanSathi User",
-                author_role: "Citizen",
-                likes: 0,
-                comments: 0,
-                timestamp: new Date().toISOString(),
-            });
-            storeLocalPost(localPost);
-            setPosts((prev) => [localPost, ...prev]);
-            setError("Post saved locally. It will remain visible in your local forum.");
-            setIsModalOpen(false);
-            setNewPost({ title: "", content: "" });
+        } catch (error) {
+            console.error("Failed to create post:", error);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     useEffect(() => {
-        fetchPosts();
-    }, [fetchPosts]);
-
-    useEffect(() => {
-        (async () => {
+        const fetchPosts = async () => {
             try {
-                const data = await getCommunityInsights(location);
-                setInsights(data);
-            } catch (e) {
-                console.error("Failed community insights fetch", e);
+                const response = await fetch(`/api/community/posts?location=${location}`);
+                const data = await response.json();
+                setPosts(data);
+            } catch (error) {
+                console.error("Failed to fetch posts:", error);
+            } finally {
+                setLoading(false);
             }
-        })();
+        };
+        fetchPosts();
     }, [location]);
 
     return (
@@ -194,78 +79,10 @@ export default function CommunityPage() {
                 </button>
             </div>
 
-            {error && (
-                <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-sm text-orange-600 dark:text-orange-400 flex items-center gap-2"
-                >
-                    <AlertTriangle className="w-4 h-4" />
-                    {error}
-                </motion.div>
-            )}
-
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-600 dark:text-blue-300 rounded-full text-xs font-bold uppercase tracking-widest border border-blue-500/20">
+            {/* Location Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-500 rounded-full text-xs font-bold uppercase tracking-widest">
                 <MapPin className="w-4 h-4" />
                 <span>{location}, Uttar Pradesh</span>
-            </div>
-
-            {insights && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-xl border border-border/50 bg-card">
-                        <p className="text-[10px] uppercase font-black tracking-wider text-secondary-foreground">Posts Analyzed</p>
-                        <p className="text-2xl font-black text-foreground">{insights.posts_analyzed}</p>
-                    </div>
-                    <div className="p-4 rounded-xl border border-border/50 bg-card">
-                        <p className="text-[10px] uppercase font-black tracking-wider text-secondary-foreground">Common Issue</p>
-                        <p className="text-sm font-bold text-foreground">{insights.common_document_issue}</p>
-                    </div>
-                    <div className="p-4 rounded-xl border border-border/50 bg-card">
-                        <p className="text-[10px] uppercase font-black tracking-wider text-secondary-foreground">Action</p>
-                        <p className="text-sm font-bold text-foreground">{insights.recommended_action}</p>
-                    </div>
-                </div>
-            )}
-
-            <div className="p-5 rounded-2xl border border-red-500/30 bg-red-500/10">
-                <h3 className="text-lg font-black text-foreground flex items-center gap-2 mb-3">
-                    <ShieldAlert className="w-5 h-5 text-red-500" />
-                    Middleman / Fraud Report
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <input
-                        value={fraudDetails}
-                        onChange={(e) => setFraudDetails(e.target.value)}
-                        placeholder="Describe bribe or exploitation"
-                        className="md:col-span-3 px-3 py-2 rounded-lg border border-border bg-background text-sm"
-                    />
-                    <input
-                        value={fraudAmount}
-                        onChange={(e) => setFraudAmount(e.target.value)}
-                        placeholder="Amount ₹"
-                        className="px-3 py-2 rounded-lg border border-border bg-background text-sm"
-                    />
-                </div>
-                <button
-                    onClick={async () => {
-                        if (!fraudDetails.trim()) return;
-                        try {
-                            await reportFraud({
-                                location,
-                                details: fraudDetails.trim(),
-                                amount: Number(fraudAmount || 0),
-                            });
-                            setFraudDetails("");
-                            setFraudAmount("");
-                            setError("Fraud pattern reported successfully.");
-                        } catch {
-                            setError("Unable to report now. Please retry.");
-                        }
-                    }}
-                    className="mt-3 px-5 py-2 rounded-lg bg-red-600 text-white font-bold text-sm"
-                >
-                    Submit Report
-                </button>
             </div>
 
             <div className="space-y-6">
@@ -286,14 +103,14 @@ export default function CommunityPage() {
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-foreground text-sm">{post.author}</h4>
-                                    <p className="text-[10px] uppercase font-bold text-secondary-foreground opacity-60">{post.time}</p>
+                                    <p className="text-[10px] uppercase font-bold text-secondary-foreground opacity-50">{post.time}</p>
                                 </div>
                             </div>
 
-                            <h3 className="text-lg font-bold mb-2 text-foreground">{post.title}</h3>
+                            <h3 className="text-lg font-bold mb-2">{post.title}</h3>
                             <p className="text-secondary-foreground text-sm leading-relaxed mb-4">{post.content}</p>
 
-                            <div className="flex gap-6 pt-4 border-t border-border/40">
+                            <div className="flex gap-6 pt-4 border-t border-border/30">
                                 <button className="flex items-center gap-2 text-sm font-bold text-secondary-foreground hover:text-primary transition-colors">
                                     <ThumbsUp className="w-4 h-4" />
                                     <span>{post.likes}</span>
@@ -308,14 +125,15 @@ export default function CommunityPage() {
                 )}
             </div>
 
+            {/* New Post Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-card text-card-foreground w-full max-w-lg rounded-3xl p-8 border border-border shadow-2xl"
+                        className="bg-card w-full max-w-lg rounded-3xl p-8 border border-border shadow-2xl"
                     >
-                        <h2 className="text-2xl font-black mb-6 text-card-foreground">Create New Post</h2>
+                        <h2 className="text-2xl font-black mb-6">Create New Post</h2>
                         <form onSubmit={handleCreatePost} className="space-y-4">
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-secondary-foreground mb-2">Title</label>
@@ -323,7 +141,7 @@ export default function CommunityPage() {
                                     type="text"
                                     value={newPost.title}
                                     onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                                    className="w-full bg-secondary/50 text-foreground border border-border rounded-xl px-4 py-3 font-medium focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-secondary-foreground/50"
+                                    className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3 font-medium focus:ring-2 focus:ring-primary outline-none transition-all"
                                     placeholder="Brief topic..."
                                     required
                                 />
@@ -333,7 +151,7 @@ export default function CommunityPage() {
                                 <textarea
                                     value={newPost.content}
                                     onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                                    className="w-full bg-secondary/50 text-foreground border border-border rounded-xl px-4 py-3 font-medium focus:ring-2 focus:ring-primary outline-none transition-all min-h-[150px] placeholder:text-secondary-foreground/50"
+                                    className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-3 font-medium focus:ring-2 focus:ring-primary outline-none transition-all min-h-[150px]"
                                     placeholder="Write your message to the community..."
                                     required
                                 />
@@ -342,16 +160,16 @@ export default function CommunityPage() {
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-6 py-3 rounded-xl font-bold text-sm border border-border bg-secondary/30 text-foreground hover:bg-secondary transition-colors"
+                                    className="flex-1 px-6 py-3 rounded-xl font-bold text-sm border border-border hover:bg-secondary transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="flex-1 bg-primary text-primary-foreground px-10 py-3 rounded-xl font-bold text-sm shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    className="flex-2 bg-primary text-primary-foreground px-10 py-3 rounded-xl font-bold text-sm shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
                                 >
-                                    {isSubmitting ? "Posting..." : "Post Message"}
+                                    {isSubmitting ? 'Posting...' : 'Post Message'}
                                 </button>
                             </div>
                         </form>

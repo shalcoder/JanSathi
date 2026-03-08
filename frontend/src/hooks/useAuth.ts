@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
-import { fetchAuthSession, getCurrentUser, signOut as amplifySignOut } from 'aws-amplify/auth';
+import { useEffect, useState } from 'react';
+import { getCurrentUser, signOut as amplifySignOut } from 'aws-amplify/auth';
 import { Hub } from 'aws-amplify/utils';
 
 export function useAuth() {
@@ -12,7 +12,7 @@ export function useAuth() {
 
     useEffect(() => {
         checkUser();
-
+        
         // Listen to Auth events
         const unsubscribe = Hub.listen('auth', ({ payload }) => {
             switch (payload.event) {
@@ -24,7 +24,7 @@ export function useAuth() {
                     break;
             }
         });
-
+        
         return () => unsubscribe();
     }, []);
 
@@ -34,6 +34,7 @@ export function useAuth() {
             setUser({
                 id: currentUser.userId,
                 name: currentUser.username,
+                // Email/attributes require fetchUserAttributes() normally, but keeping simple for now
             });
         } catch (_error) {
             setUser(null);
@@ -47,11 +48,11 @@ export function useAuth() {
         router.push('/auth/signin');
     };
 
-    const requireAuth = useCallback(() => {
+    const requireAuth = () => {
         if (!loading && !user) {
             router.push('/auth/signin');
         }
-    }, [loading, user, router]);
+    };
 
     return {
         user,
@@ -61,12 +62,3 @@ export function useAuth() {
         isAuthenticated: !!user
     };
 }
-
-export const getToken = async () => {
-    try {
-        const session = await fetchAuthSession();
-        return session.tokens?.idToken?.toString() || session.tokens?.accessToken?.toString() || null;
-    } catch {
-        return null;
-    }
-};

@@ -31,7 +31,6 @@ Design principles (idea.md):
 import uuid
 import time
 import logging
-import re
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -110,8 +109,7 @@ class JanSathiSupervisor:
         t_start = time.perf_counter()
         session_id     = event.get("session_id") or f"sess-{uuid.uuid4().hex[:10]}"
         message        = event.get("message", "").strip()
-        explicit_language = str(event.get("language", "")).strip().lower()
-        language       = explicit_language or "hi"
+        language       = event.get("language", "hi")
         channel        = event.get("channel", "web")
         consent        = event.get("consent", True)   # web implies consent
         asr_confidence = float(event.get("asr_confidence", 1.0))
@@ -127,8 +125,7 @@ class JanSathiSupervisor:
             return self._play_prompt(
                 "कृपया सहमति दें। Press 1 to consent.",   # Consent required
                 session_id, turn_id, "CONSENT_REQUIRED",
-                requires_input=True,
-                language=language,
+                requires_input=True
             )
 
         # ── Audit: log consent ───────────────────────────────────────────────
@@ -140,16 +137,8 @@ class JanSathiSupervisor:
 
         if not message:
             return self._play_prompt(
-                self._localize(
-                    language,
-                    "नमस्ते! जनसाथी में आपका स्वागत है। आप किस योजना के बारे में जानना चाहते हैं?",
-                    "Hello! Welcome to JanSathi. Which government scheme would you like to know about?",
-                ),
-                session_id,
-                turn_id,
-                "GREETING",
-                requires_input=True,
-                language=language,
+                "नमस्ते! जनसाथी में आपका स्वागत है। आप किस योजना के बारे में जानना चाहते हैं?",
+                session_id, turn_id, "GREETING", requires_input=True
             )
 
         # ── 0.5. AgentCore Integration ──────────────────────────────────────
@@ -207,9 +196,6 @@ class JanSathiSupervisor:
             intent_conf = float(intent_result.get("confidence", 0.75))
             scheme_hint = intent_result.get("scheme_hint", "pm_kisan")
             lang_det    = intent_result.get("language_detected", language)
-            if channel == "web" and explicit_language:
-                # Respect user-selected web UI language over detector guess.
-                lang_det = language
         except Exception as e:
             logger.error(f"[Supervisor] Intent agent error: {e}")
             intent      = "INFORMATION"
@@ -229,16 +215,8 @@ class JanSathiSupervisor:
         # Clarify if confidence too low
         if intent_conf < 0.60:
             return self._play_prompt(
-                self._localize(
-                    language,
-                    "माफ़ कीजिए, मैं समझ नहीं पाया। क्या आप PM-Kisan आवेदन, जानकारी, या शिकायत चाहते हैं?",
-                    "Sorry, I could not fully understand. Do you need PM-Kisan application help, scheme information, or grievance support?",
-                ),
-                session_id,
-                turn_id,
-                "CLARIFY",
-                requires_input=True,
-                language=language,
+                "माफ़ कीजिए, मैं समझ नहीं पाया। क्या आप PM-Kisan आवेदन, जानकारी, या शिकायत चाहते हैं?",
+                session_id, turn_id, "CLARIFY", requires_input=True
             )
 
         logger.info(f"[Supervisor] intent={intent} scheme={scheme_hint} conf={intent_conf:.2f}")
@@ -264,16 +242,8 @@ class JanSathiSupervisor:
 
         # ── Fallback ─────────────────────────────────────────────────────────
         return self._play_prompt(
-            self._localize(
-                language,
-                "मैं आपकी मदद के लिए यहाँ हूँ। PM-Kisan, PM Awas, या E-Shram के बारे में पूछें।",
-                "I am here to help. You can ask about PM-Kisan, PM Awas, or E-Shram.",
-            ),
-            session_id,
-            turn_id,
-            "FALLBACK",
-            requires_input=True,
-            language=language,
+            "मैं आपकी मदद के लिए यहाँ हूँ। PM-Kisan, PM Awas, या E-Shram के बारे में पूछें।",
+            session_id, turn_id, "FALLBACK", requires_input=True
         )
 
     # ── APPLY flow (agents 4→5→6→7→8→9) ─────────────────────────────────────
@@ -472,29 +442,15 @@ class JanSathiSupervisor:
             rag = _rag()
             # Try structured get_answer first (from rag_service.py)
             if hasattr(rag, "get_answer"):
-                try:
-                    answer = rag.get_answer(message, language=language)
-                except TypeError:
-                    answer = rag.get_answer(message)
+                answer = rag.get_answer(message)
             elif hasattr(rag, "get_relevant_context"):
                 ctx = rag.get_relevant_context(message)
                 answer = ctx if isinstance(ctx, str) else str(ctx)
             else:
-                answer = self._localize(
-                    language,
-                    "मैं उस योजना की जानकारी SMS के माध्यम से भेज दूँगा।",
-                    "I will share details of that scheme via SMS.",
-                )
+                answer = "I will send you information about that scheme via SMS."
 
             if not answer or len(answer.strip()) < 10:
-                answer = self._localize(
-                    language,
-                    "कृपया myscheme.gov.in या india.gov.in पर अधिक जानकारी लें।",
-                    "Please check myscheme.gov.in or india.gov.in for more details.",
-                )
-
-            if language.lower().startswith("en") and re.search(r"[\u0900-\u097F]", answer):
-                answer = "I can assist in English. Please ask your question again and I will provide the response in English."
+                answer = "कृपया myscheme.gov.in या india.gov.in पर अधिक जानकारी लें।"
 
             # Truncate to 400 chars for IVR TTS
             if len(answer) > 400:
@@ -504,18 +460,14 @@ class JanSathiSupervisor:
 
         except Exception as e:
             logger.error(f"[Supervisor] RAG agent error: {e}")
-            answer = self._localize(
-                language,
-                "योजना की जानकारी india.gov.in और myscheme.gov.in पर उपलब्ध है।",
-                "Scheme information is available on india.gov.in and myscheme.gov.in.",
-            )
+            answer = "योजना की जानकारी: india.gov.in और myscheme.gov.in पर उपलब्ध है।"
 
         return self._build_response(
             session_id=session_id,
             turn_id=turn_id,
             intent="INFORMATION",
             response_text=answer,
-            language=language,
+            language=lang_det,
             requires_input=False,
             latency_ms=round((time.perf_counter() - t_start) * 1000, 2),
         )
@@ -526,20 +478,9 @@ class JanSathiSupervisor:
         try:
             engine = _engine()
             result = engine(message="track_status", session_id=session_id)
-            response_text = result.get(
-                "response",
-                self._localize(
-                    language,
-                    "आपके आवेदन की स्थिति SMS पर भेजी जाएगी।",
-                    "Your application status will be sent by SMS.",
-                ),
-            )
+            response_text = result.get("response", "आपके आवेदन की स्थिति SMS पर भेजी जायेगी।")
         except Exception:
-            response_text = self._localize(
-                language,
-                "आपके आवेदन की स्थिति SMS पर भेजी जाएगी।",
-                "Your application status will be sent by SMS.",
-            )
+            response_text = "आपके आवेदन की स्थिति एसएमएस पर भेजी जायेगी।"
 
         return self._build_response(
             session_id=session_id,
@@ -557,20 +498,9 @@ class JanSathiSupervisor:
         try:
             engine = _engine()
             result = engine(message=f"grievance:{message}", session_id=session_id)
-            response_text = result.get(
-                "response",
-                self._localize(
-                    language,
-                    "आपकी शिकायत दर्ज कर ली गई है। SMS प्राप्त होगा।",
-                    "Your grievance has been recorded. You will receive an SMS update.",
-                ),
-            )
+            response_text = result.get("response", "आपकी शिकायत दर्ज कर ली गई है। SMS प्राप्त होगा।")
         except Exception:
-            response_text = self._localize(
-                language,
-                "आपकी शिकायत दर्ज हो गई। आपको SMS में जानकारी मिलेगी।",
-                "Your grievance has been recorded. Details will be shared via SMS.",
-            )
+            response_text = "आपकी शिकायत दर्ज हो गई। आपको SMS में जानकारी मिलेगी।"
 
         return self._build_response(
             session_id=session_id,
@@ -599,31 +529,18 @@ class JanSathiSupervisor:
         }
         return mapping.get(intent.lower(), intent.upper() if intent else "UNKNOWN")
 
-    def _play_prompt(
-        self,
-        text: str,
-        session_id: str,
-        turn_id: str,
-        action: str,
-        requires_input: bool = False,
-        language: str = "hi",
-    ) -> dict:
+    def _play_prompt(self, text: str, session_id: str, turn_id: str,
+                     action: str, requires_input: bool = False) -> dict:
         """Return a minimal IVR/web prompt."""
         return self._build_response(
             session_id=session_id,
             turn_id=turn_id,
             intent=action,
             response_text=text,
-            language=language,
+            language="hi",
             requires_input=requires_input,
             latency_ms=0,
         )
-
-    def _localize(self, language: str, hi_text: str, en_text: str) -> str:
-        lang = (language or "hi").lower()
-        if lang.startswith("en"):
-            return en_text
-        return hi_text
 
     def _build_response(
         self,

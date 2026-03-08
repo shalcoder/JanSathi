@@ -15,7 +15,10 @@ import {
     Sparkles,
     Home,
     LogOut,
+    Radio,
+    PlayCircle,
     AlertTriangle,
+    ShieldCheck,
     Phone,
     Zap,
 } from 'lucide-react';
@@ -35,7 +38,7 @@ interface SidebarProps {
 }
 
 const SESSIONS_KEY = 'jansathi_chat_sessions';
-const SHOW_DEMO_FLOW = process.env.NEXT_PUBLIC_SHOW_DEMO_FLOW !== 'false';
+
 export default function Sidebar({ activePage, onPageChange, onNewChat }: SidebarProps) {
     const { user, signOut } = useAuth();
     const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -46,16 +49,8 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                 const stored = localStorage.getItem(SESSIONS_KEY);
                 if (stored) {
                     const parsed = JSON.parse(stored);
-                    const normalized = Object.entries(parsed).map(([sessionKey, value]) => {
-                        const entry = value as Partial<ChatSession>;
-                        return {
-                            id: entry.id || sessionKey,
-                            title: entry.title || 'Untitled Session',
-                            timestamp: entry.timestamp || new Date(0).toISOString(),
-                        } as ChatSession;
-                    });
-                    const sorted = normalized.sort((a, b) =>
-                        new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+                    const sorted = (Object.values(parsed) as ChatSession[]).sort((a, b) =>
+                        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
                     );
                     setSessions(sorted);
                 }
@@ -71,15 +66,19 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     }, []);
 
     const navGroups = [
-        ...(SHOW_DEMO_FLOW ? [{
-            title: "4-Page Ops Flow",
+        {
+            title: "10-Layer Demo Flow",
             items: [
-                { id: 'ops-command', label: '1. Command + IVR', icon: LayoutDashboard, color: 'text-indigo-500' },
-                { id: 'ops-simulation', label: '2. Phone + Simulation', icon: Phone, color: 'text-emerald-500' },
-                { id: 'ops-verification', label: '3. HITL + Security', icon: AlertTriangle, color: 'text-red-500' },
-                { id: 'ops-impact', label: '4. Benefits + Impact', icon: Zap, color: 'text-primary' },
+                { id: 'overview', label: '1. Admin Command Center', icon: LayoutDashboard, color: 'text-indigo-500' },
+                { id: 'phone-emulator', label: '2. Web Phone Emulator', icon: Phone, color: 'text-emerald-500' },
+                { id: 'simulator', label: '3. Call Simulator (Inject)', icon: PlayCircle, color: 'text-rose-500' },
+                { id: 'ivr-console', label: '4. IVR Control Room', icon: Radio, color: 'text-amber-500' },
+                { id: 'hitl', label: '5. HITL Verifier Queue', icon: AlertTriangle, color: 'text-red-500' },
+                { id: 'receipts', label: '6. Benefit Action / SMS', icon: FileText, color: 'text-blue-500' },
+                { id: 'security', label: '7. DPDP Security Hash', icon: ShieldCheck, color: 'text-emerald-500' },
+                { id: 'impact', label: '8. Impact Dashboard', icon: Zap, color: 'text-primary' },
             ]
-        }] : []),
+        },
         {
             title: "Supporting Systems",
             items: [
@@ -111,7 +110,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                     </div>
                     <div>
                         <h1 className="font-bold text-xl tracking-tight text-foreground leading-none">JanSathi</h1>
-                        <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-wider opacity-50 mt-1">Citizen Support Platform</p>
+                        <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-wider opacity-50 mt-1">Bharat AI Helper</p>
                     </div>
                 </div>
 
@@ -121,7 +120,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                     className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all hover:bg-primary/90 active:scale-95 shadow-md shadow-primary/20 hover:shadow-lg"
                 >
                     <PlusCircle className="w-4 h-4" />
-                    <span>New Session</span>
+                    <span>New Chat</span>
                 </button>
 
                 {/* Main Navigation */}
@@ -181,11 +180,11 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
                                 <p className="text-[10px] text-secondary-foreground font-bold uppercase tracking-wider">No history yet</p>
                             </div>
                         ) : (
-                            sessions.map((session, idx) => (
+                            sessions.map((session) => (
                                 <button
-                                    key={session.id || `${session.title}-${session.timestamp}-${idx}`}
+                                    key={session.id}
                                     onClick={() => {
-                                        onPageChange('assistant');
+                                        onPageChange('dashboard');
                                         window.dispatchEvent(new CustomEvent('load-chat-session', { detail: session.id }));
                                     }}
                                     className="w-full text-left px-4 py-3 rounded-lg hover:bg-secondary/50 transition-colors group flex items-center gap-3"
@@ -251,9 +250,7 @@ export default function Sidebar({ activePage, onPageChange, onNewChat }: Sidebar
     );
 }
 
-type SidebarUser = { name?: string };
-
-function UserProfileName({ user }: { user: SidebarUser | null | undefined }) {
+function UserProfileName({ user }: { user: any }) {
     return (
         <>
             <p className="text-sm font-bold text-foreground truncate tracking-tight">

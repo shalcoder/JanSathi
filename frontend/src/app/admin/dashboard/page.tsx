@@ -6,7 +6,7 @@ import {
     BarChart3, Users, IndianRupee, Map, ArrowUpRight,
     Activity, CheckCircle, XCircle, Play, RefreshCw, AlertTriangle
 } from 'lucide-react';
-import { useAuth, getToken } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import OutreachSimulator from '@/components/features/chat/OutreachSimulator';
 import ModerationLoop from '@/components/features/chat/ModerationLoop';
 import IVRMonitor from '@/components/features/dashboard/IVRMonitor';
@@ -19,7 +19,7 @@ import {
 
 function HITLQueue() {
     const { user, loading: isLoaded } = useAuth();
-    
+    const getToken = async () => 'mock-token';
     const [cases, setCases] = useState<HITLCase[]>([]);
     const [loading, setLoading] = useState(true);
     const [actioningId, setActioningId] = useState<string | null>(null);

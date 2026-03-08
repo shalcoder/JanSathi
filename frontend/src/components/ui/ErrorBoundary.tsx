@@ -26,15 +26,15 @@ class ErrorBoundary extends Component<Props, State> {
     public render() {
         if (this.state.hasError) {
             return (
-                <div className="min-h-screen flex items-center justify-center bg-background p-4">
-                    <div className="bg-card border border-red-500/20 p-8 rounded-3xl text-center max-w-md shadow-lg">
-                        <h1 className="text-2xl font-bold text-foreground mb-4">Something went wrong</h1>
-                        <p className="text-secondary-foreground mb-6">
+                <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+                    <div className="glass-panel p-8 rounded-3xl border border-red-500/20 text-center max-w-md">
+                        <h1 className="text-2xl font-bold text-white mb-4">Something went wrong</h1>
+                        <p className="text-slate-400 mb-6">
                             We encountered an unexpected error. Don&apos;t worry, your data is safe.
                         </p>
                         <button
                             onClick={() => window.location.reload()}
-                            className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all font-medium"
+                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all"
                         >
                             Reload Page
                         </button>

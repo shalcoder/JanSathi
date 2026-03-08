@@ -7,7 +7,6 @@ import { ArrowRight, Mic, Languages, Bot, Globe, Cpu, Database, ChevronRight, Ac
 import BackendStatus from "@/components/BackendStatus";
 import ImpactStats from "@/components/features/community/ImpactStats";
 import { useAuthenticator } from "@aws-amplify/ui-react";
-import { SimpleThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function LandingPage() {
   const { authStatus } = useAuthenticator(context => [context.authStatus]);
@@ -40,9 +39,6 @@ export default function LandingPage() {
                 </a>
               ))}
             </div>
-
-            {/* Theme Toggle */}
-            <SimpleThemeToggle />
 
             {authStatus === 'authenticated' ? (
               <Link

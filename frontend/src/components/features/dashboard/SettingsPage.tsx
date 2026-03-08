@@ -2,13 +2,11 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Volume2, Shield, Trash2, Save, Languages } from 'lucide-react';
+import { Globe, Volume2, Shield, Trash2, Save, Languages, Bell, Database } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
-import { useI18n, type Language } from '@/context/i18n';
 
 const SettingsPage = () => {
     const { settings, updateSettings } = useSettings();
-    const { setLanguage } = useI18n();
 
     const handleSave = () => {
         alert("Settings saved successfully!");
@@ -47,11 +45,7 @@ const SettingsPage = () => {
                             <label className="text-[11px] font-bold text-secondary-foreground uppercase tracking-wider ml-1 opacity-50">Select Main Language</label>
                             <select
                                 value={settings.language}
-                                onChange={(e) => {
-                                    const lang = e.target.value as Language;
-                                    updateSettings({ language: lang });
-                                    setLanguage(lang);
-                                }}
+                                onChange={(e) => updateSettings({ language: e.target.value })}
                                 className="w-full h-14 bg-secondary/30 border border-border/50 rounded-xl px-5 text-foreground font-bold outline-none focus:border-primary appearance-none cursor-pointer"
                             >
                                 <option value="hi">Hindi (हिन्दी)</option>

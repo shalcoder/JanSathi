@@ -6,10 +6,6 @@ import time
 from botocore.exceptions import ClientError, NoCredentialsError
 from app.core.utils import log_event, timed
 from app.core.security import sanitize_ai_response
-from app.services.cache_service import ResponseCache
-
-BedrockQueryCache = ResponseCache(ttl_seconds=3600)
-PDF_CONTEXT_STORE = {}
 
 # ── Nova Model IDs ──────────────────────────────────────────────────────────
 NOVA_LITE = "amazon.nova-lite-v1:0"   # Primary: chat, RAG, responses
@@ -47,15 +43,10 @@ class BedrockService:
             self.working = False
 
     @timed
-    def generate_response(self, query, context_text, language='hi', intent="GENERAL_INQUIRY", session_id=None):
+    def generate_response(self, query, context_text, language='hi', intent="GENERAL_INQUIRY"):
         """Generate a response using Amazon Nova Lite via Converse API."""
         if not self.working:
             return self._get_context_based_response(query, context_text, language)
-
-        # ── Inject PDF Context if available ──────────────────────────────────
-        if session_id and session_id in PDF_CONTEXT_STORE:
-            pdf_context = PDF_CONTEXT_STORE[session_id]
-            context_text = f"USER UPLOADED DOCUMENT CONTENT:\n{pdf_context}\n\nADDITIONAL INFO:\n{context_text}"
 
         has_scheme_context = (
             context_text and
@@ -63,46 +54,11 @@ class BedrockService:
             "I do not have specific public data" not in context_text
         )
 
-        lang_map = {
-            'hi': 'Hindi (हिन्दी)',
-            'en': 'English',
-            'ta': 'Tamil (தமிழ்)',
-            'te': 'Telugu (తెలుగు)',
-            'kn': 'Kannada (ಕನ್ನಡ)',
-            'ml': 'Malayalam (മലയാളം)',
-            'mr': 'Marathi (मराठी)',
-            'bn': 'Bengali (বাংলা)',
-            'gu': 'Gujarati (ગુજરાતી)',
-            'pa': 'Punjabi (ਪੰਜਾਬੀ)',
-            'or': 'Odia (ଓଡ଼ିଆ)',
-            'as': 'Assamese (অসমীয়া)'
-        }
-        native_lang = lang_map.get(language, 'English')
-
         if not has_scheme_context:
             context_text = (
                 f"General inquiry about: {query}. "
                 "Provide helpful information based on general knowledge of Indian government services."
             )
-
-        # ── Check Cache ───────────────────────────────────────────────────────
-        cached = BedrockQueryCache.get(query, language)
-        if cached:
-            try:
-                # Build return dict combining cache result
-                explainability = {
-                    "confidence": 0.99,
-                    "matching_criteria": ["Cached Nova Response"],
-                    "privacy_protocol": "DPDP-Compliant (Zero PII in logs)",
-                }
-                return {
-                    "text": cached['response'],
-                    "provenance": "verified_doc" if has_scheme_context else "general_search",
-                    "explainability": explainability,
-                    "cache_hit": True
-                }
-            except Exception as e:
-                print(f"Cache return error: {e}")
 
         # ── Nova Lite prompt ──────────────────────────────────────────────────
         if has_scheme_context:
@@ -110,10 +66,10 @@ class BedrockService:
 {context_text}
 
 USER QUERY: {query}
-PRIMARY LANGUAGE: {native_lang}
+PRIMARY LANGUAGE: {language}
 USER INTENT: {intent}
 
-Respond ONLY in {native_lang}. Structure your response as:
+Respond ONLY in {language}. Structure your response as:
 ✅ **Summary**: [1-2 sentences]
 📋 **Key Details**: [bullet points from context]
 🪜 **Action Plan**: [numbered steps]
@@ -121,10 +77,10 @@ Respond ONLY in {native_lang}. Structure your response as:
 🌐 **Official Source**: [URL from context only]"""
         else:
             user_content = f"""USER QUERY: {query}
-PRIMARY LANGUAGE: {native_lang}
+PRIMARY LANGUAGE: {language}
 
 Provide helpful guidance about Indian government services. 
-Suggest official portals (india.gov.in, myscheme.gov.in). Respond in {native_lang}."""
+Suggest official portals (india.gov.in, myscheme.gov.in). Respond in {language}."""
 
         # ── Call Nova via Converse API ────────────────────────────────────────
         messages = [{"role": "user", "content": [{"text": user_content}]}]
@@ -160,12 +116,6 @@ Suggest official portals (india.gov.in, myscheme.gov.in). Respond in {native_lan
                 "matching_criteria": ["Nova Lite response via Converse API"],
                 "privacy_protocol": "DPDP-Compliant (Zero PII in logs)",
             }
-
-            # ── Set Cache ────────────────────────────────────────────────────────
-            try:
-                BedrockQueryCache.set(query, language, sanitized, None)
-            except Exception as e:
-                print(f"Failed to cache Bedrock response: {e}")
 
             return {
                 "text": sanitized,

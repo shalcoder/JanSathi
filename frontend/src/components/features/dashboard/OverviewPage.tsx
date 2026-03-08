@@ -2,27 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, ArrowRight, PhoneCall, Zap, AlertTriangle, Layers } from 'lucide-react';
 import BackendStatus from '@/components/BackendStatus';
-import { getCivicImpact, type CivicImpactMetrics } from '@/services/api';
 
 export default function OverviewPage({ onNavigate }: { onNavigate: (page: string) => void }) {
-    const [impact, setImpact] = React.useState<CivicImpactMetrics | null>(null);
-
-    React.useEffect(() => {
-        (async () => {
-            try {
-                const data = await getCivicImpact();
-                setImpact(data);
-            } catch (e) {
-                console.error("Impact fetch failed", e);
-            }
-        })();
-    }, []);
-
     const stats = [
-        { label: "Citizens Served", value: String(impact?.citizens_served ?? "1,492"), icon: PhoneCall, color: "text-blue-500", bg: "bg-blue-500/10" },
-        { label: "Benefits Unlocked", value: `₹${(impact?.estimated_benefits_unlocked_inr ?? 420000).toLocaleString("en-IN")}`, icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-        { label: "Trips Avoided", value: String(impact?.estimated_trips_avoided ?? 172), icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
-        { label: "Fraud Reports", value: String(impact?.fraud_reports ?? 5), icon: Zap, color: "text-purple-500", bg: "bg-purple-500/10" },
+        { label: "Calls Processed (24h)", value: "1,492", icon: PhoneCall, color: "text-blue-500", bg: "bg-blue-500/10" },
+        { label: "Eligibility Rate", value: "78.4%", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+        { label: "HITL Escalation", value: "4.2%", icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
+        { label: "Bedrock Spend", value: "₹248.50", icon: Zap, color: "text-purple-500", bg: "bg-purple-500/10" },
     ];
 
     return (

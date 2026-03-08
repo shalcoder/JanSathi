@@ -1,137 +1,89 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Search, Filter, ArrowRight, Landmark, Sprout, Building2, GraduationCap, HeartPulse, Route, BellRing, MapPin } from "lucide-react";
-import {
-    getSchemes,
-    getLifeWorkflow,
-    getProactiveAlerts,
-    getCivicNavigator,
-    type LiveScheme,
-    type LiveSchemesResponse,
-    type ProactiveAlert,
-    type LifeWorkflowResponse,
-    type CivicNavigatorResponse
-} from "@/services/api";
-import { getToken, useAuth } from "@/hooks/useAuth";
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Search, Filter, ArrowRight, Landmark, Sprout, Building2, GraduationCap, HeartPulse } from 'lucide-react';
+import { getSchemes } from '@/services/api';
+
+interface Scheme {
+    id: string;
+    title: string;
+    benefit: string;
+    ministry: string;
+    category: string;
+    keywords: string[];
+}
 
 export default function SchemesPage() {
-    const { user } = useAuth();
-    const [schemes, setSchemes] = useState<LiveScheme[]>([]);
-    const [filteredSchemes, setFilteredSchemes] = useState<LiveScheme[]>([]);
+    const [schemes, setSchemes] = useState<Scheme[]>([]);
+    const [filteredSchemes, setFilteredSchemes] = useState<Scheme[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [activeCategory, setActiveCategory] = useState("all");
-    const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
-    const [refreshSeconds, setRefreshSeconds] = useState<number>(120);
-    const [eventKey, setEventKey] = useState("crop_loss");
-    const [lifeWorkflow, setLifeWorkflow] = useState<LifeWorkflowResponse | null>(null);
-    const [alerts, setAlerts] = useState<ProactiveAlert[]>([]);
-    const [navigator, setNavigator] = useState<CivicNavigatorResponse | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeCategory, setActiveCategory] = useState('all');
 
     const categories = [
-        { id: "all", label: "All", icon: Landmark },
-        { id: "agriculture", label: "Agriculture", icon: Sprout },
-        { id: "housing", label: "Housing", icon: Building2 },
-        { id: "education", label: "Education", icon: GraduationCap },
-        { id: "health", label: "Health", icon: HeartPulse },
+        { id: 'all', label: 'All', icon: Landmark },
+        { id: 'agriculture', label: 'Agriculture', icon: Sprout },
+        { id: 'housing', label: 'Housing', icon: Building2 },
+        { id: 'education', label: 'Education', icon: GraduationCap },
+        { id: 'health', label: 'Health', icon: HeartPulse },
     ];
 
-    const fetchSchemesData = useCallback(async (showLoader: boolean) => {
-        if (!user) return;
-        if (showLoader) {
+    useEffect(() => {
+        const fetchSchemesData = async () => {
             setLoading(true);
-        }
-        try {
-            const token = await getToken();
-            const data: LiveSchemesResponse = await getSchemes(token || undefined);
-            const rows = Array.isArray(data?.schemes) ? data.schemes : [];
-            setSchemes(rows);
-            setFilteredSchemes(rows);
-            setLastSyncAt(data?.meta?.generated_at ?? new Date().toISOString());
-            if (data?.meta?.refresh_interval_seconds) {
-                setRefreshSeconds(data.meta.refresh_interval_seconds);
-            }
-        } catch (error) {
-            console.error("Failed to fetch schemes:", error);
-        } finally {
-            if (showLoader) {
+            try {
+                const data = await getSchemes() as { schemes?: Scheme[] };
+                if (data?.schemes && Array.isArray(data.schemes) && data.schemes.length > 0) {
+                    setSchemes(data.schemes);
+                    setFilteredSchemes(data.schemes);
+                } else {
+                    // Fallback to demo data if backend is empty
+                    const demoSchemes: Scheme[] = [
+                        { id: '1', title: 'PM Kisan Samman Nidhi', benefit: '₹6,000/year', ministry: 'Ministry of Agriculture', category: 'agriculture', keywords: ['farmers', 'direct transfer'] },
+                        { id: '2', title: 'Ayushman Bharat', benefit: '₹5 Lakh Cover', ministry: 'Ministry of Health', category: 'health', keywords: ['health', 'insurance'] },
+                        { id: '3', title: 'PM Awas Yojana', benefit: 'Housing Subsidy', ministry: 'Ministry of Housing', category: 'housing', keywords: ['home', 'urban', 'rural'] },
+                        { id: '4', title: 'Atal Pension Yojana', benefit: 'Monthly Pension', ministry: 'PFRDA', category: 'general', keywords: ['pension', 'old age'] },
+                    ];
+                    setSchemes(demoSchemes);
+                    setFilteredSchemes(demoSchemes);
+                }
+            } catch (error) {
+                console.error("Failed to fetch schemes:", error);
+            } finally {
                 setLoading(false);
             }
-        }
-    }, [user]);
-
-    const fetchCivicPanels = useCallback(async () => {
-        if (!user) return;
-        try {
-            const token = await getToken();
-            const [flow, proactive, nav] = await Promise.all([
-                getLifeWorkflow(eventKey, user.id, token || undefined),
-                getProactiveAlerts(user.id, token || undefined),
-                getCivicNavigator("Varanasi", "csc", token || undefined),
-            ]);
-            setLifeWorkflow(flow);
-            setAlerts(proactive.alerts || []);
-            setNavigator(nav);
-        } catch (error) {
-            console.error("Failed to fetch civic panels:", error);
-        }
-    }, [eventKey, user]);
-
-    useEffect(() => {
-        fetchSchemesData(true);
-    }, [fetchSchemesData]);
-
-    useEffect(() => {
-        fetchCivicPanels();
-    }, [fetchCivicPanels]);
-
-    useEffect(() => {
-        if (!user) return;
-        const timer = setInterval(() => {
-            fetchSchemesData(false);
-        }, refreshSeconds * 1000);
-        return () => clearInterval(timer);
-    }, [fetchSchemesData, refreshSeconds, user]);
+        };
+        fetchSchemesData();
+    }, []);
 
     useEffect(() => {
         let filtered = schemes;
 
-        if (activeCategory !== "all") {
-            filtered = filtered.filter((s) => s.category === activeCategory);
+        if (activeCategory !== 'all') {
+            filtered = filtered.filter(s => s.category === activeCategory);
         }
 
         if (searchQuery) {
             const lowQuery = searchQuery.toLowerCase();
-            filtered = filtered.filter((s) =>
+            filtered = filtered.filter(s =>
                 s.title.toLowerCase().includes(lowQuery) ||
                 s.ministry.toLowerCase().includes(lowQuery) ||
-                (s.keywords && s.keywords.some((k) => k.toLowerCase().includes(lowQuery)))
+                (s.keywords && s.keywords.some(k => k.toLowerCase().includes(lowQuery)))
             );
         }
 
         setFilteredSchemes(filtered);
     }, [searchQuery, activeCategory, schemes]);
 
-    const statusLabel = (scheme: LiveScheme): string => {
-        if (scheme.eligibility_status === "eligible") return "ELIGIBLE";
-        if (scheme.eligibility_status === "likely_eligible") return "LIKELY ELIGIBLE";
-        return "CHECK CRITERIA";
-    };
-
     return (
         <div className="space-y-8 p-6 lg:p-10 max-w-7xl mx-auto h-full flex flex-col">
             <div className="flex justify-between items-end">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight text-foreground">Government Schemes</h1>
-                    <p className="text-secondary-foreground font-medium mt-1">Personalized live feed with official apply links.</p>
-                    {lastSyncAt && (
-                        <p className="text-xs text-secondary-foreground/70 mt-2">
-                            Last synced: {new Date(lastSyncAt).toLocaleString()} | Auto refresh: {refreshSeconds}s
-                        </p>
-                    )}
+                    <p className="text-secondary-foreground font-medium mt-1">Browse and apply for verify schemes tailored for you.</p>
                 </div>
             </div>
 
+            {/* Search & Filter Bar */}
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-foreground/50" />
@@ -149,62 +101,7 @@ export default function SchemesPage() {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 p-6 rounded-2xl border border-border/60 bg-card">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-black text-foreground flex items-center gap-2">
-                            <Route className="w-5 h-5 text-primary" />
-                            Life Workflow Automation
-                        </h3>
-                        <select
-                            value={eventKey}
-                            onChange={(e) => setEventKey(e.target.value)}
-                            className="px-3 py-2 rounded-lg bg-secondary/40 border border-border text-sm font-bold"
-                        >
-                            <option value="crop_loss">Crop Loss</option>
-                            <option value="child_birth">New Child Birth</option>
-                            <option value="job_loss">Job Loss</option>
-                        </select>
-                    </div>
-                    <p className="text-sm text-secondary-foreground mb-3">
-                        {lifeWorkflow?.event_label || "Life Event"} workflow mapped to multi-scheme automation.
-                    </p>
-                    <ol className="space-y-2">
-                        {(lifeWorkflow?.workflow_steps || []).map((step, idx) => (
-                            <li key={`${step}-${idx}`} className="text-sm font-medium text-foreground bg-secondary/20 border border-border/40 rounded-lg px-3 py-2">
-                                {idx + 1}. {step}
-                            </li>
-                        ))}
-                    </ol>
-                </div>
-
-                <div className="p-6 rounded-2xl border border-border/60 bg-card space-y-4">
-                    <h3 className="text-lg font-black text-foreground flex items-center gap-2">
-                        <BellRing className="w-5 h-5 text-amber-500" />
-                        Proactive Alerts
-                    </h3>
-                    <div className="space-y-3">
-                        {alerts.slice(0, 3).map((a) => (
-                            <div key={a.id} className="p-3 rounded-xl border border-border/50 bg-secondary/20">
-                                <p className="text-xs font-black uppercase tracking-wider text-primary">{a.priority}</p>
-                                <p className="text-sm font-bold text-foreground">{a.title}</p>
-                                <p className="text-xs text-secondary-foreground">{a.message}</p>
-                            </div>
-                        ))}
-                    </div>
-                    {navigator && (
-                        <div className="pt-3 border-t border-border/40">
-                            <h4 className="text-sm font-black text-foreground flex items-center gap-2 mb-2">
-                                <MapPin className="w-4 h-4 text-emerald-500" />
-                                AI Government Navigator
-                            </h4>
-                            <p className="text-xs text-secondary-foreground font-semibold">{navigator.nearest_center.name}</p>
-                            <p className="text-xs text-secondary-foreground">{navigator.nearest_center.address}</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
+            {/* Categories */}
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
                 {categories.map((cat) => (
                     <button
@@ -212,7 +109,7 @@ export default function SchemesPage() {
                         onClick={() => setActiveCategory(cat.id)}
                         className={`
               flex items-center gap-2 px-6 py-3 rounded-full border whitespace-nowrap transition-all
-              ${activeCategory === cat.id ? "bg-foreground text-background border-foreground" : "bg-card border-border hover:border-primary/50 text-secondary-foreground hover:text-foreground"}
+              ${activeCategory === cat.id ? 'bg-foreground text-background border-foreground' : 'bg-card border-border hover:border-primary/50 text-secondary-foreground hover:text-foreground'}
             `}
                     >
                         <cat.icon className="w-4 h-4" />
@@ -221,6 +118,7 @@ export default function SchemesPage() {
                 ))}
             </div>
 
+            {/* Schemes Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
                 {loading ? (
                     <div className="col-span-full flex justify-center py-20">
@@ -241,7 +139,7 @@ export default function SchemesPage() {
                         >
                             <div className="flex justify-between items-start mb-6">
                                 <span className="px-4 py-1.5 rounded-full bg-orange-500/10 text-orange-600 text-[10px] font-black uppercase tracking-[0.2em] border border-orange-500/20">
-                                    {statusLabel(scheme)}
+                                    ELIGIBLE
                                 </span>
                                 <div className="text-secondary-foreground/20 group-hover:text-primary transition-colors">
                                     <ArrowRight className="w-6 h-6 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
@@ -251,22 +149,15 @@ export default function SchemesPage() {
                             <div className="mb-6 flex-1">
                                 <h3 className="text-2xl font-black text-foreground mb-2 group-hover:text-primary transition-colors">{scheme.title}</h3>
                                 <p className="text-sm font-bold text-secondary-foreground/60">{scheme.ministry}</p>
-                                <p className="text-xs text-secondary-foreground/70 mt-2">AI match score: {Math.round((scheme.eligibility_score || 0) * 100)}%</p>
                             </div>
 
-                            <div className="flex flex-wrap gap-2 mb-4">
+                            <div className="flex flex-wrap gap-2 mb-8">
                                 {scheme.keywords?.slice(0, 2).map((k, ki) => (
                                     <span key={ki} className="px-3 py-1 bg-secondary border border-border/50 rounded-lg text-[10px] font-bold text-secondary-foreground uppercase tracking-wider">
                                         {k}
                                     </span>
                                 ))}
                             </div>
-
-                            {scheme.why_recommended && scheme.why_recommended.length > 0 && (
-                                <p className="text-xs text-secondary-foreground/80 mb-4">
-                                    {scheme.why_recommended[0]}
-                                </p>
-                            )}
 
                             <div className="flex items-center justify-between pt-6 border-t border-border/30">
                                 <div>
@@ -276,10 +167,7 @@ export default function SchemesPage() {
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        const url = scheme.apply_link || scheme.official_source;
-                                        if (url) {
-                                            window.open(url, "_blank", "noopener,noreferrer");
-                                        }
+                                        alert(`Opening application for ${scheme.title}`);
                                     }}
                                     className="px-6 py-3.5 bg-foreground text-background rounded-xl text-xs font-black uppercase tracking-[0.1em] hover:scale-105 active:scale-95 transition-all shadow-lg"
                                 >

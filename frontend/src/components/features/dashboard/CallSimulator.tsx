@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PlayCircle, FileTerminal, RefreshCw, Loader2, CheckCircle2, ChevronRight, Hash } from 'lucide-react';
-import { useAuth, getToken } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { simulateIvrCall } from '@/services/api';
 
 // Helper to avoid Next.js Strict Mode "impure function" warnings during render
@@ -12,7 +12,7 @@ export default function CallSimulator() {
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccess, setDispatchSuccess] = useState(false);
   const { user, loading: isLoaded } = useAuth();
-    
+    const getToken = async () => 'mock-token';
 
   const generatePayload = () => {
     setSessionData({

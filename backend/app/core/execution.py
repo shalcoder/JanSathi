@@ -330,47 +330,11 @@ def process_user_input(message: str, session_id: str, language: str = "hi",
 
     intent = intent_result.get("intent", "info")
     scheme_hint = intent_result.get("scheme_hint", "unknown")
-    event_key = intent_result.get("event_key", "unknown")
     scheme_name = _detect_scheme(message, scheme_hint)
 
     # ── 6. Route by intent ───────────────────────────────────────────────────────
 
-    # ── 6a. LIFE_EVENT → civic orchestration case ───────────────────────────────
-    if intent == "life_event":
-        logger.info(f"[Execution] Life event intent → create life-event case ({event_key})")
-        try:
-            from app.services.civic_infra_service import CivicInfraService
-            user_id = user_profile.get("id") or user_profile.get("user_id") or "anonymous"
-            case = CivicInfraService().create_life_event_case(
-                session_id=session_id,
-                event_key=event_key if event_key != "unknown" else "crop_loss",
-                user_id=user_id,
-                language=language,
-            )
-            response_text = (
-                f"Life-event workflow started: {case.get('event_label', 'Civic Workflow')}. "
-                f"Case ID {case.get('case_id')}. Step 1 is now active."
-            )
-            return {
-                "response": response_text,
-                "response_text": response_text,
-                "action_type": "LIFE_EVENT_CASE_STARTED",
-                "current_state": "LIFE_EVENT_IN_PROGRESS",
-                "is_terminal": False,
-                "requires_input": True,
-                "session_data": {},
-                "life_event_case": case,
-                "telemetry": {
-                    "intent": "life_event",
-                    "event_key": event_key,
-                    "confidence": intent_result.get("confidence", 0.9),
-                },
-            }
-        except Exception as e:
-            logger.error(f"[Execution] Life event orchestration failed: {e}")
-            return _error_resp(e)
-
-    # ── 6b. GRIEVANCE → LLM draft ───────────────────────────────────────────────
+    # ── 6a. GRIEVANCE → LLM draft ───────────────────────────────────────────────
     if intent == "grievance":
         logger.info(f"[Execution] Grievance intent → Starting slot collection")
         try:
@@ -381,7 +345,7 @@ def process_user_input(message: str, session_id: str, language: str = "hi",
             logger.error(f"[Execution] Grievance pipeline failed: {e}")
             return _error_resp(e)
 
-    # ── 6c. TRACK → track_status ─────────────────────────────────────────────────
+    # ── 6b. TRACK → track_status ─────────────────────────────────────────────────
     if intent == "track":
         logger.info(f"[Execution] Track intent → FSM track_status")
         try:
@@ -390,7 +354,7 @@ def process_user_input(message: str, session_id: str, language: str = "hi",
         except Exception as e:
             return _error_resp(e)
 
-    # ── 6d. APPLY → start_apply:<scheme> ─────────────────────────────────────────
+    # ── 6c. APPLY → start_apply:<scheme> ─────────────────────────────────────────
     if intent == "apply":
         logger.info(f"[Execution] Apply intent → start_apply:{scheme_name}")
         try:
@@ -399,7 +363,7 @@ def process_user_input(message: str, session_id: str, language: str = "hi",
         except Exception as e:
             return _error_resp(e)
 
-    # ── 6e. INFO / FALLBACK → Smart RAG Pipeline ──────────────────────────────
+    # ── 6d. INFO / FALLBACK → Smart RAG Pipeline ──────────────────────────────
     logger.info(f"[Execution] Info/fallback intent → Smart RAG Pipeline")
     try:
         from app.services.smart_rag_service import SmartRAGService

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type Language = 'en' | 'hi' | 'ta' | 'te' | 'kn' | 'ml' | 'mr' | 'gu' | 'bn' | 'pa' | 'or' | 'as';
+type Language = 'en' | 'hi' | 'ta' | 'te' | 'kn' | 'ml' | 'mr' | 'gu' | 'bn' | 'pa' | 'or' | 'as';
 
 interface I18nContextType {
   language: Language;
@@ -316,12 +316,18 @@ const translations: Record<Language, Record<string, string>> = {
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window === 'undefined') return 'hi';
-    const saved = localStorage.getItem('jansathi_lang') as Language | null;
-    const validLangs = ['en', 'hi', 'ta', 'te', 'kn', 'ml', 'mr', 'gu', 'bn', 'pa', 'or', 'as'];
-    return saved && validLangs.includes(saved) ? saved : 'hi';
-  });
+  const [language, setLanguageState] = useState<Language>('hi');
+
+  // Load from localStorage on mount safely
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('jansathi_lang') as Language;
+      const validLangs = ['en', 'hi', 'ta', 'te', 'kn', 'ml', 'mr', 'gu', 'bn', 'pa', 'or', 'as'];
+      if (saved && validLangs.includes(saved)) {
+        setLanguageState(saved);
+      }
+    }
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);

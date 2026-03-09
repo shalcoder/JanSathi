@@ -1,20 +1,12 @@
-'use client';
-
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import OfflineNotice from "@/components/OfflineNotice";
-import { I18nProvider } from "@/context/i18n";
-import { ThemeProvider } from "@/context/theme";
-import { configureAmplify } from "@/lib/cognito";
+import Providers from "./providers";
 
-// Configure Amplify/Cognito once at app boot
-configureAmplify();
-
-export const metadata = {
-  themeColor: '#2563eb',
+export const metadata: Metadata = {
   description: 'JanSathi AI - Government scheme assistant for rural India',
   manifest: '/manifest.json',
+  themeColor: '#2563eb',
   icons: {
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
@@ -42,14 +34,9 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased scrollbar-none`}
       >
-        <OfflineNotice />
-        <ErrorBoundary>
-          <ThemeProvider>
-            <I18nProvider>
-              {children}
-            </I18nProvider>
-          </ThemeProvider>
-        </ErrorBoundary>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

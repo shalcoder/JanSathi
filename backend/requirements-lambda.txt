@@ -1,6 +1,29 @@
-boto3>=1.26.0
+# ── Web framework ─────────────────────────────────────────────────────────────
+flask==3.1.2
+flask-cors==6.0.2
+Flask-SQLAlchemy==3.1.1
+flask-limiter==4.1.1
+flask-migrate==4.0.7
+flask-talisman==1.1.0
+mangum==0.19.0
+
+# ── AWS ───────────────────────────────────────────────────────────────────────
+boto3==1.42.43
 botocore>=1.29.0
-python-dotenv>=1.0.0
-PyYAML>=6.0.0
-requests>=2.31.0
-duckduckgo-search>=6.3.7
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv==1.2.1
+pyyaml==6.0.2
+requests==2.32.5
+beautifulsoup4==4.14.3
+duckduckgo-search==6.3.7
+pydantic==2.12.5
+
+# ── ML / numeric ──────────────────────────────────────────────────────────────
+scikit-learn==1.7.2
+numpy==2.2.6
+scipy>=1.13.0
+
+# ── LangGraph multi-agent system ──────────────────────────────────────────────
+langgraph>=0.2.0
+langchain-aws>=0.1.0

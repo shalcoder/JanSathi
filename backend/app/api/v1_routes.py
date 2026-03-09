@@ -964,7 +964,8 @@ def create_community_post():
 # DOCUMENT MANAGEMENT (Local Fallback)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+# Use /tmp on Lambda (read-only /var/task); local uploads/ elsewhere
+UPLOAD_FOLDER = '/tmp/uploads' if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') else os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @v1.route("/upload", methods=["POST"])

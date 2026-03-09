@@ -55,7 +55,9 @@ class RagService:
             logger.error(f"DB Scheme Load Error: {e}")
 
         # 3. Load Uploaded Docs (Local RAG for Citizen Docs)
-        self.upload_dir = os.path.join(os.getcwd(), 'uploads')
+        # Use /tmp on Lambda (read-only /var/task); local uploads/ elsewhere
+        _base = '/tmp' if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') else os.getcwd()
+        self.upload_dir = os.path.join(_base, 'uploads')
         if not os.path.exists(self.upload_dir):
             os.makedirs(self.upload_dir)
         self._load_uploaded_docs()

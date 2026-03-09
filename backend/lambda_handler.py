@@ -30,11 +30,13 @@ if _XRAY_ENABLED:
 
 # ── Flask app + Mangum adapter ─────────────────────────────────────────────────
 try:
-    from app import create_app
+    from main import create_app
     _flask_app = create_app()
 
     from mangum import Mangum
-    handler = Mangum(_flask_app, lifespan="off")
+    # Mangum 0.17+ is ASGI-only; wrap Flask (WSGI) with asgiref
+    from asgiref.wsgi import WsgiToAsgi
+    handler = Mangum(WsgiToAsgi(_flask_app), lifespan="off")
     logger.info("[Lambda] Flask app loaded via Mangum")
 
 except Exception as _bootstrap_err:

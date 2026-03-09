@@ -58,6 +58,8 @@ aws_credentials
 secrets.json
 .serverless/
 cdk.out/
+backend/lambda_deploy_new.zip
+backend/package2/
 
 # Logs
 logs/

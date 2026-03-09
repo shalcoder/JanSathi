@@ -67,88 +67,155 @@ function SignUpContent() {
             </motion.div>
 
             <style jsx global>{`
+                /* ── Amplify token overrides ─────────────────────────────── */
                 .amplify-auth-container {
-                    /* Next-gen overrides for standard Amplify UI */
                     --amplify-colors-background-primary: transparent;
-                    --amplify-colors-background-secondary: rgba(255, 255, 255, 0.03);
-                    --amplify-colors-font-primary: #ffffff;
-                    --amplify-colors-font-secondary: #a1a1aa;
-                    --amplify-colors-font-tertiary: #71717a;
-                    --amplify-colors-font-interactive: white;
-                    
+                    --amplify-colors-background-secondary: var(--input);
+                    --amplify-colors-font-primary: var(--foreground);
+                    --amplify-colors-font-secondary: var(--secondary-foreground);
+                    --amplify-colors-font-tertiary: var(--secondary-foreground);
+                    --amplify-colors-font-interactive: var(--primary);
+
                     --amplify-colors-brand-primary-10: var(--primary);
                     --amplify-colors-brand-primary-80: var(--primary);
                     --amplify-colors-brand-primary-90: var(--primary);
                     --amplify-colors-brand-primary-100: var(--primary);
-                    
+
                     --amplify-components-button-primary-background-color: var(--primary);
                     --amplify-components-button-primary-hover-background-color: var(--primary);
+                    --amplify-components-button-primary-color: #ffffff;
                     --amplify-components-fieldcontrol-focus-box-shadow: 0 0 0 2px var(--primary);
                     --amplify-components-button-link-color: var(--primary);
-                    
+
                     --amplify-components-tabs-item-active-color: var(--primary);
                     --amplify-components-tabs-item-active-border-color: var(--primary);
-                    --amplify-components-tabs-item-color: #a1a1aa;
-                    --amplify-components-tabs-list-border-color: rgba(255, 255, 255, 0.1);
+                    --amplify-components-tabs-item-color: var(--secondary-foreground);
+                    --amplify-components-tabs-list-border-color: var(--border);
+                    --amplify-components-tabs-item-background-color: transparent;
+                    --amplify-components-tabs-panel-background-color: transparent;
                 }
-                
-                .amplify-auth-container [data-amplify-authenticator] {
-                    background: transparent;
-                    border: none;
-                    box-shadow: none;
-                    padding: 0;
+
+                /* ── Strip all Amplify-imposed backgrounds / borders ─────── */
+                .amplify-auth-container [data-amplify-authenticator],
+                [data-amplify-router],
+                [data-amplify-router-content],
+                [data-amplify-form],
+                .amplify-tabs,
+                .amplify-tabs__panel {
+                    background: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    padding-left: 0 !important;
+                    padding-right: 0 !important;
                 }
-                
-                [data-amplify-router] {
-                    background: transparent;
-                    border: none;
-                    box-shadow: none;
+
+                /* ── Tabs ─────────────────────────────────────────────────── */
+                .amplify-tabs__list {
+                    border-bottom: 1px solid var(--border) !important;
+                    background: transparent !important;
+                    margin-bottom: 1.25rem;
                 }
-                
-                .amplify-field-group__control {
-                    background: rgba(255,255,255,0.05) !important;
-                    border: 1px solid rgba(255,255,255,0.1) !important;
-                    color: white !important;
+                .amplify-tabs__panel {
+                    background: transparent !important;
+                    padding-top: 0.5rem !important;
+                }
+
+                /* ── Labels ───────────────────────────────────────────────── */
+                .amplify-label {
+                    color: var(--secondary-foreground) !important;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    margin-bottom: 0.35rem;
+                }
+
+                /* ── Inputs / field controls ──────────────────────────────── */
+                .amplify-field-group__control,
+                .amplify-input,
+                .amplify-select,
+                .amplify-textarea {
+                    background: var(--input) !important;
+                    border: 1px solid var(--border) !important;
+                    color: var(--foreground) !important;
                     border-radius: 0.75rem !important;
                 }
-                
-                .amplify-label {
-                    color: rgba(255,255,255,0.7) !important;
-                    font-size: 0.8rem;
-                    font-weight: 600;
-                    margin-bottom: 0.25rem;
+                .amplify-field-group__control:focus,
+                .amplify-input:focus {
+                    outline: none !important;
+                    border-color: var(--primary) !important;
+                    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent) !important;
                 }
-                
-                .amplify-input {
-                    color: white !important;
+                /* placeholder */
+                .amplify-input::placeholder {
+                    color: var(--secondary-foreground) !important;
+                    opacity: 0.6;
+                }
+
+                /* ── Password show/hide button ────────────────────────────── */
+                .amplify-field-group__icon-button {
+                    color: var(--secondary-foreground) !important;
                     background: transparent !important;
+                    border: none !important;
                 }
-                
+
+                /* ── Primary button ───────────────────────────────────────── */
                 .amplify-button[data-variation="primary"] {
+                    background: var(--primary) !important;
+                    color: #ffffff !important;
                     border-radius: 0.75rem;
                     font-weight: 700;
                     text-transform: uppercase;
                     letter-spacing: 0.025em;
+                    border: none !important;
                 }
-                
-                .amplify-button--link {
-                    color: var(--primary) !important;
-                    font-weight: 600;
+                .amplify-button[data-variation="primary"]:hover {
+                    opacity: 0.9;
                 }
 
+                /* ── Link buttons ────────────────────────────────────────── */
+                .amplify-button--link,
+                .amplify-button[data-variation="link"] {
+                    color: var(--primary) !important;
+                    font-weight: 600;
+                    background: transparent !important;
+                    border: none !important;
+                }
+
+                /* ── Default / secondary buttons ─────────────────────────── */
+                .amplify-button:not([data-variation="primary"]):not([data-variation="link"]) {
+                    background: var(--secondary) !important;
+                    color: var(--foreground) !important;
+                    border: 1px solid var(--border) !important;
+                    border-radius: 0.75rem;
+                }
+
+                /* ── Divider ─────────────────────────────────────────────── */
                 .amplify-divider {
-                    border-bottom-color: rgba(255, 255, 255, 0.1);
+                    border-bottom-color: var(--border) !important;
                 }
                 .amplify-divider__label {
-                    background: #121212;
-                    color: rgba(255, 255, 255, 0.5);
+                    background: var(--card) !important;
+                    color: var(--secondary-foreground) !important;
                     font-size: 0.7rem;
                     font-weight: 700;
                     text-transform: uppercase;
                 }
 
-                .amplify-tabs {
-                    border: none !important;
+                /* ── Error / alert text ──────────────────────────────────── */
+                .amplify-alert,
+                [data-amplify-qr] p,
+                .amplify-text {
+                    color: var(--foreground) !important;
+                }
+
+                /* ── Checkbox ────────────────────────────────────────────── */
+                .amplify-checkbox__button {
+                    border-color: var(--border) !important;
+                    background: var(--input) !important;
+                }
+                .amplify-checkbox__label {
+                    color: var(--secondary-foreground) !important;
                 }
             `}</style>
         </div>

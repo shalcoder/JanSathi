@@ -252,7 +252,7 @@ export default function SignIn() {
                                                     type="tel"
                                                     value={phone}
                                                     onChange={(e) => setPhone(e.target.value)}
-                                                    className="w-full pl-20 pr-4 py-3 bg-background/50 border border-border/50 rounded-xl text-foreground placeholder:text-secondary-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                                    className="w-full pl-20 pr-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder:text-secondary-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                                     placeholder="98765 43210"
                                                     autoComplete="tel"
                                                     maxLength={14}
@@ -296,7 +296,7 @@ export default function SignIn() {
                                                         value={digit}
                                                         onChange={(e) => handleOTPChange(idx, e.target.value)}
                                                         onKeyDown={(e) => handleOTPKeyDown(idx, e)}
-                                                        className="w-12 h-14 text-center text-xl font-bold bg-background/50 border border-border/50 rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                                        className="w-12 h-14 text-center text-xl font-bold bg-input border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                                         aria-label={`OTP digit ${idx + 1}`}
                                                     />
                                                 ))}
@@ -338,7 +338,7 @@ export default function SignIn() {
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full pl-11 pr-4 py-3 bg-background/50 border border-border/50 rounded-xl text-foreground placeholder:text-secondary-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                            className="w-full pl-11 pr-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder:text-secondary-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                             placeholder="your.email@example.com"
                                             autoComplete="email"
                                             required
@@ -357,7 +357,7 @@ export default function SignIn() {
                                             type={showPwd ? 'text' : 'password'}
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full pl-11 pr-11 py-3 bg-background/50 border border-border/50 rounded-xl text-foreground placeholder:text-secondary-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                            className="w-full pl-11 pr-11 py-3 bg-input border border-border rounded-xl text-foreground placeholder:text-secondary-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                             placeholder="••••••••"
                                             autoComplete="current-password"
                                             required

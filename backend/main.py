@@ -37,7 +37,9 @@ def create_app():
         "https://d3cpml579oeqok.cloudfront.net",
         "https://main.d2zzdv7guoeutu.amplifyapp.com",
     ]
-    CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
+    CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization", "X-Session-Id", "X-Correlation-Id"],
+         expose_headers=["X-Correlation-Id"])
     
     # Database: SQLite only for local dev
     if not USE_DYNAMODB:

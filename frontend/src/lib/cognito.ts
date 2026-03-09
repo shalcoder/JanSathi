@@ -7,6 +7,12 @@ export function configureAmplify() {
   const redirectSignIn = process.env.NEXT_PUBLIC_REDIRECT_SIGN_IN || '';
   const redirectSignOut = process.env.NEXT_PUBLIC_REDIRECT_SIGN_OUT || '';
 
+  // Don't configure if env vars are missing (e.g. during SSR with no env)
+  if (!userPoolId || !userPoolClientId) {
+    console.warn('[Cognito] Missing NEXT_PUBLIC_COGNITO_USER_POOL_ID or NEXT_PUBLIC_COGNITO_CLIENT_ID — skipping Amplify.configure()');
+    return;
+  }
+
   const cognitoConfig: {
     userPoolId: string;
     userPoolClientId: string;

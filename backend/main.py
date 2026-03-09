@@ -35,6 +35,7 @@ def create_app():
         "http://jansathi-frontend-098999664345-prod.s3-website-us-east-1.amazonaws.com",
         "https://dglfy6xfryumm.cloudfront.net",
         "https://d3cpml579oeqok.cloudfront.net",
+        "https://main.d2zzdv7guoeutu.amplifyapp.com",
     ]
     CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
     

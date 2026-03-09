@@ -6,6 +6,10 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import OfflineNotice from "@/components/OfflineNotice";
 import { I18nProvider } from "@/context/i18n";
 import { ThemeProvider } from "@/context/theme";
+import { configureAmplify } from "@/lib/cognito";
+
+// Configure Amplify/Cognito once at app boot
+configureAmplify();
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

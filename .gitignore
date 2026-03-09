@@ -60,6 +60,7 @@ secrets.json
 cdk.out/
 backend/lambda_deploy_new.zip
 backend/package2/
+backend/package/
 
 # Logs
 logs/

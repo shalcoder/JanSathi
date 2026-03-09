@@ -4,20 +4,24 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, Mic, Languages, Bot, Globe, Cpu, Database, ChevronRight, Activity, Zap, Users, AlertTriangle, CheckCircle2, Radio, Lock, FileText, Shield } from "lucide-react";
-import BackendStatus from "@/components/BackendStatus";
+import dynamic from 'next/dynamic';
 import ImpactStats from "@/components/features/community/ImpactStats";
-import { useAuthenticator } from "@aws-amplify/ui-react";
 import { SimpleThemeToggle } from "@/components/ui/ThemeToggle";
+
+// Dynamic import to prevent hydration mismatches
+const BackendStatus = dynamic(() => import('@/components/BackendStatus'), { 
+  ssr: false,
+  loading: () => null
+});
 
 export default function LandingPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check if user is authenticated
+    // Check if user is authenticated via localStorage
     const authToken = localStorage.getItem('jansathi_auth');
     setIsAuthenticated(authToken === 'true');
   }, []);
-
   return (
     <main className="min-h-screen bg-background text-foreground overflow-x-hidden font-[family-name:var(--font-outfit)] selection:bg-primary/30 relative">
 
@@ -51,7 +55,7 @@ export default function LandingPage() {
             {/* Theme Toggle */}
             <SimpleThemeToggle />
 
-            {authStatus === 'authenticated' ? (
+            {isAuthenticated ? (
               <Link
                 href="/dashboard"
                 className="px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"

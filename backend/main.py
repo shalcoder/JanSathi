@@ -28,7 +28,9 @@ def create_app():
     # Security: CORS - Restricted to authorized origins
     origins = [
         "http://localhost:3000",
+        "http://localhost:3001",
         "https://jansathi.vercel.app",
+        "https://jan-sathi-five.vercel.app",
         "http://jansathi-frontend-098999664345-1772954261.s3-website-us-east-1.amazonaws.com",
         "http://jansathi-frontend-098999664345-prod.s3-website-us-east-1.amazonaws.com",
         "https://dglfy6xfryumm.cloudfront.net",
@@ -47,19 +49,19 @@ def create_app():
             db.init_app(app)
 
     # Rate Limiting DISABLED FOR DEBUGGING
-    # try:
-    #     from flask_limiter import Limiter
-    #     from flask_limiter.util import get_remote_address
-    #     limiter = Limiter(
-    #         get_remote_address,
-    #         app=app,
-    #         default_limits=[Config.RATELIMIT_DEFAULT],
-    #         storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
-    #     )
-    #     # Expose limiter on app so blueprints can reference it
-    #     app.limiter = limiter
-    # except ImportError:
-    #     pass
+    try:
+        from flask_limiter import Limiter
+        from flask_limiter.util import get_remote_address
+        limiter = Limiter(
+            get_remote_address,
+            app=app,
+            default_limits=[Config.RATELIMIT_DEFAULT],
+            storage_uri="memory://" if USE_DYNAMODB else Config.RATELIMIT_STORAGE_URL,
+        )
+        # Expose limiter on app so blueprints can reference it
+        app.limiter = limiter
+    except ImportError:
+        pass
 
     # Register correlation-ID + lifecycle logging middleware
     register_middleware(app)
@@ -68,21 +70,21 @@ def create_app():
     try:
         from app.agent import agent_bp
         app.register_blueprint(agent_bp, url_prefix='/agent')
-    except ImportError:
-        pass
+    except Exception as e:
+        print(f"Error registering agent_bp: {e}", flush=True)
 
     # Register API Blueprints
     try:
         from app.api.v1_routes import v1 as v1_bp
         app.register_blueprint(v1_bp)
-    except ImportError:
-        pass
+    except Exception as e:
+        print(f"Error registering v1_bp: {e}", flush=True)
 
     try:
         from app.api.profile_routes import profile_bp
         app.register_blueprint(profile_bp)
-    except ImportError:
-        pass
+    except Exception as e:
+        print(f"Error registering profile_bp: {e}", flush=True)
 
 
     # Create SQLite tables only in local dev mode

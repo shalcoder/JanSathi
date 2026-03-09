@@ -15,7 +15,6 @@ import CommunityPage from "@/components/features/dashboard/CommunityPage";
 import HelpPage from "@/components/features/dashboard/HelpPage";
 import IVRMonitor from "@/components/features/dashboard/IVRMonitor";
 import IVRConsole from "@/components/features/dashboard/IVRConsole";
-import CallSimulator from "@/components/features/dashboard/CallSimulator";
 import HITLQueue from "@/components/features/dashboard/HITLQueue";
 import BenefitReceiptViewer from "@/components/features/dashboard/BenefitReceiptViewer";
 import SecurityAuditPanel from "@/components/features/dashboard/SecurityAuditPanel";
@@ -50,7 +49,7 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
 
   // Semantic notification types
-  const [notifications, setNotifications] = useState([
+  const [notifications] = useState([
     { title: "PM-Kisan Installment", time: "2m ago", desc: "Your 16th installment has been processed.", type: "success" },
     { title: "Weather Alert", time: "1h ago", desc: "Heavy rain forecast for your district.", type: "warning" },
     { title: "System Update", time: "5h ago", desc: "JanSathi v2.5 features live now.", type: "info" }
@@ -76,36 +75,41 @@ export default function Home() {
   };
 
   const handleViewAllActivity = () => {
-    // For now, redirect to notifications or show a toast
     alert("Redirecting to full activity log...");
   };
 
-  // Simulate real-time notification
+  // Profile guard
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const newNotification = {
-        title: "New Scheme Matched",
-        time: "Just now",
-        desc: "You are eligible for PM-Vishwakarma based on your profile.",
-        type: "success"
-      };
-      setNotifications(prev => [newNotification, ...prev]);
-      setUnreadCount(prev => prev + 1);
-    }, 5000); // 5 seconds delay
+    const checkProfile = async () => {
+      try {
+        const { getUserProfile } = await import('@/services/api');
+        const { getToken } = await import('@/hooks/useAuth');
+        const token = await getToken();
+        // Skip profile check for demo tokens — they are not valid JWTs
+        // and will always return 401 from the auth-protected /v1/profile endpoint.
+        if (token && !token.startsWith('demo-token-')) {
+          const profile = await getUserProfile(token);
+          if (profile && profile.profile_complete === false) {
+            router.push('/onboarding');
+          }
+        }
+      } catch (err) {
+        console.error("Dashboard profile guard failed", err);
+      }
+    };
+    if (user && !authLoading) {
+      checkProfile();
+    }
+  }, [user, authLoading, router]);
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Initialize and check user
   useEffect(() => {
-    // Profile check logic removed
-  }, [router]);
-
-  useEffect(() => {
-    // Using setTimeout to safely trigger the mount state change after the initial render cycle
     const timer = setTimeout(() => setIsMounted(true), 10);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    requireAuth();
+  }, [user, authLoading, requireAuth]);
 
   const renderContent = () => {
     switch (activePage) {
@@ -120,7 +124,6 @@ export default function Home() {
         return (
           <div className="space-y-8">
             <PhoneEmulatorPage />
-            <CallSimulator />
           </div>
         );
       case 'ops-verification':
@@ -150,7 +153,6 @@ export default function Home() {
         return (
           <div className="space-y-8">
             <PhoneEmulatorPage />
-            <CallSimulator />
           </div>
         );
       case 'hitl':
@@ -195,10 +197,6 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    requireAuth();
-  }, [user, authLoading, requireAuth]);
-
   if (!isMounted || authLoading || !user) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
@@ -209,12 +207,9 @@ export default function Home() {
 
   return (
     <main className="h-screen w-full flex bg-background text-foreground overflow-hidden relative selection:bg-primary/20 transition-colors font-[family-name:var(--font-outfit)]">
-
-      {/* Simplified Background */}
       <div className="fixed inset-0 z-[-1] bg-background"></div>
       <div className="mesh-bg opacity-30"></div>
 
-      {/* 1. Sidebar Navigation */}
       <div className={`
         fixed inset-0 z-50 lg:relative lg:inset-auto lg:flex
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -240,10 +235,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 2. Main Content Area */}
       <div className="flex-1 flex flex-col h-full relative z-10 transition-all min-w-0 overflow-hidden">
-
-        {/* Clean Header */}
         <header className="px-6 py-4 flex items-center justify-between bg-card border-b border-border lg:px-10 shrink-0 z-20">
           <div className="flex items-center gap-6">
             <button
@@ -252,14 +244,10 @@ export default function Home() {
             >
               <Menu className="w-6 h-6 text-foreground" />
             </button>
-
-            {/* Status Pill - More responsive */}
             <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-secondary/50 border border-border group cursor-default">
               <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full"></div>
               <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-foreground opacity-60">Online</span>
             </div>
-
-            {/* Search Bar - Responsive width */}
             <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-secondary/30 border border-border/50 rounded-xl transition-all">
               <Search className="w-4 h-4 text-secondary-foreground opacity-40" />
               <input
@@ -271,10 +259,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-4 lg:gap-6">
-            {/* Theme Toggle */}
             <ThemeToggle />
-
-            {/* Notification Bell & Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -331,7 +316,6 @@ export default function Home() {
             </div>
 
             <div className="hidden sm:block">
-              {/* <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 shadow-sm" } }} /> */}
               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
@@ -339,7 +323,6 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Dynamic Page Rendering */}
         <div className={`flex-1 overflow-x-hidden ${(activePage === 'dashboard' || activePage === 'assistant') ? 'p-0' : 'overflow-y-auto p-4 sm:p-8 lg:p-12'} scrollbar-none`}>
           <div className={`${(activePage === 'dashboard' || activePage === 'assistant') ? 'h-full w-full' : 'max-w-6xl mx-auto min-h-full pb-20'}`}>
             <AnimatePresence mode="wait">
@@ -357,9 +340,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-
       <TelemetryPanel />
-
     </main>
   );
 }

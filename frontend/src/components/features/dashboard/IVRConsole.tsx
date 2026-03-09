@@ -11,6 +11,8 @@ export default function IVRConsole() {
   const [sessions, setSessions] = useState<IvrSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const failCountRef = React.useRef(0);
 
   // Poll for active sessions
   useEffect(() => {
@@ -18,15 +20,32 @@ export default function IVRConsole() {
     const fetchSessions = async () => {
       try {
         const token = await getToken();
-        // Allow unauthenticated fallback for demo purposes or generic access
         const data = await getIvrSessions(token);
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           setSessions(data);
         }
+        // Reset fail counter on any successful (non-empty) response
+        failCountRef.current = 0;
+        setError(null);
       } catch (err) {
-        // Silently handle - getIvrSessions already returns empty array on error
-        if (process.env.NODE_ENV === 'development') {
-          console.debug("IVR sessions polling (no active sessions)");
+        failCountRef.current += 1;
+        if (failCountRef.current >= 3) {
+          // Backend is down — stop flooding it with requests
+          setIsPolling(false);
+          setError("Backend offline — showing demo data. Click ▶ to retry.");
+          setSessions([
+            {
+              session_id: "demo-session-1",
+              caller_number: "+91-9876543210",
+              start_time: new Date().toISOString(),
+              last_seen: new Date().toISOString(),
+              language: "hi",
+              current_state: "active",
+              last_transcript: "PM Kisan status poochna hai",
+              last_audio_url: "",
+              channel: "web-ivr"
+            }
+          ] as IvrSession[]);
         }
       }
     };
@@ -69,13 +88,23 @@ export default function IVRConsole() {
         </div>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">{error}</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1 min-h-[500px]">
         {/* Active Sessions List */}
         <div className="col-span-1 border border-border/50 bg-card/60 backdrop-blur-xl rounded-2xl flex flex-col overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="p-4 border-b border-border/50 bg-secondary/20 flex justify-between items-center">
             <h3 className="font-bold text-sm uppercase tracking-wider">Active Calls ({sessions.length})</h3>
             <div className="flex gap-2 items-center">
-              <button onClick={() => setIsPolling(!isPolling)} className={`p-1.5 rounded transition-colors ${isPolling ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-secondary-foreground hover:bg-secondary'}`} title={isPolling ? "Pause Polling" : "Resume Polling"}>
+              <button onClick={() => { failCountRef.current = 0; setError(null); setIsPolling(!isPolling); }} className={`p-1.5 rounded transition-colors ${isPolling ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-secondary-foreground hover:bg-secondary'}`} title={isPolling ? "Pause Polling" : "Resume Polling"}>
                   <RefreshCw className={`w-4 h-4 ${isPolling ? 'animate-spin-slow' : ''}`} />
               </button>
               {isPolling && (

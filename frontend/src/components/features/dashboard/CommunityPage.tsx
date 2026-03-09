@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { MessageSquare, ThumbsUp, MapPin, Users, AlertTriangle, ShieldAlert } from "lucide-react";
 import { motion } from "framer-motion";
-import { buildClient, getCommunityInsights, reportFraud, type CommunityInsightsResponse } from "@/services/api";
+import { getCommunityPosts, createCommunityPost, reportFraud, getCommunityInsights, type CommunityInsightsResponse } from "@/services/api";
+import { getToken } from "@/hooks/useAuth";
 
 interface Post {
     id?: number | string;
@@ -41,32 +42,7 @@ const normalizePost = (raw: Partial<Post>): Post => {
     };
 };
 
-const MOCK_POSTS: Post[] = [
-    normalizePost({
-        title: "PM-Kisan payment received successfully!",
-        content: "Just received my 16th installment of ₹2000. The process was smooth and payment came directly to my account. Thank you JanSathi for helping me check my eligibility!",
-        author: "Ramesh Kumar",
-        time: "2 hours ago",
-        likes: 12,
-        comments: 3
-    }),
-    normalizePost({
-        title: "Need help with Ayushman Bharat card",
-        content: "My family is eligible for Ayushman Bharat but we're having trouble getting the card issued. Has anyone faced similar issues? What documents are required?",
-        author: "Priya Devi",
-        time: "5 hours ago",
-        likes: 8,
-        comments: 7
-    }),
-    normalizePost({
-        title: "Weather warning for farmers",
-        content: "Local meteorology department has issued heavy rain warning for next 3 days. Fellow farmers, please take care of your crops and livestock.",
-        author: "Agricultural Officer",
-        time: "1 day ago",
-        likes: 25,
-        comments: 12
-    }),
-];
+// No mock posts as we are using real backend data
 
 export default function CommunityPage() {
     const [posts, setPosts] = useState<Post[]>([]);
@@ -101,18 +77,15 @@ export default function CommunityPage() {
     const fetchPosts = useCallback(async () => {
         setError(null);
         try {
-            const localPosts = loadLocalPosts();
-            const api = buildClient();
-            const response = await api.get(`/v1/community/posts?location=${encodeURIComponent(location)}`);
-            const data = Array.isArray(response.data) ? response.data : [];
-            const remotePosts = data.map((post) => normalizePost(post));
-            const mergedPosts = [...localPosts, ...remotePosts];
-            setPosts(mergedPosts.length > 0 ? mergedPosts : MOCK_POSTS);
+            const token = await getToken();
+            const data = await getCommunityPosts(location, 20, token || undefined);
+            const remotePosts = data.map((post: Record<string, unknown>) => normalizePost(post));
+            setPosts(remotePosts);
         } catch (err) {
             console.error("Failed to fetch posts:", err);
             const localPosts = loadLocalPosts();
-            setPosts(localPosts.length > 0 ? localPosts : MOCK_POSTS);
-            setError("Using local forum data. Backend connection unavailable.");
+            setPosts(localPosts.length > 0 ? localPosts : []);
+            setError("Direct forum connection unavailable. Showing local archives.");
         } finally {
             setLoading(false);
         }
@@ -125,15 +98,15 @@ export default function CommunityPage() {
         setIsSubmitting(true);
         setError(null);
         try {
-            const api = buildClient();
-            const response = await api.post("/v1/community/posts", {
+            const token = await getToken();
+            const data = await createCommunityPost({
                 title: newPost.title.trim(),
                 content: newPost.content.trim(),
                 location,
                 author: "JanSathi User",
                 role: "Citizen",
-            });
-            const data = response.data;
+            }, token || undefined);
+            
             if (data?.status === "success" && data?.post) {
                 setPosts((prev) => [normalizePost(data.post), ...prev]);
                 setIsModalOpen(false);
@@ -250,11 +223,12 @@ export default function CommunityPage() {
                     onClick={async () => {
                         if (!fraudDetails.trim()) return;
                         try {
+                            const token = await getToken();
                             await reportFraud({
                                 location,
                                 details: fraudDetails.trim(),
                                 amount: Number(fraudAmount || 0),
-                            });
+                            }, token || undefined);
                             setFraudDetails("");
                             setFraudAmount("");
                             setError("Fraud pattern reported successfully.");

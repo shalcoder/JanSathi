@@ -204,6 +204,40 @@ class DataStack(Stack):
         )
 
         # ============================================================
+        # DynamoDB: HITL Cases Table (Human-in-the-Loop escalations)
+        # ============================================================
+        self.hitl_table = dynamodb.Table(
+            self, "HitlCasesTable",
+            table_name="JanSathi-HITL-Cases",
+            partition_key=dynamodb.Attribute(
+                name="case_id",
+                type=dynamodb.AttributeType.STRING,
+            ),
+            sort_key=dynamodb.Attribute(
+                name="created_at",
+                type=dynamodb.AttributeType.STRING,
+            ),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.RETAIN,
+            point_in_time_recovery=True,
+            time_to_live_attribute="ttl",
+        )
+
+        # GSI: query by status (pending / approved / rejected)
+        self.hitl_table.add_global_secondary_index(
+            index_name="StatusIndex",
+            partition_key=dynamodb.Attribute(
+                name="status",
+                type=dynamodb.AttributeType.STRING,
+            ),
+            sort_key=dynamodb.Attribute(
+                name="created_at",
+                type=dynamodb.AttributeType.STRING,
+            ),
+            projection_type=dynamodb.ProjectionType.ALL,
+        )
+
+        # ============================================================
         # SNS: Notifications Topic (Layer 7)
         # ============================================================
         self.notifications_topic = sns.Topic(
@@ -224,6 +258,9 @@ class DataStack(Stack):
         cdk.CfnOutput(self, "CacheTableName",
                        value=self.cache_table.table_name,
                        description="DynamoDB Cache table name")
+        cdk.CfnOutput(self, "HitlTableName",
+                       value=self.hitl_table.table_name,
+                       description="DynamoDB HITL Cases table name")
         cdk.CfnOutput(self, "AudioBucketName",
                        value=self.audio_bucket.bucket_name,
                        description="S3 Audio bucket name")

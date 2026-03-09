@@ -62,32 +62,72 @@ def log_request_lifecycle(response):
 _DEV_BYPASS_ENABLED = os.getenv("ENABLE_DEV_BYPASS", "false").lower() == "true"
 _IS_PROD = os.getenv("NODE_ENV", "development") == "production"
 
+# ── JWKS cache (avoid fetching on every request) ────────────────────────────
+_jwks_cache: dict = {}
+_jwks_cache_time: float = 0.0
+_JWKS_TTL: int = 3600  # 1 hour
+
+
+def _get_jwks(region: str, pool_id: str) -> dict:
+    global _jwks_cache, _jwks_cache_time
+    now = time.time()
+    if _jwks_cache and (now - _jwks_cache_time) < _JWKS_TTL:
+        return _jwks_cache
+    try:
+        import requests as req
+        url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
+        _jwks_cache = req.get(url, timeout=5).json()
+        _jwks_cache_time = now
+    except Exception as e:
+        logger.warning(f"JWKS fetch failed: {e}")
+    return _jwks_cache
+
+
 def _decode_cognito_jwt(token: str) -> Optional[dict]:
     """
     Decode and verify a Cognito-issued JWT.
-    Bypass only if ENABLE_DEV_BYPASS is true AND not in production environment.
+
+    Priority order:
+    1. demo-token-<email> format → accepted in non-production (local dev shortcut).
+       The email becomes the user_id so profile lookups work per-user.
+    2. Full ENABLE_DEV_BYPASS override (accepts ANY token, admin role).
+    3. Real Cognito RS256 JWT verification via JWKS.
     """
+    # ── 1. Dev demo-token shortcut ──────────────────────────────────────────
+    if token.startswith("demo-token-"):
+        if _IS_PROD:
+            logger.error("SECURITY: demo-token rejected in NODE_ENV=production")
+            return None
+        user_email = token[len("demo-token-"):]
+        # Use email as a stable, human-readable dev user_id
+        user_id = user_email if user_email else "dev-anonymous"
+        logger.debug(f"[Auth] Dev demo-token accepted for user: {user_id}")
+        return {"sub": user_id, "email": user_email, "role": "user"}
+
+    # ── 2. Full dev bypass ───────────────────────────────────────────────────
     if _DEV_BYPASS_ENABLED and not _IS_PROD:
-        logger.warning("SECURITY WARNING: JWT Auth bypass is ACTIVE (ENABLE_DEV_BYPASS=true)")
+        logger.warning("SECURITY WARNING: ENABLE_DEV_BYPASS=true — all tokens accepted as admin")
         return {"sub": "dev-user", "email": "dev@jansathi.local", "role": "admin"}
 
+    # ── 3. Real Cognito JWT ──────────────────────────────────────────────────
     try:
         import jwt
-        import requests as req
 
         region = os.getenv("AWS_REGION", "us-east-1")
         pool_id = os.getenv("COGNITO_USER_POOL_ID")
-        
+
         if not pool_id:
-            logger.warning("COGNITO_USER_POOL_ID not set — auth verification failed.")
-            return {"sub": "unverified-user", "role": "user"}
+            logger.warning("COGNITO_USER_POOL_ID not set — accepting token unverified (dev mode)")
+            return {"sub": "unverified-user", "email": "", "role": "user"}
 
-        jwks_url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
+        jwks = _get_jwks(region, pool_id)
+        if not jwks:
+            return None
 
-        jwks = req.get(jwks_url, timeout=5).json()
         header = jwt.get_unverified_header(token)
-        key = next((k for k in jwks["keys"] if k.get("kid") == header.get("kid")), None)
+        key = next((k for k in jwks.get("keys", []) if k.get("kid") == header.get("kid")), None)
         if not key:
+            logger.warning("JWT kid not found in JWKS")
             return None
 
         from jwt.algorithms import RSAAlgorithm
@@ -100,7 +140,8 @@ def _decode_cognito_jwt(token: str) -> Optional[dict]:
         )
         return {
             "sub": payload.get("sub", payload.get("username", "unknown")),
-            "role": "user" # Cognito:groups could be mapped here natively
+            "email": payload.get("email", ""),
+            "role": "user",
         }
     except Exception as e:
         logger.warning(f"JWT decode failed: {e}")

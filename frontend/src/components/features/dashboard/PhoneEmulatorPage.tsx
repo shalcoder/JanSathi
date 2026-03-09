@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Phone, PhoneOff, Mic, MicOff, Hash, Globe, Volume2, Clock,
-  ChevronRight, AlertCircle, Wifi
+  ChevronRight, AlertCircle, Wifi, Brain, Zap, CheckCircle
 } from 'lucide-react';
 import SMSSimulator, { SMSMessage } from './SMSSimulator';
 import TelemetryPanel, { TelemetryData } from './TelemetryPanel';
@@ -26,16 +26,94 @@ interface TranscriptEntry {
 interface EmulatorResponse {
   response_text?: string;
   response?: string;
+  audio_url?: string | null;
+  agents_activated?: string[];
   workflow_stage?: string;
   slots?: Record<string, unknown>;
   rule_trace?: Array<{ rule: string; pass: boolean; citation?: string }>;
   artifact_generated?: { type: string; url?: string };
   sms_payload?: { body: string };
-  telemetry?: TelemetryData;
+  telemetry?: TelemetryData & { agents_count?: number };
   is_terminal?: boolean;
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
+
+// Agent pipeline definitions (must match backend agents_activated names)
+type AgentStatus = {
+  id: string;
+  name: string;
+  label: string;
+  status: 'idle' | 'processing' | 'done';
+};
+
+const AGENT_DEFS: Omit<AgentStatus, 'status'>[] = [
+  { id: 'intent',      name: 'IntentClassifier',     label: 'Intent Classifier'     },
+  { id: 'knowledge',   name: 'KnowledgeRetriever',   label: 'Knowledge Retriever'   },
+  { id: 'eligibility', name: 'EligibilityValidator', label: 'Eligibility Validator' },
+  { id: 'risk',        name: 'RiskAssessor',          label: 'Risk Assessor'         },
+  { id: 'response',    name: 'ResponseGenerator',    label: 'Response Generator'    },
+  { id: 'scheme',      name: 'SchemeAdvisor',         label: 'Scheme Advisor'        },
+  { id: 'document',    name: 'DocumentOrchestrator', label: 'Document Orchestrator' },
+  { id: 'notify',      name: 'NotificationAgent',    label: 'Notification Agent'    },
+  { id: 'hitl',        name: 'HITLRouter',            label: 'HITL Router'           },
+];
+
+function AgentPipeline({ agents, isProcessing }: { agents: AgentStatus[]; isProcessing: boolean }) {
+  return (
+    <div className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Brain className="w-4 h-4 text-primary" />
+        <span className="text-[11px] font-bold text-secondary-foreground uppercase tracking-widest">
+          9-Agent Pipeline
+        </span>
+        {isProcessing && (
+          <div className="ml-auto flex items-center gap-1">
+            <motion.div animate={{ scale: [1, 1.4, 1] }} transition={{ repeat: Infinity, duration: 0.7 }}>
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            </motion.div>
+            <span className="text-[9px] font-bold text-primary">LIVE</span>
+          </div>
+        )}
+      </div>
+      <div className="space-y-1">
+        {agents.map((agent) => (
+          <div
+            key={agent.id}
+            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-300 ${
+              agent.status === 'processing'
+                ? 'bg-zinc-800/60 border border-zinc-600/40'
+                : agent.status === 'done'
+                ? 'bg-emerald-500/10 border border-emerald-500/20'
+                : 'border border-transparent'
+            }`}
+          >
+            {agent.status === 'processing' ? (
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                <Zap className="w-3 h-3 text-primary" />
+              </motion.div>
+            ) : agent.status === 'done' ? (
+              <CheckCircle className="w-3 h-3 text-emerald-400" />
+            ) : (
+              <div className="w-3 h-3 rounded-full border border-white/15" />
+            )}
+            <span
+              className={`text-[10px] font-semibold transition-colors ${
+                agent.status === 'processing'
+                  ? 'text-primary'
+                  : agent.status === 'done'
+                  ? 'text-emerald-400'
+                  : 'text-white/35'
+              }`}
+            >
+              {agent.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const DTMF_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
 
@@ -96,9 +174,13 @@ interface WindowWithSpeech {
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 const LANGUAGES = [
-  { code: 'hi-IN', label: 'हिंदी' },
-  { code: 'en-IN', label: 'English' },
-  { code: 'ta-IN', label: 'தமிழ்' },
+  { code: 'hi-IN', label: 'हिंदी',  greeting: 'नमस्ते! मैं जन साथी हूँ। आपकी कैसे मदद कर सकता हूँ?' },
+  { code: 'en-IN', label: 'English', greeting: 'Hello! I am JanSathi. How can I help you today?' },
+  { code: 'ta-IN', label: 'தமிழ்',  greeting: 'வணக்கம்! நான் ஜன்சாதி. உங்களுக்கு எவ்வாறு உதவலாம்?' },
+  { code: 'te-IN', label: 'తెలుగు', greeting: 'నమస్కారం! నేను జన్‌సాథి. మీకు ఎలా సహాయం చేయగలను?' },
+  { code: 'kn-IN', label: 'ಕನ್ನಡ',  greeting: 'ನಮಸ್ಕಾರ! ನಾನು ಜನ್‌ಸಾಥಿ. ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?' },
+  { code: 'mr-IN', label: 'मराठी',  greeting: 'नमस्कार! मी जनसाथी आहे. मी आपली कशी मदद करू?' },
+  { code: 'bn-IN', label: 'বাংলা',  greeting: 'নমস্কার! আমি জনসাথী। আপনাকে কীভাবে সাহায্য করতে পারি?' },
 ];
 
 export default function PhoneEmulatorPage() {
@@ -114,9 +196,14 @@ export default function PhoneEmulatorPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interim, setInterim] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [activeAgents, setActiveAgents] = useState<AgentStatus[]>(
+    AGENT_DEFS.map(a => ({ ...a, status: 'idle' }))
+  );
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const agentTimersRef = useRef<number[]>([]);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef(false);
 
@@ -137,16 +224,41 @@ export default function PhoneEmulatorPage() {
       occupation: 'farmer',
       income_bracket: 'low',
     };
+
+    // Animate all 9 agents through the pipeline with stagger
+    agentTimersRef.current.forEach(t => clearTimeout(t));
+    agentTimersRef.current = [];
+    AGENT_DEFS.forEach(({ id }, idx) => {
+      const t = setTimeout(() => {
+        setActiveAgents(prev => prev.map(a => a.id === id ? { ...a, status: 'processing' } : a));
+      }, idx * 180) as unknown as number;
+      agentTimersRef.current.push(t);
+    });
+
     try {
-      const res = await client.post<EmulatorResponse>('/v1/query', {
+      const res = await client.post<EmulatorResponse>('/v1/ivr/voice', {
         session_id: sid,
-        user_profile: userProfile,
-        message: text,
-        channel: 'web-ivr',
+        text,
         language: lang.split('-')[0],
-      });
+        channel: 'web-ivr',
+        user_profile: userProfile,
+      }, { timeout: 10000 });
       const data = res.data;
       const responseText = data.response_text || data.response || 'मैं समझा नहीं। कृपया दोबारा बोलें।';
+
+      // Stop animation; show which agents were actually activated
+      agentTimersRef.current.forEach(t => clearTimeout(t));
+      agentTimersRef.current = [];
+      const activated = data.agents_activated ?? [];
+      setActiveAgents(AGENT_DEFS.map(a => ({
+        ...a,
+        status: activated.includes(a.name) ? 'done' : 'idle',
+      })));
+      // Auto-reset to idle after 3 s
+      const resetT = setTimeout(() => {
+        setActiveAgents(AGENT_DEFS.map(a => ({ ...a, status: 'idle' })));
+      }, 3000) as unknown as number;
+      agentTimersRef.current.push(resetT);
 
       // Update telemetry
       setTelemetry({
@@ -163,8 +275,8 @@ export default function PhoneEmulatorPage() {
       // Add system transcript
       addTranscript('system', responseText);
 
-      // Speak response
-      speakText(responseText);
+      // Speak via Polly audio_url (real multilingual TTS) or browser TTS fallback
+      speakText(responseText, data.audio_url ?? undefined);
 
       // SMS / artifact
       if (data.artifact_generated || data.sms_payload) {
@@ -185,7 +297,19 @@ export default function PhoneEmulatorPage() {
       }
     } catch (e) {
       console.error('[PhoneEmulator] Backend error:', e);
-      const fallback = 'सर्वर से जुड़ने में समस्या है। कृपया बाद में प्रयास करें।';
+      agentTimersRef.current.forEach(t => clearTimeout(t));
+      agentTimersRef.current = [];
+      setActiveAgents(AGENT_DEFS.map(a => ({ ...a, status: 'idle' })));
+      const _ivrOffline: Record<string, string> = {
+        'hi-IN': 'अभी सरकारी सर्वर से जुड़ने में समस्या है। कृपया myscheme.gov.in पर जाएं या बाद में प्रयास करें।',
+        'en-IN': 'Having trouble connecting to the server. Please visit myscheme.gov.in or try again shortly.',
+        'ta-IN': 'சேவையகத்துடன் இணைப்பில் சிக்கல். myscheme.gov.in பார்க்கவும்.',
+        'te-IN': 'సర్వర్ కనెక్షన్ సమస్య. myscheme.gov.in చూడండి లేదా మళ్లీ ప్రయత్నించండి.',
+        'kn-IN': 'ಸರ್ವರ್ ಸಂಪರ್ಕ ಸಮಸ್ಯೆ. myscheme.gov.in ನೋಡಿ ಅಥವಾ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+        'mr-IN': 'सर्व्हरशी संपर्कात समस्या. myscheme.gov.in पहा किंवा नंतर प्रयत्न करा.',
+        'bn-IN': 'সার্ভার সংযোগ সমস্যা। myscheme.gov.in দেখুন বা পরে চেষ্টা করুন।',
+      };
+      const fallback = _ivrOffline[lang] ?? _ivrOffline['en-IN'];
       addTranscript('system', fallback);
       speakText(fallback);
     }
@@ -193,18 +317,39 @@ export default function PhoneEmulatorPage() {
   }, [sessionId, token, lang, user]);
 
   // TTS -----------------------------------------------------------------------
-  const speakText = (text: string) => {
+  // Uses Polly presigned audio URL when available (real multilingual speech).
+  // Falls back to browser SpeechSynthesis when no URL is provided.
+  const speakText = (text: string, audioUrl?: string) => {
     if (typeof window === 'undefined') return;
+    // Stop currently playing audio / TTS
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    synthRef.current?.cancel();
+
+    const onDone = () => {
+      setIsSpeaking(false);
+      if (activeRef.current) startListening();
+    };
+
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      setIsSpeaking(true);
+      audio.onended = () => { audioRef.current = null; onDone(); };
+      audio.onerror = () => { audioRef.current = null; setIsSpeaking(false); browserTTS(text, onDone); };
+      audio.play().catch(() => { audioRef.current = null; setIsSpeaking(false); browserTTS(text, onDone); });
+      return;
+    }
+    browserTTS(text, onDone);
+  };
+
+  const browserTTS = (text: string, onDone: () => void) => {
     synthRef.current = window.speechSynthesis;
     synthRef.current.cancel();
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = lang;
     utt.rate = 0.9;
     utt.onstart = () => setIsSpeaking(true);
-    utt.onend = () => {
-      setIsSpeaking(false);
-      if (activeRef.current) startListening();
-    };
+    utt.onend = onDone;
     synthRef.current.speak(utt);
   };
 
@@ -269,12 +414,13 @@ export default function PhoneEmulatorPage() {
     setTranscript([]);
     setSmsMessages([]);
     setTelemetry({});
+    setActiveAgents(AGENT_DEFS.map(a => ({ ...a, status: 'idle' })));
     await new Promise(r => setTimeout(r, 1200));
     setCallState('active');
     activeRef.current = true;
-    const greeting = lang.startsWith('hi')
-      ? 'नमस्ते! मैं जन साथी हूँ। आपकी कैसे मदद कर सकता हूँ?'
-      : 'Hello! I am JanSathi. How can I help you today?';
+    const greeting =
+      LANGUAGES.find(l => l.code === lang)?.greeting ??
+      'नमस्ते! मैं जन साथी हूँ। आपकी कैसे मदद कर सकता हूँ?';
     addTranscript('system', greeting);
     speakText(greeting);
   };
@@ -283,13 +429,22 @@ export default function PhoneEmulatorPage() {
     activeRef.current = false;
     recognitionRef.current?.abort();
     synthRef.current?.cancel();
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    agentTimersRef.current.forEach(t => clearTimeout(t));
+    agentTimersRef.current = [];
     setIsListening(false);
     setIsSpeaking(false);
     setInterim('');
     setCallState('ended');
   };
 
-  const resetEmulator = () => { setCallState('idle'); setTranscript([]); setSmsMessages([]); setTelemetry({}); };
+  const resetEmulator = () => {
+    setCallState('idle');
+    setTranscript([]);
+    setSmsMessages([]);
+    setTelemetry({});
+    setActiveAgents(AGENT_DEFS.map(a => ({ ...a, status: 'idle' })));
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 p-6 lg:p-8">
@@ -416,6 +571,8 @@ export default function PhoneEmulatorPage() {
                 ) : (
                   <button
                     onClick={endCall}
+                    aria-label="End call"
+                    title="End call"
                     className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-400 text-white transition-all active:scale-95 flex items-center justify-center shadow-[0_0_25px_rgba(239,68,68,0.4)]"
                   >
                     <PhoneOff className="w-7 h-7" />
@@ -424,6 +581,8 @@ export default function PhoneEmulatorPage() {
                 <button
                   onClick={() => isListening ? recognitionRef.current?.abort() : startListening()}
                   disabled={callState !== 'active'}
+                  aria-label={isListening ? 'Stop listening' : 'Start listening'}
+                  title={isListening ? 'Stop listening' : 'Start listening'}
                   className={`w-16 h-10 rounded-full transition-all flex items-center justify-center text-white ${isListening ? 'bg-red-500/80 border border-red-400' : 'bg-white/5 border border-white/10'} disabled:opacity-30`}
                 >
                   {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -433,8 +592,14 @@ export default function PhoneEmulatorPage() {
           </div>
         </div>
 
-        {/* ── RIGHT: SMS + Telemetry ── */}
+        {/* ── RIGHT: Agent Pipeline + SMS + Telemetry ── */}
         <div className="space-y-4 flex flex-col">
+          {/* 9-Agent Pipeline */}
+          <AgentPipeline
+            agents={activeAgents}
+            isProcessing={activeAgents.some(a => a.status === 'processing')}
+          />
+
           {/* SMS Simulator */}
           <div className="flex-1 bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">

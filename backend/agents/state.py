@@ -48,6 +48,14 @@ class JanSathiState(TypedDict, total=False):
     # ── IVR / Audio Signals ───────────────────────────────────────────────────
     asr_confidence: float            # 1.0 for web/text; 0–1 for IVR audio input
 
+    # ── Life Event Workflow ───────────────────────────────────────────────────
+    life_event_id: str               # e.g. "crop_failure" | "child_birth" | "job_loss"
+    life_event_label: str            # Human-readable event name
+    life_event_icon: str             # Emoji icon
+    life_event_workflow: List[Dict[str, Any]]  # Ordered list of service steps
+    life_event_summary: str          # Auto-generated summary sentence
+    is_life_event: bool              # True when a life event was detected
+
     # ── LangGraph Message History ─────────────────────────────────────────────
     messages: List[Dict[str, Any]]   # Nova Converse API message history
 

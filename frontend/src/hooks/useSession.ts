@@ -32,7 +32,10 @@ export function useSession(): UseSessionReturn {
     const [isLoading, setIsLoading] = useState<boolean>(!sessionId);
 
     const fetchSession = useCallback(async () => {
-        if (!isSignedIn) return;
+        if (!isSignedIn) {
+            setIsLoading(false);
+            return;
+        }
         setIsLoading(true);
         try {
             const jwt = await getToken();

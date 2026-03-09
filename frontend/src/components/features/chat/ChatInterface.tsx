@@ -13,6 +13,9 @@ import remarkGfm from 'remark-gfm';
 import VoiceInput from './VoiceInput';
 import AudioPlayer from './AudioPlayer';
 import BenefitReceipt from './BenefitReceipt';
+import SlotCollectionProgress from './SlotCollectionProgress';
+import ApplicationSuccessModal from './ApplicationSuccessModal';
+import { LifeEventWorkflow, type LifeEventData } from './LifeEventWorkflow';
 import TelemetryPanel from './TelemetryPanel';
 import SchemeCard from './SchemeCard';
 import { useSession } from '@/hooks/useSession';
@@ -26,12 +29,15 @@ import {
     sendUnifiedQuery,
     analyzeImage,
     applyForBenefit,
+    getUserProfile,
     type UnifiedQueryResponse,
     type BenefitReceipt as BenefitReceiptType,
     type Thought,
     type Citation,
 } from '@/services/api';
 import { enqueue, registerOnlineFlush, type QueuedAction } from '@/services/offlineQueue';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 // ─── Typewriter ───────────────────────────────────────────────────────────────
 
@@ -88,12 +94,17 @@ type Message = {
         privacy_protocol: string;
     };
     // Unified fields
+    lifeEvent?: LifeEventData;
     benefitReceipt?: BenefitReceiptType;
     confidence?: number;
     turnId?: string;
     debugInfo?: UnifiedQueryResponse['debug'];
     citations?: Citation[];
     applyStatus?: 'idle' | 'applying' | 'applied' | 'queued';
+    // Slot-filling fields from agentic pipeline
+    slots?: Record<string, string | number | boolean>;
+    slotsComplete?: boolean;
+    schemeName?: string;
 };
 
 const SUGGESTIONS = [
@@ -104,15 +115,6 @@ const SUGGESTIONS = [
 ];
 
 const SESSIONS_KEY = 'jansathi_chat_sessions';
-
-// ─── Demo fallback cache ──────────────────────────────────────────────────────
-
-const DEMO_FALLBACKS: Record<string, string> = {
-    'PM-Kisan Status': 'PM-Kisan Samman Nidhi provides ₹6,000/year to eligible farmers in 3 installments. Check your status at pmkisan.gov.in.',
-    'PM Awas Yojana': 'PM Awas Yojana (Urban) offers housing assistance for EWS/LIG/MIG categories. Apply via pmaymis.gov.in.',
-    'Ration Card': 'A Ration Card gives access to subsidised food grains under the National Food Security Act. Apply at your local Ration office.',
-    'E-Shram Registry': 'E-Shram is a national database for unorganised workers. Register at eshram.gov.in to get a UAN and access benefits.',
-};
 
 // ─── Citations & Thoughts ─────────────────────────────────────────────────────
 
@@ -216,26 +218,26 @@ const TaskWorkflow = ({ active }: { active: boolean }) => {
     if (!active) return null;
 
     return (
-        <div className="mt-4 p-4 rounded-2xl bg-primary/5 border border-primary/10 space-y-4">
+        <div className="mt-4 p-4 rounded-2xl bg-zinc-900/60 dark:bg-zinc-800/60 border border-zinc-700/50 space-y-4">
             <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Processing Status</span>
-                <span className="text-[10px] font-mono text-primary/60">{Math.round(((step + 1) / steps.length) * 100)}%</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Processing Status</span>
+                <span className="text-[10px] font-mono text-zinc-500">{Math.round(((step + 1) / steps.length) * 100)}%</span>
             </div>
             <div className="flex gap-1">
                 {steps.map((s, idx) => (
                     <div
                         key={idx}
-                        className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${idx <= step ? 'bg-primary' : 'bg-primary/10'}`}
+                        className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${idx <= step ? 'bg-primary' : 'bg-zinc-700'}`}
                     />
                 ))}
             </div>
             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center animate-pulse">
+                <div className="w-8 h-8 rounded-xl bg-zinc-700/80 flex items-center justify-center animate-pulse">
                     {React.createElement(steps[step].icon, { className: "w-4 h-4 text-primary" })}
                 </div>
                 <div>
-                    <div className="text-sm font-bold text-foreground">{steps[step].label}</div>
-                    <div className="text-[11px] text-muted-foreground">Analyzing your request...</div>
+                    <div className="text-sm font-bold text-zinc-200">{steps[step].label}</div>
+                    <div className="text-[11px] text-zinc-400">Analyzing your request...</div>
                 </div>
             </div>
         </div>
@@ -247,15 +249,28 @@ const TaskWorkflow = ({ active }: { active: boolean }) => {
 export default function ChatInterface() {
     const { user } = useAuth();
     const { language, setLanguage } = useI18n();
-    const { sessionId, token } = useSession();
+    const { sessionId, token, resetSession } = useSession();
     const [messages, setMessages] = useState<Message[]>([]);
     const [localSessionId, setLocalSessionId] = useState<string | null>(null);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
-    const [isDemoMode, setIsDemoMode] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [userProfile, setUserProfile] = useState<Record<string, unknown> | null>(null);
+    const [appModal, setAppModal] = useState<{
+        caseId: string;
+        schemeName?: string;
+        smsSent?: boolean;
+    } | null>(null);
+
+    // Fetch user profile once token is available so it can be passed as context to every query
+    useEffect(() => {
+        if (!token) return;
+        getUserProfile(token).then(res => {
+            if (res?.data) setUserProfile(res.data as Record<string, unknown>);
+        }).catch(() => {/* non-fatal */});
+    }, [token]);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -315,6 +330,13 @@ export default function ChatInterface() {
         localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
     }, []);
 
+    const hasStaleToolParamError = (thoughts?: Thought[]) => {
+        if (!thoughts?.length) return false;
+        return thoughts.some(
+            (t) => t.type === 'observation' && (t.text || '').includes('Invalid parameters for retrieve_knowledge')
+        );
+    };
+
     // ── Main send handler ──────────────────────────────────────────────────────
 
     const handleSend = async (text: string = inputText) => {
@@ -342,18 +364,11 @@ export default function ChatInterface() {
             return next;
         });
         setInputText('');
-        setIsDemoMode(false);
-
-        // Set a 6-second demo-fallback timeout
-        const fallbackTimer = setTimeout(() => {
-            setIsDemoMode(true);
-        }, 6000);
 
         try {
             if (selectedImage) {
                 // Image analysis (legacy endpoint kept)
                 const data = await analyzeImage(selectedImage, language);
-                clearTimeout(fallbackTimer);
                 setSelectedImage(null);
                 setImagePreview(null);
                 const aiMsg: Message = {
@@ -371,24 +386,50 @@ export default function ChatInterface() {
                 });
             } else {
                 // Use unified query endpoint
-                const response = await sendUnifiedQuery(
+                let response = await sendUnifiedQuery(
                     {
                         session_id: activeSid,
                         channel: 'web',
                         input: { text },
-                        metadata: { lang: language, user_id: user?.id || 'anonymous' }
+                        metadata: {
+                            lang: language,
+                            user_id: user?.id || 'anonymous',
+                            ...(userProfile ? { user_profile: userProfile } : {}),
+                        }
                     },
                     token ?? undefined,
                     activeSid
                 );
-                clearTimeout(fallbackTimer);
-                setIsDemoMode(false);
+
+                // Auto-heal old/sticky Bedrock session traces by retrying once on a fresh session.
+                if (hasStaleToolParamError(response.debug?.thoughts)) {
+                    const freshSid = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                    setLocalSessionId(freshSid);
+                    sessionStorage.setItem('current_jansathi_session', freshSid);
+                    resetSession();
+
+                    response = await sendUnifiedQuery(
+                        {
+                            session_id: freshSid,
+                            channel: 'web',
+                            input: { text },
+                            metadata: {
+                                lang: language,
+                                user_id: user?.id || 'anonymous',
+                                ...(userProfile ? { user_profile: userProfile } : {}),
+                            }
+                        },
+                        token ?? undefined,
+                        freshSid
+                    );
+                }
 
                 const aiMsg: Message = {
                     id: 'ai_' + Date.now(),
                     role: 'assistant',
                     text: response.response_text,
                     audioUrl: response.audio_url,
+                    lifeEvent: (response as any).life_event ?? undefined,
                     benefitReceipt: response.benefit_receipt,
                     confidence: response.confidence,
                     turnId: response.turn_id,
@@ -396,7 +437,11 @@ export default function ChatInterface() {
                     citations: response.citations,
                     timestamp: new Date(),
                     isTyping: true,
-                    applyStatus: 'idle'
+                    applyStatus: 'idle',
+                    // Slot-filling fields
+                    slots: response.slots && Object.keys(response.slots).length > 0 ? response.slots : undefined,
+                    slotsComplete: response.slots_complete,
+                    schemeName: response.scheme_hint || undefined,
                 };
                 setMessages(prev => {
                     const next = [...prev, aiMsg];
@@ -404,16 +449,32 @@ export default function ChatInterface() {
                     return next;
                 });
             }
-        } catch {
-            clearTimeout(fallbackTimer);
-            // Show demo fallback if available
-            const fallbackText = DEMO_FALLBACKS[text] ??
-                "I'm having trouble connecting right now. Please try again in a moment.";
-            setIsDemoMode(true);
+        } catch (err) {
+            console.error("Agentic query failed:", err);
+            const _offlineReplies: Record<string, string> = {
+                hi: '🙏 अभी सरकारी सर्वर से जुड़ने में समस्या है।\n\n'
+                  + '📋 आधिकारिक जानकारी के लिए:\n'
+                  + '• सभी योजनाएं: myscheme.gov.in\n'
+                  + '• PM किसान: pmkisan.gov.in\n'
+                  + '• आयुष्मान भारत: pmjay.gov.in\n'
+                  + '• PM आवास: pmaymis.gov.in\n\n'
+                  + 'कृपया कुछ देर बाद पुनः प्रयास करें।',
+                ta: '🙏 இப்போது சேவையகத்துடன் இணைப்பில் சிக்கல்.\n📋 https://myscheme.gov.in இல் தகவல் காணலாம்.\nசிறிது நேரம் கழித்து முயற்சிக்கவும்.',
+                te: '🙏 ప్రస్తుతం సర్వర్‌కు కనెక్ట్ సమస్య.\n📋 https://myscheme.gov.in లో సమాచారం చూడవచ్చు.\nమళ్లీ ప్రయత్నించండి.',
+                kn: '🙏 ಈಗ ಸರ್ವರ್‌ಗೆ ಸಂಪರ್ಕ ಸಮಸ್ಯೆ.\n📋 https://myscheme.gov.in ನಲ್ಲಿ ಮಾಹಿತಿ ಲಭ್ಯ.\nಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಪ್ರಯತ್ನಿಸಿ.',
+                mr: '🙏 आत्ता सर्व्हरशी कनेक्ट होण्यात समस्या.\n📋 https://myscheme.gov.in वर माहिती मिळवा.\nकृपया थोड्या वेळाने पुन्हा प्रयत्न करा.',
+                bn: '🙏 এখন সার্ভারের সাথে সংযোগ সমস্যা।\n📋 https://myscheme.gov.in-এ তথ্য পাওয়া যাবে।\nকিছুক্ষণ পরে আবার চেষ্টা করুন।',
+                en: '🙏 Having trouble connecting to the government server right now.\n\n'
+                  + '📋 Find official scheme information at:\n'
+                  + '• All Schemes: myscheme.gov.in\n'
+                  + '• PM-KISAN: pmkisan.gov.in\n'
+                  + '• Ayushman Bharat: pmjay.gov.in\n\n'
+                  + 'Please try again in a moment.',
+            };
             const errMsg: Message = {
                 id: 'err_' + Date.now(),
                 role: 'assistant',
-                text: fallbackText,
+                text: _offlineReplies[language] ?? _offlineReplies['en'],
                 timestamp: new Date(),
                 isTyping: true
             };
@@ -446,13 +507,19 @@ export default function ChatInterface() {
         }
 
         try {
-            await applyForBenefit(
+            const result = await applyForBenefit(
                 { session_id: sessionId, turn_id: msg.turnId },
                 token ?? undefined
             );
             setMessages(prev =>
                 prev.map(m => m.id === msg.id ? { ...m, applyStatus: 'applied' as const } : m)
             );
+            // Show success modal
+            setAppModal({
+                caseId: result.case_id || `CASE-${Date.now().toString(36).toUpperCase()}`,
+                schemeName: msg.schemeName,
+                smsSent: true,
+            });
         } catch {
             setMessages(prev =>
                 prev.map(m => m.id === msg.id ? { ...m, applyStatus: 'idle' as const } : m)
@@ -483,34 +550,20 @@ export default function ChatInterface() {
                     <select
                         value={language}
                         onChange={(e) => setLanguage(e.target.value as Language)}
+                        title="Select language"
+                        aria-label="Select language"
                         className="appearance-none bg-background/60 backdrop-blur-xl border border-border/50 text-foreground text-xs font-bold rounded-xl px-4 py-2 pr-8 outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm hover:bg-secondary/40 transition-colors"
                     >
-                        {SUPPORTED_LANGUAGES.map(lang => (
+                        {SUPPORTED_LANGUAGES.map((lang) => (
                             <option key={lang.code} value={lang.code}>
-                                {lang.native} ({lang.name})
+                                {lang.native}
                             </option>
                         ))}
                     </select>
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none opacity-50">
-                        <Globe className="w-3 h-3 text-secondary-foreground" />
-                    </div>
                 </div>
             </div>
 
-            {/* Demo mode badge */}
-            <AnimatePresence>
-                {isDemoMode && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        className="absolute top-4 right-4 z-50 flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded-full"
-                    >
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                        <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider">Fallback Mode</span>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+
 
             {/* Background element */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20" />
@@ -624,12 +677,12 @@ export default function ChatInterface() {
                                                                     <ExternalLink className="w-2.5 h-2.5" />
                                                                 </a>
                                                             ),
-                                                            ul: ({ children }) => <ul className="space-y-1 mb-4 list-none">{children}</ul>,
+                                                            ul: ({ children }) => <div className="space-y-1 mb-4">{children}</div>,
                                                             li: ({ children }) => (
-                                                                <li className="flex items-start gap-2 text-sm">
+                                                                <div className="flex items-start gap-2 text-sm">
                                                                     <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
                                                                     <span>{children}</span>
-                                                                </li>
+                                                                </div>
                                                             ),
                                                             strong: ({ children }) => (
                                                                 <strong className="font-black text-foreground underline decoration-primary/20 decoration-2 underline-offset-2">
@@ -682,11 +735,17 @@ export default function ChatInterface() {
                                                     </div>
                                                 )}
 
+                                                {/* ── Life Event Workflow ────────────────────────── */}
+                                                {msg.lifeEvent?.detected && (
+                                                    <LifeEventWorkflow data={msg.lifeEvent} />
+                                                )}
+
                                                 {/* ── NEW: Benefit Receipt ─────────────────────── */}
                                                 {msg.benefitReceipt && (
                                                     <BenefitReceipt
                                                         receipt={msg.benefitReceipt}
                                                         confidence={msg.confidence}
+                                                        schemeName={msg.schemeName}
                                                         turnId={msg.turnId}
                                                         sessionId={sessionId ?? undefined}
                                                         isApplying={msg.applyStatus === 'applying'}
@@ -699,8 +758,17 @@ export default function ChatInterface() {
                                                     />
                                                 )}
 
-                                                {/* Helper suggestion for thinking state */}
-                                                {isLoading && isThinking && !messages.some(m => m.isTyping && m.role === 'assistant') && (
+                                                {/* ── Slot Collection Progress ─────────────────── */}
+                                                {msg.slots && !msg.benefitReceipt && (
+                                                    <SlotCollectionProgress
+                                                        slots={msg.slots}
+                                                        slotsComplete={msg.slotsComplete ?? false}
+                                                        schemeName={msg.schemeName}
+                                                    />
+                                                )}
+
+                                                {/* Helper suggestion for thinking state — only render inside assistant cards */}
+                                                {msg.role === 'assistant' && isLoading && isThinking && !messages.some(m => m.isTyping && m.role === 'assistant') && (
                                                     <div className="max-w-[85%] sm:max-w-md">
                                                         <div className="flex gap-3">
                                                             <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
@@ -800,6 +868,8 @@ export default function ChatInterface() {
                                 </div>
                                 <button
                                     onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                                    aria-label="Remove selected image"
+                                    title="Remove selected image"
                                     className="p-3 bg-secondary/50 hover:text-red-600 rounded-xl transition-colors"
                                 >
                                     <X className="w-6 h-6" />
@@ -816,6 +886,8 @@ export default function ChatInterface() {
                                 accept="image/*"
                                 className="hidden"
                                 ref={fileInputRef}
+                                title="Upload image"
+                                aria-label="Upload image"
                                 onChange={(e) => {
                                     if (e.target.files?.[0]) {
                                         setSelectedImage(e.target.files[0]);
@@ -825,6 +897,8 @@ export default function ChatInterface() {
                             />
                             <button
                                 onClick={() => fileInputRef.current?.click()}
+                                aria-label="Upload image"
+                                title="Upload image"
                                 className={`p-3 rounded-2xl transition-all ${selectedImage ? 'bg-primary text-white shadow-[0_0_15px_rgba(234,88,12,0.4)]' : 'hover:bg-secondary/80 text-secondary-foreground hover:text-foreground'}`}
                             >
                                 <Camera className="w-5 h-5" />
@@ -845,6 +919,8 @@ export default function ChatInterface() {
                             <button
                                 onClick={() => handleSend()}
                                 disabled={isLoading || (!inputText.trim() && !selectedImage)}
+                                aria-label="Send message"
+                                title="Send message"
                                 className="p-3.5 bg-primary text-white rounded-2xl shadow-[0_4px_15px_rgba(234,88,12,0.3)] disabled:opacity-30 active:scale-95 transition-all hover:bg-primary/90 hover:shadow-[0_4px_25px_rgba(234,88,12,0.4)]"
                             >
                                 <Send className="w-5 h-5" />
@@ -859,6 +935,16 @@ export default function ChatInterface() {
                     </div>
                 </div>
             </div>
+
+            {/* Application Success Modal */}
+            {appModal && (
+                <ApplicationSuccessModal
+                    caseId={appModal.caseId}
+                    schemeName={appModal.schemeName}
+                    smsSent={appModal.smsSent}
+                    onClose={() => setAppModal(null)}
+                />
+            )}
         </div>
     );
 }

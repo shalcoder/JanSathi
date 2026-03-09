@@ -22,6 +22,187 @@ import time
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 from botocore.exceptions import ClientError
+from botocore.config import Config as BotoConfig
+
+# ── Local knowledge base (used when Kendra + Bedrock are unavailable) ─────────
+_LOCAL_KB: List[Dict] = [
+    {
+        "keywords": ["pm kisan", "pm-kisan", "किसान", "farmer", "6000", "kisan samman"],
+        "en": (
+            "✅ **PM-KISAN Samman Nidhi**\n"
+            "📋 Key Details:\n"
+            "• ₹6,000/year paid in 3 installments of ₹2,000 each\n"
+            "• For small-marginal farmers owning up to 2 hectares\n"
+            "• Annually income below ₹2 lakh\n"
+            "🪜 How to Apply:\n"
+            "1. Visit pmkisan.gov.in\n"
+            "2. Click 'New Farmer Registration'\n"
+            "3. Enter Aadhaar number + bank details\n"
+            "🛡️ Documents: Aadhaar, land records, bank passbook\n"
+            "🌐 Official: https://pmkisan.gov.in"
+        ),
+        "hi": (
+            "✅ **पीएम किसान सम्मान निधि**\n"
+            "📋 मुख्य विवरण:\n"
+            "• प्रति वर्ष ₹6,000 तीन किस्तों में (₹2,000 हर 4 महीने)\n"
+            "• 2 हेक्टेयर तक की भूमि वाले छोटे किसान पात्र\n"
+            "• वार्षिक आय ₹2 लाख से कम होनी चाहिए\n"
+            "🪜 आवेदन कैसे करें:\n"
+            "1. pmkisan.gov.in पर जाएं\n"
+            "2. 'नए किसान पंजीकरण' पर क्लिक करें\n"
+            "3. आधार और बैंक विवरण भरें\n"
+            "🛡️ दस्तावेज़: आधार, भूमि रिकॉर्ड, बैंक पासबुक\n"
+            "🌐 आधिकारिक: https://pmkisan.gov.in"
+        ),
+    },
+    {
+        "keywords": ["pm awas", "awas yojana", "housing", "home", "makaan", "घर", "आवास", "gramin"],
+        "en": (
+            "✅ **PM Awas Yojana (PMAY)**\n"
+            "📋 Key Details:\n"
+            "• Gramin (Rural): Up to ₹1.2 lakh subsidy for pucca house\n"
+            "• Urban (PMAY-U): Interest subsidy on home loans (EWS/LIG/MIG categories)\n"
+            "• EWS: Annual income up to ₹3L, MIG-I up to ₹6L, MIG-II up to ₹12L\n"
+            "🪜 How to Apply:\n"
+            "1. Visit pmaymis.gov.in (Urban) or pmayg.nic.in (Rural)\n"
+            "2. Apply via CSC center or online portal\n"
+            "🛡️ Documents: Aadhaar, income certificate, land/plot documents\n"
+            "🌐 Official: https://pmaymis.gov.in"
+        ),
+        "hi": (
+            "✅ **प्रधानमंत्री आवास योजना (PMAY)**\n"
+            "📋 मुख्य विवरण:\n"
+            "• ग्रामीण: पक्के घर के लिए ₹1.2 लाख तक की सहायता\n"
+            "• शहरी: होम लोन पर ब्याज सब्सिडी (EWS/LIG/MIG)\n"
+            "• EWS: ₹3 लाख तक वार्षिक आय\n"
+            "🪜 आवेदन: pmaymis.gov.in या नजदीकी CSC केंद्र पर जाएं\n"
+            "🛡️ दस्तावेज़: आधार, आय प्रमाण पत्र, भूमि दस्तावेज़\n"
+            "🌐 आधिकारिक: https://pmaymis.gov.in"
+        ),
+    },
+    {
+        "keywords": ["e-shram", "e shram", "eshram", "labour", "worker", "श्रम", "मजदूर", "असंगठित", "unorganised"],
+        "en": (
+            "✅ **e-Shram Card**\n"
+            "📋 Key Details:\n"
+            "• Free registration for unorganised sector workers\n"
+            "• ₹2 lakh accidental death insurance under PMSBY\n"
+            "• Access to other welfare schemes through a single portal\n"
+            "🪜 How to Apply:\n"
+            "1. Visit eshram.gov.in\n"
+            "2. Register with Aadhaar-linked mobile number\n"
+            "3. Receive e-Shram UAN card\n"
+            "🛡️ Documents: Aadhaar, mobile number\n"
+            "🌐 Official: https://eshram.gov.in"
+        ),
+        "hi": (
+            "✅ **ई-श्रम कार्ड**\n"
+            "📋 मुख्य विवरण:\n"
+            "• असंगठित क्षेत्र के मजदूरों के लिए निःशुल्क पंजीकरण\n"
+            "• PMSBY के तहत ₹2 लाख दुर्घटना बीमा\n"
+            "• कल्याण योजनाओं तक एकल पोर्टल से पहुंच\n"
+            "🪜 आवेदन: eshram.gov.in पर आधार से लिंक्ड मोबाइल से रजिस्टर करें\n"
+            "🛡️ दस्तावेज़: आधार, मोबाइल नंबर\n"
+            "🌐 आधिकारिक: https://eshram.gov.in"
+        ),
+    },
+    {
+        "keywords": ["ayushman", "ayushmaan", "health", "hospital", "treatment", "आयुष्मान", "स्वास्थ्य", "अस्पताल", "pmjay"],
+        "en": (
+            "✅ **Ayushman Bharat PM-JAY**\n"
+            "📋 Key Details:\n"
+            "• ₹5 lakh health cover per family per year\n"
+            "• For BPL and vulnerable families (SECC database)\n"
+            "• Cashless treatment at 25,000+ empanelled hospitals\n"
+            "🪜 How to Apply:\n"
+            "1. Check eligibility: pmjay.gov.in\n"
+            "2. Visit nearest Ayushman Bharat Kendra or empanelled hospital\n"
+            "3. Get Golden Card using Aadhaar\n"
+            "🛡️ Documents: Aadhaar, ration card (BPL)\n"
+            "🌐 Official: https://pmjay.gov.in"
+        ),
+        "hi": (
+            "✅ **आयुष्मान भारत PM-JAY**\n"
+            "📋 मुख्य विवरण:\n"
+            "• प्रत्येक परिवार को प्रति वर्ष ₹5 लाख स्वास्थ्य कवर\n"
+            "• BPL और कमजोर परिवारों के लिए (SECC डेटाबेस)\n"
+            "• 25,000+ सूचीबद्ध अस्पतालों में कैशलेस उपचार\n"
+            "🪜 आवेदन: pmjay.gov.in पर पात्रता जांचें, नजदीकी अस्पताल में जाएं\n"
+            "🛡️ दस्तावेज़: आधार, राशन कार्ड (BPL)\n"
+            "🌐 आधिकारिक: https://pmjay.gov.in"
+        ),
+    },
+    {
+        "keywords": ["ration", "ration card", "food", "राशन", "अनाज", "nfsa", "pds", "public distribution"],
+        "en": (
+            "✅ **National Food Security Act (NFSA) / Ration Card**\n"
+            "📋 Key Details:\n"
+            "• Subsidised rice at ₹3/kg, wheat at ₹2/kg, coarse grains at ₹1/kg\n"
+            "• Antyodaya (AAY): Poorest of poor — 35 kg/month\n"
+            "• Priority Households (PHH): 5 kg/person/month\n"
+            "🪜 How to Apply:\n"
+            "1. Visit food.gov.in or state food portal\n"
+            "2. Submit Aadhaar + income certificate\n"
+            "🛡️ Documents: Aadhaar, income proof, address proof\n"
+            "🌐 Official: https://nfsa.gov.in"
+        ),
+        "hi": (
+            "✅ **राशन कार्ड (NFSA)**\n"
+            "📋 मुख्य विवरण:\n"
+            "• सब्सिडी पर चावल ₹3/kg, गेहूं ₹2/kg\n"
+            "• अंत्योदय (AAY): प्रति माह 35 kg\n"
+            "• प्राथमिकता परिवार (PHH): प्रति व्यक्ति 5 kg प्रति माह\n"
+            "🪜 आवेदन: nfsa.gov.in या राज्य के खाद्य पोर्टल पर जाएं\n"
+            "🛡️ दस्तावेज़: आधार, आय प्रमाण, पता प्रमाण\n"
+            "🌐 आधिकारिक: https://nfsa.gov.in"
+        ),
+    },
+    {
+        "keywords": ["scheme", "yojana", "schemes", "योजना", "government", "benefit", "लाभ", "सरकारी", "available", "उपलब्ध", "kya hai", "list"],
+        "en": (
+            "✅ **Popular Government Schemes for Citizens**\n"
+            "📋 Available Schemes:\n"
+            "• 🌾 **PM-KISAN** — ₹6,000/yr for farmers\n"
+            "• 🏠 **PM Awas Yojana** — Housing subsidy\n"
+            "• 👷 **e-Shram Card** — Workers insurance + welfare\n"
+            "• 🏥 **Ayushman Bharat** — ₹5L health cover\n"
+            "• 🍚 **Ration Card (NFSA)** — Subsidised food grains\n"
+            "• 📜 **PM Mudra Loan** — Up to ₹10L business loan\n"
+            "• 👵 **PM Vaya Vandana** — Pension for senior citizens\n"
+            "🪜 To apply for any scheme, just say 'I want to apply for [scheme name]'\n"
+            "🌐 Discover more: https://myscheme.gov.in"
+        ),
+        "hi": (
+            "✅ **नागरिकों के लिए प्रमुख सरकारी योजनाएं**\n"
+            "📋 उपलब्ध योजनाएं:\n"
+            "• 🌾 **पीएम किसान** — किसानों को ₹6,000/वर्ष\n"
+            "• 🏠 **पीएम आवास योजना** — घर के लिए सब्सिडी\n"
+            "• 👷 **ई-श्रम कार्ड** — मजदूरों का बीमा और कल्याण\n"
+            "• 🏥 **आयुष्मान भारत** — ₹5 लाख स्वास्थ्य कवर\n"
+            "• 🍚 **राशन कार्ड (NFSA)** — सब्सिडी पर अनाज\n"
+            "• 📜 **पीएम मुद्रा लोन** — ₹10 लाख तक व्यवसाय ऋण\n"
+            "🪜 किसी भी योजना के लिए बोलें: 'मुझे [योजना का नाम] के लिए आवेदन करना है'\n"
+            "🌐 अधिक जानकारी: https://myscheme.gov.in"
+        ),
+    },
+]
+
+
+def _local_kb_query(query: str, language: str) -> Optional[str]:
+    """Fast keyword match against local knowledge base. Returns None if no match."""
+    q = query.lower()
+    best_match = None
+    best_score = 0
+    for entry in _LOCAL_KB:
+        score = sum(1 for kw in entry["keywords"] if kw in q)
+        if score > best_score:
+            best_score = score
+            best_match = entry
+    if best_match and best_score > 0:
+        lang_key = language if language in best_match else "en"
+        return best_match.get(lang_key) or best_match.get("en")
+    return None
+
 
 class SmartRAGService:
     def __init__(self):
@@ -29,15 +210,16 @@ class SmartRAGService:
         self.kendra_index_id = os.getenv('KENDRA_INDEX_ID', 'mock-index')
         self.s3_bucket = os.getenv('S3_BUCKET_NAME', 'jansathi-knowledge-base-1772952106')
         self.learning_folder = 'learned-qa'  # Folder in S3 for new Q&A pairs
-        
+
         # Confidence thresholds
         self.HIGH_CONFIDENCE = 0.75  # Use Kendra answer directly
         self.LOW_CONFIDENCE = 0.40   # Generate new answer with Bedrock
-        
+
+        _cfg = BotoConfig(connect_timeout=4, read_timeout=8, retries={'max_attempts': 1})
         # Initialize AWS clients
         try:
-            self.kendra = boto3.client('kendra', region_name=self.region)
-            self.s3 = boto3.client('s3', region_name=self.region)
+            self.kendra = boto3.client('kendra', region_name=self.region, config=_cfg)
+            self.s3 = boto3.client('s3', region_name=self.region, config=_cfg)
             self.working = True
         except Exception as e:
             print(f"SmartRAG Init Error: {e}")
@@ -74,7 +256,24 @@ class SmartRAGService:
             }
         """
         start_time = time.time()
-        
+
+        # 0. Try local knowledge base first — instant, no AWS needed
+        local_answer = _local_kb_query(user_query, language)
+        if local_answer:
+            self._cache_answer(user_query, local_answer, 0.82, [])
+            return {
+                'answer': local_answer,
+                'confidence': 0.82,
+                'source': 'local_kb',
+                'sources': [{'title': 'JanSathi Local Knowledge Base', 'uri': 'https://myscheme.gov.in', 'excerpt': '', 'confidence': 'HIGH'}],
+                'learned': False,
+                'telemetry': {
+                    'latency_ms': (time.time() - start_time) * 1000,
+                    'cache_hit': False,
+                    'local_kb_hit': True,
+                }
+            }
+
         # 1. Check cache first
         cache_result = self._check_cache(user_query)
         if cache_result:
@@ -158,8 +357,32 @@ class SmartRAGService:
                 }
             }
         
-        # 6. Fallback - return best available answer
-        fallback_answer = kendra_result.get('raw_text', '') or "I don't have enough information to answer that question accurately. Please visit https://myscheme.gov.in for official information."
+        # 6. Fallback - return best available answer (language-aware)
+        _fallback_msgs = {
+            'hi': '🙏 अभी सर्वर से जुड़ने में समस्या हो रही है।\n\n'
+                  '📋 आप निम्नलिखित आधिकारिक पोर्टल पर जानकारी प्राप्त कर सकते हैं:\n'
+                  '• सभी योजनाएं: https://myscheme.gov.in\n'
+                  '• PM किसान: https://pmkisan.gov.in\n'
+                  '• आयुष्मान भारत: https://pmjay.gov.in\n'
+                  '• PM आवास: https://pmaymis.gov.in\n\n'
+                  'कृपया कुछ देर बाद पुनः प्रयास करें।',
+            'ta': '🙏 இப்போது சேவையகத்துடன் இணைப்பில் சிக்கல் உள்ளது.\n\n'
+                  '📋 அதிகாரப்பூர்வ தகவலுக்கு: https://myscheme.gov.in\n\n'
+                  'சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.',
+            'te': '🙏 ప్రస్తుతం సర్వర్‌కు కనెక్ట్ అవడంలో సమస్య ఉంది.\n\n'
+                  '📋 అధికారిక సమాచారానికి: https://myscheme.gov.in\n\n'
+                  'కొంత సేపటి తర్వాత మళ్లీ ప్రయత్నించండి.',
+            'en': '🙏 We are having trouble connecting to the server right now.\n\n'
+                  '📋 You can find official scheme information at:\n'
+                  '• All Schemes: https://myscheme.gov.in\n'
+                  '• PM-KISAN: https://pmkisan.gov.in\n'
+                  '• Ayushman Bharat: https://pmjay.gov.in\n\n'
+                  'Please try again in a moment.',
+        }
+        fallback_answer = (
+            kendra_result.get('raw_text', '') or
+            _fallback_msgs.get(language, _fallback_msgs['en'])
+        )
         
         return {
             'answer': fallback_answer,

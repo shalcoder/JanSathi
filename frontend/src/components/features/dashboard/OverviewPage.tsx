@@ -3,17 +3,37 @@ import { motion } from 'framer-motion';
 import { CheckCircle, ArrowRight, PhoneCall, Zap, AlertTriangle, Layers } from 'lucide-react';
 import BackendStatus from '@/components/BackendStatus';
 import { getCivicImpact, type CivicImpactMetrics } from '@/services/api';
+import { ProactiveAlerts } from './ProactiveAlerts';
+import { CommunityInsights } from './CommunityInsights';
+import { useAuth } from '@/hooks/useAuth';
+import { useSession } from '@/hooks/useSession';
 
 export default function OverviewPage({ onNavigate }: { onNavigate: (page: string) => void }) {
+    const { user } = useAuth();
+    const { token } = useSession();
     const [impact, setImpact] = React.useState<CivicImpactMetrics | null>(null);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         (async () => {
             try {
+                setLoading(true);
+                setError(null);
                 const data = await getCivicImpact();
                 setImpact(data);
             } catch (e) {
                 console.error("Impact fetch failed", e);
+                setError("Unable to fetch real-time data. Showing demo statistics.");
+                // Set demo data as fallback
+                setImpact({
+                    citizens_served: 1492,
+                    estimated_benefits_unlocked_inr: 420000,
+                    estimated_trips_avoided: 172,
+                    fraud_reports: 5
+                } as CivicImpactMetrics);
+            } finally {
+                setLoading(false);
             }
         })();
     }, []);
@@ -31,6 +51,24 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (page: string
             <div className="mb-2">
                  <BackendStatus />
             </div>
+
+            {/* Error Message */}
+            {error && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">{error}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Loading State */}
+            {loading && (
+                <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <span className="ml-3 text-secondary-foreground">Loading dashboard data...</span>
+                </div>
+            )}
 
             {/* Welcome Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -75,6 +113,12 @@ export default function OverviewPage({ onNavigate }: { onNavigate: (page: string
                         <p className="text-sm font-semibold text-secondary-foreground relative z-10">{stat.label}</p>
                     </motion.div>
                 ))}
+            </div>
+
+            {/* Proactive Scheme Discovery + Community Intelligence */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ProactiveAlerts userId={user?.id} token={token ?? undefined} />
+                <CommunityInsights location="India" token={token ?? undefined} />
             </div>
 
             {/* Recent Activity & Recommendations */}

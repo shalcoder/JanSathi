@@ -13,6 +13,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from threading import Lock
 from typing import Any, Dict, List, Optional
+from types import SimpleNamespace
 
 import yaml
 
@@ -61,6 +62,40 @@ class SchemeFeedService:
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "refresh_interval_seconds": self._refresh_interval_seconds,
                 "data_sources": ["sqlite:Scheme", "yaml:schemes_config"],
+            },
+        }
+
+    def get_schemes(self, user_profile: Optional[Dict[str, Any]] = None, language: str = "en") -> Dict[str, Any]:
+        """Return a personalized scheme list for anonymous/tool callers."""
+        base_schemes = self._get_base_schemes()
+
+        profile_obj = None
+        if user_profile:
+            profile_obj = SimpleNamespace(
+                occupation=user_profile.get("occupation", ""),
+                annual_income=user_profile.get("income", user_profile.get("annual_income", 0)) or 0,
+                land_holding_acres=user_profile.get("land_holding_acres", user_profile.get("land", 0)) or 0,
+            )
+
+        scored: List[Dict[str, Any]] = []
+        for scheme in base_schemes:
+            scored.append(self._personalize_scheme(scheme, profile_obj))
+
+        scored.sort(
+            key=lambda item: (
+                item.get("eligibility_score", 0.0),
+                item.get("last_updated_at", ""),
+            ),
+            reverse=True,
+        )
+
+        return {
+            "schemes": scored,
+            "count": len(scored),
+            "meta": {
+                "language": language,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "engine": "scheme_feed_v1",
             },
         }
 

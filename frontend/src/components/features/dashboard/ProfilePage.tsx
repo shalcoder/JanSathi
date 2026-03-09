@@ -26,8 +26,7 @@ import { buildClient } from '@/services/api';
 
 const ProfilePage = () => {
     const router = useRouter();
-    const { user, loading: isLoaded } = useAuth();
-    
+    const { user, loading: authLoading } = useAuth();
     
     // Track API state
     const [isLoading, setIsLoading] = useState(true);
@@ -58,7 +57,13 @@ const ProfilePage = () => {
 
     // 1. Fetch live profile on mount
     React.useEffect(() => {
-        if (!isLoaded || !user) return;
+        if (authLoading) return; // Wait until auth has finished checking
+
+        if (!user) {
+            setIsLoading(false);
+            router.push('/auth/signin'); // Redirect to login if totally unauthenticated
+            return;
+        }
 
         const loadProfile = async () => {
             try {
@@ -113,7 +118,7 @@ const ProfilePage = () => {
         };
 
         loadProfile();
-    }, [isLoaded, user, router]);
+    }, [authLoading, user, router]);
 
     // 2. Save profile to backend
     const handleProfileSubmit = async (e: React.FormEvent) => {

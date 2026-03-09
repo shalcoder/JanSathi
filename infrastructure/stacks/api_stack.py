@@ -18,6 +18,9 @@ from aws_cdk import (
     aws_cloudwatch as cloudwatch,
     aws_cloudwatch_actions as cw_actions,
     aws_sns as sns,
+    aws_sqs as sqs,
+    aws_events as events,
+    aws_cognito as cognito,
 )
 from constructs import Construct
 
@@ -39,11 +42,17 @@ class ApiStack(Stack):
         users_table: dynamodb.Table,
         conversations_table: dynamodb.Table,
         cache_table: dynamodb.Table,
+        hitl_table: dynamodb.Table,
         audio_bucket: s3.Bucket,
         uploads_bucket: s3.Bucket,
         kendra_index: kendra.CfnIndex,
         notifications_topic: sns.Topic,
-        state_machine_arn: str = None, # OPTIONAL: ARN from WorkflowStack
+        hitl_queue: sqs.Queue,
+        event_bus: events.EventBus,
+        user_pool: cognito.UserPool,
+        state_machine_arn: str = None,
+        bedrock_agent_id: str = "",
+        bedrock_agent_alias_id: str = "",
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -82,12 +91,27 @@ class ApiStack(Stack):
                 "UPLOADS_BUCKET": uploads_bucket.bucket_name,
                 "SNS_TOPIC_ARN": notifications_topic.topic_arn,
                 "AWS_REGION_NAME": kwargs.get("env", cdk.Environment()).region or "ap-south-1",
-                "BEDROCK_MODEL_ID": "anthropic.claude-3-haiku-20240307-v1:0",
-                "BEDROCK_MAX_TOKENS": "1000",
+                # Bedrock
+                "BEDROCK_MODEL_ID": "amazon.nova-lite-v1:0",
+                "BEDROCK_MAX_TOKENS": "2048",
+                "BEDROCK_AGENT_ID": bedrock_agent_id,
+                "BEDROCK_AGENT_ALIAS_ID": bedrock_agent_alias_id,
+                # Kendra
                 "KENDRA_INDEX_ID": kendra_index.attr_id,
-                "STATE_MACHINE_ARN": state_machine_arn or "", # Env Var for WorkflowService
+                # Step Functions
+                "STATE_MACHINE_ARN": state_machine_arn or "",
+                # DynamoDB
+                "HITL_TABLE": hitl_table.table_name,
+                # SQS
+                "HITL_QUEUE_URL": hitl_queue.queue_url,
+                # EventBridge
+                "EVENTBRIDGE_BUS_NAME": event_bus.event_bus_name,
+                # Cognito
+                "COGNITO_USER_POOL_ID": user_pool.user_pool_id,
+                # Runtime
                 "NODE_ENV": "production",
                 "USE_DYNAMODB": "true",
+                "XRAY_ENABLED": "true",
             },
             tracing=_lambda.Tracing.ACTIVE,
             log_retention=logs.RetentionDays.ONE_MONTH,
@@ -108,11 +132,20 @@ class ApiStack(Stack):
         audio_bucket.grant_read_write(self.lambda_function)
         uploads_bucket.grant_read_write(self.lambda_function)
 
-        # Bedrock (InvokeModel only)
+        # HITL table
+        hitl_table.grant_read_write_data(self.lambda_function)
+
+        # Bedrock — foundation models + AgentCore (InvokeAgent)
         self.lambda_function.add_to_role_policy(
             iam.PolicyStatement(
-                actions=["bedrock:InvokeModel"],
+                actions=["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
                 resources=["arn:aws:bedrock:*::foundation-model/*"],
+            )
+        )
+        self.lambda_function.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["bedrock-agent-runtime:InvokeAgent"],
+                resources=["arn:aws:bedrock:*:*:agent-alias/*"],
             )
         )
 
@@ -144,7 +177,26 @@ class ApiStack(Stack):
                 )
             )
 
-        # SSM Parameter Store (for config)
+        # Kendra — query and retrieve
+        self.lambda_function.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["kendra:Query", "kendra:Retrieve", "kendra:BatchGetDocumentStatus"],
+                resources=[f"arn:aws:kendra:{self.region}:{self.account}:index/*"],
+            )
+        )
+
+        # EventBridge — publish domain events
+        self.lambda_function.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["events:PutEvents"],
+                resources=[event_bus.event_bus_arn],
+            )
+        )
+
+        # SQS — send HITL cases to FIFO queue
+        hitl_queue.grant_send_messages(self.lambda_function)
+
+        # SSM Parameter Store
         self.lambda_function.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["ssm:GetParameter", "ssm:GetParameters"],
@@ -175,6 +227,16 @@ class ApiStack(Stack):
                 allow_headers=["Content-Type", "Authorization", "X-Amz-Date"],
                 max_age=Duration.hours(1),
             ),
+        )
+
+        # Cognito authorizer — protects /api/* routes
+        # /health and OPTIONS (CORS preflight) remain open
+        self.cognito_authorizer = apigw.CognitoUserPoolsAuthorizer(
+            self, "CognitoAuthorizer",
+            cognito_user_pools=[user_pool],
+            authorizer_name="JanSathi-CognitoAuth",
+            identity_source="method.request.header.Authorization",
+            results_cache_ttl=Duration.minutes(5),
         )
 
         # Usage Plan for External Partners

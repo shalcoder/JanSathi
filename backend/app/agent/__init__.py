@@ -1,5 +1,8 @@
+print("DEBUG: app/agent/__init__.py starting...", flush=True)
 from flask import Blueprint, request, jsonify
+print("DEBUG: flask imports in agent/__init__.py done", flush=True)
 from .schemas import validate_agent_request
+print("DEBUG: schemas imported in agent/__init__.py", flush=True)
 
 agent_bp = Blueprint("agent", __name__)
 

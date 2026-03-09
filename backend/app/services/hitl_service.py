@@ -1,8 +1,8 @@
 """
 hitl_service.py – Human-in-the-Loop ticket management.
 
-Writes low-confidence cases to storage and provides
-list / resolve operations used by the admin API.
+Write path:  DynamoDB → SQS FIFO → EventBridge
+Read path:   DynamoDB (or local JSON in dev)
 """
 
 import os
@@ -14,15 +14,15 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Storage helpers – DynamoDB when configured, otherwise local JSON file
-# ──────────────────────────────────────────────────────────────────────────────
-
 HITL_LOCAL_FILE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "agentic_engine", "hitl_cases.json"
 )
+HITL_TABLE = os.getenv("HITL_TABLE", "JanSathi-HITL-Cases")
+AWS_REGION  = os.getenv("AWS_REGION", "us-east-1")
 
+
+# ── Storage helpers ────────────────────────────────────────────────────────────
 
 def _load_local() -> dict:
     if not os.path.exists(HITL_LOCAL_FILE):
@@ -38,26 +38,22 @@ def _save_local(data: dict) -> None:
 
 
 def _get_dynamo_table():
-    """Returns a DynamoDB Table resource or None if not configured."""
     try:
         import boto3
-        table_name = os.getenv("HITL_TABLE", "JanSathiHITLCases")
-        region = os.getenv("AWS_REGION", "us-east-1")
-        dynamodb = boto3.resource("dynamodb", region_name=region)
-        return dynamodb.Table(table_name)
+        ddb = boto3.resource("dynamodb", region_name=AWS_REGION)
+        return ddb.Table(HITL_TABLE)
     except Exception as e:
-        logger.warning(f"[HITLService] DynamoDB unavailable, using local storage: {e}")
+        logger.warning(f"[HITLService] DynamoDB unavailable: {e}")
         return None
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Public API
-# ──────────────────────────────────────────────────────────────────────────────
+# ── Public service class ───────────────────────────────────────────────────────
 
 class HITLService:
     """
     Manages the Human-in-the-Loop review queue.
-    Supports both DynamoDB (production) and local JSON (development).
+    Write path: DynamoDB → SQS FIFO → EventBridge (fire-and-forget, non-blocking).
+    Read path:  DynamoDB (dev: local JSON fallback).
     """
 
     def enqueue_case(
@@ -70,27 +66,34 @@ class HITLService:
         benefit_receipt: Optional[dict] = None,
         audio_url: Optional[str] = None,
         slots: Optional[dict] = None,
+        scheme: str = "",
+        user_id: str = "",
     ) -> dict:
         """
-        Write a new HITL review ticket.
-        Returns the created case dict.
+        Write a new HITL review ticket to DynamoDB, then fan out to SQS + EventBridge.
         """
-        case_id = f"hitl-{uuid.uuid4().hex[:10]}"
+        case_id    = f"hitl-{uuid.uuid4().hex[:10]}"
+        created_at = datetime.now(timezone.utc).isoformat()
         case = {
-            "id": case_id,
-            "session_id": session_id,
-            "turn_id": turn_id,
-            "transcript": transcript,
-            "response_text": response_text,
-            "confidence": confidence,
+            "case_id":        case_id,
+            "id":             case_id,       # legacy alias
+            "session_id":     session_id,
+            "user_id":        user_id,
+            "turn_id":        turn_id,
+            "transcript":     transcript,
+            "response_text":  response_text,
+            "confidence":     str(confidence),
+            "scheme":         scheme,
             "benefit_receipt": benefit_receipt or {},
-            "audio_url": audio_url or "",
-            "slots": slots or {},
-            "status": "pending_review",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "audio_url":      audio_url or "",
+            "slots":          slots or {},
+            "status":         "pending_review",
+            "created_at":     created_at,
+            "updated_at":     created_at,
+            "verifications":  {},
         }
 
+        # 1 — DynamoDB (primary store)
         table = _get_dynamo_table()
         if table:
             table.put_item(Item=case)
@@ -98,6 +101,33 @@ class HITLService:
             store = _load_local()
             store[case_id] = case
             _save_local(store)
+
+        # 2 — SQS FIFO (async HITL worker pickup)
+        try:
+            from app.services.sqs_service import SQSService
+            SQSService().enqueue_hitl_case(
+                case_id=case_id,
+                session_id=session_id,
+                user_id=user_id,
+                scheme=scheme,
+                confidence=confidence,
+                context={"transcript": transcript, "slots": slots or {}},
+                priority="high" if confidence < 0.3 else "normal",
+            )
+        except Exception as e:
+            logger.warning(f"[HITLService] SQS enqueue failed (non-fatal): {e}")
+
+        # 3 — EventBridge (triggers admin alerts + CloudWatch)
+        try:
+            from app.services.eventbridge_service import EventBridgeService
+            EventBridgeService().hitl_case_created(
+                case_id=case_id,
+                session_id=session_id,
+                confidence=confidence,
+                scheme=scheme,
+            )
+        except Exception as e:
+            logger.warning(f"[HITLService] EventBridge publish failed (non-fatal): {e}")
 
         logger.info(f"[HITLService] Enqueued case {case_id} (session={session_id}, conf={confidence:.2f})")
         return case
@@ -119,8 +149,7 @@ class HITLService:
 
     def resolve_case(self, case_id: str, action: str, reason: Optional[str] = None) -> dict:
         """
-        Resolve a HITL case.
-        action: 'approve' | 'reject'
+        Resolve a HITL case. action: 'approve' | 'reject'
         Returns updated case or error dict.
         """
         if action not in ("approve", "reject"):
@@ -133,14 +162,14 @@ class HITLService:
         if table:
             try:
                 table.update_item(
-                    Key={"id": case_id},
+                    Key={"case_id": case_id, "created_at": self._get_created_at(case_id) or now},
                     UpdateExpression="SET #s = :s, updated_at = :u, resolution_reason = :r",
                     ExpressionAttributeNames={"#s": "status"},
                     ExpressionAttributeValues={
                         ":s": new_status,
                         ":u": now,
-                        ":r": reason or ""
-                    }
+                        ":r": reason or "",
+                    },
                 )
                 return {"id": case_id, "status": new_status}
             except Exception as e:
@@ -161,9 +190,17 @@ class HITLService:
         table = _get_dynamo_table()
         if table:
             try:
-                response = table.get_item(Key={"id": case_id})
-                return response.get("Item")
+                # Scan by case_id (PK); we don't know created_at for get_item
+                from boto3.dynamodb.conditions import Attr
+                resp = table.scan(FilterExpression=Attr("case_id").eq(case_id))
+                items = resp.get("Items", [])
+                return items[0] if items else None
             except Exception:
                 return None
         else:
             return _load_local().get(case_id)
+
+    def _get_created_at(self, case_id: str) -> Optional[str]:
+        """Retrieve created_at sort key for update_item."""
+        case = self.get_case(case_id)
+        return case.get("created_at") if case else None

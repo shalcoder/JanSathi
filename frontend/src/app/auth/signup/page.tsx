@@ -53,7 +53,6 @@ export default function SignUp() {
                     <div className="amplify-auth-container">
                         <Authenticator 
                             initialState="signUp" 
-                            socialProviders={['google', 'apple', 'facebook', 'amazon']} 
                             components={components}
                         >
                             {() => (

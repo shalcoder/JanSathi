@@ -68,14 +68,21 @@ def response_agent(state: JanSathiState) -> JanSathiState:
     Agent 7: Response Synthesis Agent.
     Generates final response using Nova Lite + RAG context.
     Creates a Benefit Receipt for eligible auto-submit cases.
+    Handles life_event intent by building a structured cascade response.
     """
     session_id = state.get("session_id", "unknown")
     query = state.get("user_query", "")
     language = state.get("language", "hi")
+    intent = state.get("intent", "info")
+
+    # ── Life event fast path ─────────────────────────────────────────────────
+    if intent == "life_event" and state.get("is_life_event"):
+        return _handle_life_event_response(state)
+
     rag_context = state.get("rag_context", [])
     eligibility_result = state.get("eligibility_result", {})
     verifier_result = state.get("verifier_result", {})
-    intent = state.get("intent", "info")
+    scheme_hint = state.get("scheme_hint", "unknown")
     scheme_hint = state.get("scheme_hint", "unknown")
 
     logger.info(f"[ResponseAgent] session={session_id} intent={intent} scheme={scheme_hint}")
@@ -148,6 +155,51 @@ def _validate_response(response: str) -> str:
             response = response.replace(url, "https://myscheme.gov.in")
 
     return response.strip()
+
+
+def _handle_life_event_response(state: JanSathiState) -> JanSathiState:
+    """
+    Build a structured response for a detected life event.
+    Returns a short human-readable summary + structured workflow in state.
+    No LLM call needed — response is template-based + structured data.
+    """
+    session_id    = state.get("session_id", "unknown")
+    event_label   = state.get("life_event_label", "Life Event")
+    icon          = state.get("life_event_icon", "🏛️")
+    workflow      = state.get("life_event_workflow", [])
+    summary       = state.get("life_event_summary", "I've found government services that can help.")
+    language      = state.get("language", "hi")
+
+    # Urgent steps (priority == "urgent")
+    urgent = [s for s in workflow if s.get("priority") == "urgent"]
+    urgent_labels = [f"**{s['label']}**" for s in urgent]
+
+    # Build readable markdown response
+    lines = [
+        f"{icon} **{event_label} — Government Services Triggered**\n",
+        summary,
+        "",
+    ]
+    for i, step in enumerate(workflow, 1):
+        priority_badge = {"urgent": "🔴 URGENT", "high": "🟠 HIGH", "medium": "🟡 MEDIUM", "low": "🟢 LOW"}.get(step.get("priority", "medium"), "")
+        lines.append(f"**Step {i}: {step['label']}** {priority_badge}")
+        lines.append(f"{step['description']}")
+        lines.append(f"→ {step['action']}")
+        if step.get("link"):
+            lines.append(f"🔗 [Apply / More Info]({step['link']})")
+        lines.append("")
+
+    lines.append("---")
+    lines.append("💬 Ask me about any of these steps for detailed guidance. I can help you check eligibility, prepare documents, or fill applications.")
+
+    response_text = "\n".join(lines)
+
+    logger.info(f"[ResponseAgent/LifeEvent] session={session_id} event={state.get('life_event_id')} steps={len(workflow)}")
+
+    updated = dict(state)
+    updated["response_text"] = response_text
+    updated["benefit_receipt"] = {}
+    return updated
 
 
 def _generate_benefit_receipt(state: JanSathiState, response_text: str) -> dict:

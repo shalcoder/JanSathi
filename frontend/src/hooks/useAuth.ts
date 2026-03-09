@@ -2,52 +2,61 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
-import { fetchAuthSession, getCurrentUser, signOut as amplifySignOut } from 'aws-amplify/auth';
-import { Hub } from 'aws-amplify/utils';
+import {
+    getCurrentUser,
+    fetchAuthSession,
+    signOut as amplifySignOut,
+    type AuthUser,
+} from 'aws-amplify/auth';
+
+interface AuthUserInfo {
+    id: string;
+    name: string;
+    email: string;
+    username?: string;
+}
 
 export function useAuth() {
     const router = useRouter();
-    const [user, setUser] = useState<{ id: string; name: string; username?: string } | null>(null);
+    const [user, setUser] = useState<AuthUserInfo | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        checkUser();
-
-        // Listen to Auth events
-        const unsubscribe = Hub.listen('auth', ({ payload }) => {
-            switch (payload.event) {
-                case 'signedIn':
-                    checkUser();
-                    break;
-                case 'signedOut':
-                    setUser(null);
-                    break;
-            }
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    const checkUser = () => {
+    const checkUser = useCallback(async () => {
         try {
-            const currentUser = await getCurrentUser();
+            const cognito = await getCurrentUser();
+            const session = await fetchAuthSession();
+            const idToken = session.tokens?.idToken;
+            const email   = (idToken?.payload?.email as string) || cognito.username;
+            const name    = (idToken?.payload?.name as string)
+                         || (idToken?.payload?.['cognito:username'] as string)
+                         || email.split('@')[0];
             setUser({
-                id: currentUser.userId,
-                name: currentUser.username,
+                id:       cognito.userId || cognito.username,
+                name,
+                email,
+                username: cognito.username,
             });
-        } catch (_error) {
+        } catch {
+            // Not signed in
             setUser(null);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const signOut = () => {
-        localStorage.removeItem('jansathi_auth');
-        localStorage.removeItem('jansathi_user');
+    useEffect(() => {
+        checkUser();
+    }, [checkUser]);
+
+    const signOut = useCallback(async () => {
+        try {
+            await amplifySignOut({ global: true });
+        } catch {
+            // best-effort
+        }
         setUser(null);
         router.push('/auth/signin');
-    };
+    }, [router]);
 
     const requireAuth = useCallback(() => {
         if (!loading && !user) {
@@ -60,14 +69,19 @@ export function useAuth() {
         loading,
         signOut,
         requireAuth,
-        isAuthenticated: !!user
+        isAuthenticated: !!user,
+        refresh: checkUser,
     };
 }
 
-export const getToken = async () => {
+/**
+ * Returns the current Cognito IdToken JWT string, or null.
+ * Works in both browser and server components via Amplify session.
+ */
+export const getToken = async (): Promise<string | null> => {
     try {
         const session = await fetchAuthSession();
-        return session.tokens?.idToken?.toString() || session.tokens?.accessToken?.toString() || null;
+        return session.tokens?.idToken?.toString() ?? null;
     } catch {
         return null;
     }

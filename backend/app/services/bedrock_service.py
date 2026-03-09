@@ -4,9 +4,13 @@ import os
 import re
 import time
 from botocore.exceptions import ClientError, NoCredentialsError
+from dotenv import load_dotenv
 from app.core.utils import log_event, timed
 from app.core.security import sanitize_ai_response
 from app.services.cache_service import ResponseCache
+
+# Allow standalone script/test execution paths to pick up backend/.env credentials.
+load_dotenv()
 
 BedrockQueryCache = ResponseCache(ttl_seconds=3600)
 PDF_CONTEXT_STORE = {}
@@ -35,22 +39,40 @@ class BedrockService:
         self.region = os.getenv('AWS_REGION', 'us-east-1')
         # Default to Amazon Nova Lite (replaces Claude)
         self.model_id = os.getenv('BEDROCK_MODEL_ID', NOVA_LITE)
-        
+
+        from botocore.config import Config as BotoConfig
+        _cfg = BotoConfig(connect_timeout=5, read_timeout=10, retries={'max_attempts': 1})
         try:
             self.bedrock_runtime = boto3.client(
-                service_name='bedrock-runtime', 
-                region_name=self.region
+                service_name='bedrock-runtime',
+                region_name=self.region,
+                config=_cfg,
             )
             self.working = True
         except NoCredentialsError:
             print("Bedrock Init Failed: No Credentials.")
             self.working = False
 
+    def _is_scheme_related(self, query: str, intent: str, scheme_hint: str) -> bool:
+        it = (intent or "").lower()
+        sh = (scheme_hint or "unknown").lower()
+        if sh not in ("", "unknown", "none", "null"):
+            return True
+        if it in {"apply", "grievance", "track", "life_event"}:
+            return True
+        q = (query or "").lower()
+        scheme_terms = [
+            "scheme", "yojana", "kisan", "pmay", "pm awas", "awas",
+            "e-shram", "eshram", "ration", "ayushman", "pmjay", "subsidy",
+            "eligibility", "application status", "grievance",
+        ]
+        return any(t in q for t in scheme_terms)
+
     @timed
-    def generate_response(self, query, context_text, language='hi', intent="GENERAL_INQUIRY", session_id=None):
+    def generate_response(self, query, context_text, language='hi', intent="GENERAL_INQUIRY", session_id=None, scheme_hint="unknown"):
         """Generate a response using Amazon Nova Lite via Converse API."""
         if not self.working:
-            return self._get_context_based_response(query, context_text, language)
+            return self._get_context_based_response(query, context_text, language, intent, scheme_hint)
 
         # ── Inject PDF Context if available ──────────────────────────────────
         if session_id and session_id in PDF_CONTEXT_STORE:
@@ -62,6 +84,7 @@ class BedrockService:
             context_text.strip() and
             "I do not have specific public data" not in context_text
         )
+        scheme_related = self._is_scheme_related(query, intent, scheme_hint)
 
         lang_map = {
             'hi': 'Hindi (हिन्दी)',
@@ -79,10 +102,31 @@ class BedrockService:
         }
         native_lang = lang_map.get(language, 'English')
 
+        if not has_scheme_context and scheme_related:
+            # Strict verified mode for government schemes: never fabricate details.
+            return {
+                "text": (
+                    "I can help with this scheme, but I currently don't have verified context to answer safely.\n\n"
+                    "Please ask one of these so I can proceed accurately:\n"
+                    "1. Eligibility criteria\n"
+                    "2. Required documents\n"
+                    "3. Application process\n"
+                    "4. Status check\n\n"
+                    "Official portals: https://myscheme.gov.in, https://india.gov.in"
+                ),
+                "provenance": "strict_verified_mode",
+                "explainability": {
+                    "confidence": 0.6,
+                    "matching_criteria": ["Scheme-related query without verified context"],
+                    "privacy_protocol": "DPDP-Compliant (Zero PII in logs)",
+                },
+            }
+
         if not has_scheme_context:
             context_text = (
                 f"General inquiry about: {query}. "
-                "Provide helpful information based on general knowledge of Indian government services."
+                "Provide a helpful, concise answer as a broad assistant. "
+                "If the user asks for regulated/legal/medical advice, add a brief caution."
             )
 
         # ── Check Cache ───────────────────────────────────────────────────────
@@ -105,7 +149,7 @@ class BedrockService:
                 print(f"Cache return error: {e}")
 
         # ── Nova Lite prompt ──────────────────────────────────────────────────
-        if has_scheme_context:
+        if has_scheme_context and scheme_related:
             user_content = f"""VERIFIED SCHEME INFORMATION:
 {context_text}
 
@@ -123,8 +167,9 @@ Respond ONLY in {native_lang}. Structure your response as:
             user_content = f"""USER QUERY: {query}
 PRIMARY LANGUAGE: {native_lang}
 
-Provide helpful guidance about Indian government services. 
-Suggest official portals (india.gov.in, myscheme.gov.in). Respond in {native_lang}."""
+Answer as a broad, helpful assistant in {native_lang}.
+Keep it practical and concise.
+If the query is clearly about Indian government schemes and verified sources are missing, say that you need verified context and suggest official portals (india.gov.in, myscheme.gov.in)."""
 
         # ── Call Nova via Converse API ────────────────────────────────────────
         messages = [{"role": "user", "content": [{"text": user_content}]}]
@@ -176,10 +221,10 @@ Suggest official portals (india.gov.in, myscheme.gov.in). Respond in {native_lan
         except ClientError as e:
             error_code = e.response['Error']['Code']
             print(f"Bedrock ClientError ({error_code}): {e}")
-            return self._get_context_based_response(query, context_text, language)
+            return self._get_context_based_response(query, context_text, language, intent, scheme_hint)
         except Exception as e:
             print(f"Nova/Bedrock Error: {e}")
-            return self._get_context_based_response(query, context_text, language)
+            return self._get_context_based_response(query, context_text, language, intent, scheme_hint)
 
     def _validate_response(self, response: str) -> str:
         """
@@ -263,8 +308,8 @@ Suggest official portals (india.gov.in, myscheme.gov.in). Respond in {native_lan
                 "provenance": "vision_error",
             }
 
-    def _get_context_based_response(self, query, context_text, language='hi'):
-        """Fallback response when Bedrock is offline - now handles general questions."""
+    def _get_context_based_response(self, query, context_text, language='hi', intent='info', scheme_hint='unknown'):
+        """Fallback response when Bedrock is offline with strict-vs-broad behavior."""
         
         # Check if we have specific scheme context
         # IMPROVED: Ensure we don't treat system instructions as verified data
@@ -274,33 +319,31 @@ Suggest official portals (india.gov.in, myscheme.gov.in). Respond in {native_lan
             "I do not have specific public data" not in context_text and
             "General inquiry about" not in context_text  # Don't show our own placeholder as verified info
         )
+        scheme_related = self._is_scheme_related(query, intent, scheme_hint)
         
         provenance = "verified_doc" if has_scheme_context else "general_search"
         
-        if has_scheme_context:
+        if has_scheme_context and scheme_related:
             # Specific scheme information available
             lines = context_text.split('\n')
             primary_info = lines[0] if lines else "Scheme information"
             text = f"✅ **Verified Info**: {primary_info}\n\n📋 **Next Steps**: Please check the official government portal for application details and requirements."
+        elif scheme_related:
+            # Strict verified mode for scheme questions when context is missing.
+            text = (
+                "I can assist with this scheme, but I don't have verified source content right now.\n\n"
+                "Please ask for one specific item (eligibility, documents, process, status), "
+                "or check official portals: https://myscheme.gov.in and https://india.gov.in"
+            )
+            provenance = "strict_verified_mode"
         else:
-            # General question - provide helpful fallback
+            # Broad assistant fallback for non-scheme questions.
             if language == 'hi':
-                text = f"""नमस्ते! आपकी सहायता के लिए यहाँ कुछ सुझाव दिए गए हैं:
-
-• सरकारी योजनाओं की खोज के लिए [myscheme.gov.in](https://myscheme.gov.in) पर जाएँ।
-• आधिकारिक जानकारी [india.gov.in](https://india.gov.in) पर भी उपलब्ध है।
-• आप अपने नजदीकी जिले के सरकारी कार्यालय से भी संपर्क कर सकते हैं।
-
-आशा है कि यह जानकारी आपके काम आएगी!"""
+                text = f"""आपने पूछा: "{query}"\n\nमैं सामान्य जानकारी देने की कोशिश कर सकता हूँ, लेकिन इस समय मेरा मॉडल ऑफलाइन फ़ॉलबैक मोड में है। कृपया प्रश्न को थोड़ा स्पष्ट करें ताकि मैं बेहतर उत्तर दे सकूँ।"""
             else:
-                text = f"""I don't have specific detailed information about the query '{query}' in my current scheme database, but I can provide general guidance.
+                text = f"""You asked: "{query}".
 
-📋 **Suggestions**:
-• Search for this on [india.gov.in](https://india.gov.in)
-• Check [myscheme.gov.in](https://myscheme.gov.in) for similar government schemes
-• Contact your local district administration office
-
-🌐 **Official Source**: [https://india.gov.in](https://india.gov.in)"""
+I can provide broad guidance, but I am currently in offline fallback mode. Please ask a more specific question and I will answer as precisely as possible."""
 
         return {
             "text": text,

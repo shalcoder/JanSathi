@@ -31,26 +31,8 @@ export const buildClient = (token?: string, sessionId?: string) => {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (sessionId) headers["X-Session-Id"] = sessionId;
-  
-  const client = axios.create({ baseURL: BASE_URL, headers });
-  
-  // Add response interceptor to handle HTML error responses
-  client.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      // Check if we received HTML instead of JSON
-      if (error.response?.headers['content-type']?.includes('text/html')) {
-        if (process.env.NODE_ENV === 'development') {
-          console.debug(`API endpoint returned HTML (likely 404/500): ${error.config?.url}`);
-        }
-        // Convert to a more meaningful error
-        error.message = `API endpoint not found or returned error: ${error.config?.url}`;
-      }
-      return Promise.reject(error);
-    }
-  );
-  
-  return client;
+  // Bedrock/Agent orchestration can exceed 20s under cold starts; keep a safer timeout.
+  return axios.create({ baseURL: BASE_URL, headers, timeout: 45000 });
 };
 
 // Default unauthenticated client (legacy / health checks)
@@ -101,8 +83,8 @@ export interface BenefitReceiptSource {
 
 export interface BenefitReceipt {
   eligible: boolean;
-  rules?: string[];
-  sources?: BenefitReceiptSource[];
+  rules: string[];
+  sources: BenefitReceiptSource[];
 }
 
 export interface UnifiedQueryRequest {
@@ -115,6 +97,7 @@ export interface UnifiedQueryRequest {
   metadata?: {
     lang?: string;
     user_id?: string;
+    user_profile?: Record<string, unknown>;
   };
 }
 
@@ -128,6 +111,15 @@ export interface UnifiedQueryResponse {
   confidence?: number;
   rules_override?: boolean;
   next_actions?: string[];
+  // Slot-filling fields
+  slots?: Record<string, string | number | boolean>;
+  slots_complete?: boolean;
+  intent?: string;
+  scheme_hint?: string;
+  // Outcome fields
+  hitl_case_id?: string;
+  sms_sent?: boolean;
+  eligibility_result?: Record<string, unknown>;
   debug?: {
     model: string;
     latency_ms: number;
@@ -222,6 +214,14 @@ interface RawAgentResponse {
   citations?: Citation[];
   thoughts?: Thought[];
   provenance?: string;
+  // Agentic pipeline fields
+  slots?: Record<string, string | number | boolean>;
+  slots_complete?: boolean;
+  intent?: string;
+  scheme_hint?: string;
+  hitl_case_id?: string;
+  sms_sent?: boolean;
+  eligibility_result?: Record<string, unknown>;
 }
 
 export const sendUnifiedQuery = async (
@@ -238,6 +238,7 @@ export const sendUnifiedQuery = async (
     language: params.metadata?.lang || "en",
     channel: params.channel || "web",
     userId: params.metadata?.user_id,
+    user_profile: params.metadata?.user_profile,
   });
 
   const data = response.data;
@@ -251,6 +252,14 @@ export const sendUnifiedQuery = async (
     benefit_receipt: data.benefit_receipt,
     confidence: data.confidence || 0.9,
     audio_url: data.audio_url,
+    // Slot-filling & outcome fields from agentic pipeline
+    slots: data.slots,
+    slots_complete: data.slots_complete,
+    intent: data.intent,
+    scheme_hint: data.scheme_hint,
+    hitl_case_id: data.hitl_case_id,
+    sms_sent: data.sms_sent,
+    eligibility_result: data.eligibility_result,
     // Carry over any extra fields like citations or provenance if they exist
     ...(data.citations ? { citations: data.citations } : {}),
     ...(data.provenance ? { provenance: data.provenance } : { provenance: "AI Analysis" }),
@@ -317,6 +326,14 @@ export const initSession = async (
   const response = await client.post<{ session_id: string }>(
     "/v1/sessions/init",
   );
+  return response.data;
+};
+
+export const getUserProfile = async (
+  token?: string,
+): Promise<{ profile_complete: boolean; data?: Record<string, unknown> }> => {
+  const client = buildClient(token);
+  const response = await client.get("/v1/profile");
   return response.data;
 };
 
@@ -452,7 +469,7 @@ export const getHealth = async (): Promise<HealthStatus> => {
 export const sendQuery = async (
   params: QueryRequest | FormData,
 ): Promise<QueryResponse> => {
-  const response = await apiClient.post("/query", params, {
+  const response = await apiClient.post("/v1/query", params, {
     headers:
       params instanceof FormData
         ? { "Content-Type": "multipart/form-data" }
@@ -581,22 +598,35 @@ export interface LifeWorkflowResponse {
 export interface ProactiveAlert {
   id: string;
   title: string;
-  message: string;
-  priority: "high" | "medium" | "low";
-  channel: string;
+  message?: string;
+  sms_alert?: string;
+  benefit?: string;
+  priority: 'high' | 'medium' | 'low';
+  channel?: string;
+  action?: string;
+  link?: string;
 }
 
 export interface ProactiveAlertsResponse {
   alerts: ProactiveAlert[];
   count: number;
+  profile_summary?: { occupation: string; income_bracket: string; state: string };
+  last_refresh?: string;
 }
 
 export interface CommunityInsightsResponse {
   location: string;
   posts_analyzed: number;
-  top_scheme_topics: Array<{ topic: string; count: number }>;
-  common_document_issue: string;
-  recommended_action: string;
+  applications_analyzed?: number;
+  top_claimed_schemes?: Array<{ scheme: string; count: number }>;
+  top_scheme_topics?: Array<{ topic: string; count: number }>;
+  common_document_issues?: Array<{ issue: string; count: number }>;
+  common_document_issue?: string;
+  top_grievances?: Array<{ type: string; count: number }>;
+  ai_recommendation?: string;
+  recommended_action?: string;
+  local_officer_contact?: { name: string; phone: string; portal: string };
+  generated_at?: string;
 }
 
 export interface CivicNavigatorResponse {
@@ -698,6 +728,28 @@ export const getCommunityInsights = async (
   return response.data;
 };
 
+export const getCommunityPosts = async (
+  location?: string,
+  limit: number = 20,
+  token?: string
+): Promise<Record<string, unknown>[]> => {
+  const client = buildClient(token);
+  const q = new URLSearchParams();
+  if (location) q.set("location", location);
+  q.set("limit", limit.toString());
+  const response = await client.get<Record<string, unknown>[]>(`/v1/community/posts?${q.toString()}`);
+  return response.data;
+};
+
+export const createCommunityPost = async (
+  payload: { title: string; content: string; author?: string; role?: string; location?: string },
+  token?: string
+): Promise<{ status: string; post: Record<string, unknown> }> => {
+  const client = buildClient(token);
+  const response = await client.post("/v1/community/posts", payload);
+  return response.data;
+};
+
 export const getCivicNavigator = async (
   location: string,
   service: string = "csc",
@@ -743,27 +795,20 @@ export const reportFraud = async (
 
 export const getCivicImpact = async (token?: string): Promise<CivicImpactMetrics> => {
   const client = buildClient(token);
-  const response = await client.get<CivicImpactMetrics>("/v1/civic/impact");
+  const response = await client.get<CivicImpactMetrics>("/v1/civic/impact", { timeout: 6000 });
   return response.data;
 };
 
 export const seedDatabase = async (): Promise<unknown> => {
-  try {
-    const response = await apiClient.post("/v1/admin/seed");
-    return response.data;
-  } catch (err: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Seed endpoint not available');
-    }
-    return { message: "Seed endpoint not available" };
-  }
+  const response = await apiClient.post("/v1/admin/seed");
+  return response.data;
 };
 
 export const applyForScheme = async (
   user_id: string,
   scheme_name: string,
 ): Promise<unknown> => {
-  const response = await apiClient.post("/apply", { user_id, scheme_name });
+  const response = await apiClient.post("/v1/apply", { user_id, scheme_name });
   return response.data;
 };
 
@@ -786,14 +831,10 @@ export interface IvrSession {
 export const getIvrSessions = async (token?: string | null): Promise<IvrSession[]> => {
   try {
     const api = buildClient(token || undefined);
-    const response = await api.get("/ivr/sessions");
+    const response = await api.get("/v1/ivr/sessions", { timeout: 5000 });
     return response.data;
-  } catch (err: any) {
-    // Silently return empty array for network errors or empty responses
-    // This is expected when no IVR sessions are active
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('IVR sessions fetch failed (expected when no active sessions):', err?.message);
-    }
+  } catch (err) {
+    // Silently return empty — polling will retry on next interval
     return [];
   }
 };
@@ -801,12 +842,10 @@ export const getIvrSessions = async (token?: string | null): Promise<IvrSession[
 export const simulateIvrCall = async (payload: Record<string, unknown>, token?: string | null): Promise<Record<string, unknown>> => {
   try {
     const api = buildClient(token || undefined);
-    const response = await api.post("/ivr/connect-webhook", payload);
+    const response = await api.post("/v1/ivr/connect-webhook", payload);
     return response.data;
-  } catch (err: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('IVR call simulation failed:', err?.message);
-    }
+  } catch (err) {
+    console.error("Failed to simulate IVR call", err);
     throw err;
   }
 };
@@ -824,14 +863,10 @@ export interface HitlCase {
 export const getHitlCases = async (token?: string | null): Promise<HitlCase[]> => {
   try {
     const api = buildClient(token || undefined);
-    const response = await api.get("/admin/cases");
+    const response = await api.get("/v1/admin/cases?status=pending_review");
     return response.data;
-  } catch (err: any) {
-    // Silently return empty array for network errors or empty responses
-    // This is expected when no HITL cases are pending
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('HITL cases fetch failed (expected when no pending cases):', err?.message);
-    }
+  } catch (err) {
+    console.error("Failed to fetch HITL cases", err);
     return [];
   }
 };
@@ -839,11 +874,9 @@ export const getHitlCases = async (token?: string | null): Promise<HitlCase[]> =
 export const resolveHitlCase = async (caseId: string, action: "approve" | "reject", token?: string | null): Promise<void> => {
   try {
     const api = buildClient(token || undefined);
-    await api.post(`/admin/cases/${caseId}/${action}`);
-  } catch (err: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`HITL case resolution failed for ${caseId}:`, err?.message);
-    }
+    await api.post(`/v1/admin/cases/${caseId}/${action}`);
+  } catch (err) {
+    console.error(`Failed to resolve HITL case ${caseId}`, err);
     throw err;
   }
 };
@@ -860,13 +893,10 @@ export interface AuditRecord {
 export const getAuditLogs = async (token?: string | null): Promise<AuditRecord[]> => {
   try {
     const api = buildClient(token || undefined);
-    const response = await api.get("/admin/audit");
+    const response = await api.get("/v1/admin/audit");
     return response.data.records || [];
-  } catch (err: any) {
-    // Silently return empty array - expected when no audit logs exist
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Audit logs fetch failed (expected when no logs):', err?.message);
-    }
+  } catch (err) {
+    console.error("Failed to fetch audit records", err);
     return [];
   }
 };

@@ -1,30 +1,18 @@
 """
 v1_routes.py — Unified /v1/* API endpoints for JanSathi.
-
-These endpoints are called by the frontend (api.ts) and are NOT in the
-legacy routes.py to avoid breaking existing integrations.
-
-Endpoints:
-  POST /v1/sessions/init            → create/get session
-  GET  /v1/sessions/<session_id>    → get session state
-  POST /v1/query                    → unified chat query
-  POST /v1/query/audio              → audio query (multipart)
-  POST /v1/apply                    → submit scheme application
-  GET  /v1/applications             → list applications for session/user
-  POST /v1/upload-presign           → get S3 presigned URL for document upload
-  GET  /v1/admin/cases              → HITL case queue (admin)
-  POST /v1/admin/cases/<id>/approve → approve HITL case
-  POST /v1/admin/cases/<id>/reject  → reject HITL case
-  GET  /v1/ivr/sessions             → active IVR session list (admin)
-  POST /v1/ivr/connect-webhook      → Amazon Connect Lambda invocation proxy
 """
 
 import uuid
 import os
 import time
 import logging
-
 from flask import Blueprint, request, jsonify, current_app, g
+
+logger = logging.getLogger(__name__)
+v1 = Blueprint("v1", __name__, url_prefix="/v1")
+
+print("DEBUG: v1_routes.py imports starting...", flush=True)
+
 from app.services.hitl_service import HITLService
 from app.services.notify_service import NotifyService
 from app.services.ivr_service import IVRService
@@ -32,16 +20,15 @@ from app.services.rag_service import RagService
 from app.services.scheme_feed_service import SchemeFeedService
 from app.services.civic_infra_service import CivicInfraService
 from app.services.bedrock_service import PDF_CONTEXT_STORE
+
+print("DEBUG: Importing process_user_input from execution...", flush=True)
 from app.core.execution import process_user_input
+print("DEBUG: process_user_input imported.", flush=True)
+
 from app.core.middleware import require_auth, require_admin
 from app.core.schema_validator import validate_unified_event, UnifiedResponse
 from app.models.models import db, CommunityPost, UserDocument, Conversation, SchemeApplication
 from agentic_engine.session_manager import SessionManager
-from agentic_engine.storage import LocalJSONStorage
-
-logger = logging.getLogger(__name__)
-
-v1 = Blueprint("v1", __name__, url_prefix="/v1")
 
 # ── Singletons ────────────────────────────────────────────────────────────────
 hitl_service = HITLService()
@@ -198,17 +185,42 @@ def unified_query():
 
     # Route through process_user_input (agentic engine)
     try:
-        result = process_user_input(message=event.message, session_id=event.session_id)
+        # Use user_profile if provided by client, fallback to user_context
+        u_profile = event.user_profile if event.user_profile is not None else event.user_context
+        
+        result = process_user_input(
+            message=event.message, 
+            session_id=event.session_id,
+            language=event.language,
+            user_profile=u_profile,
+            channel=event.channel
+        )
     except Exception as e:
         logger.error(f"[v1/query] Engine error: {e}")
-        return UnifiedResponse.error(str(e), status=500)
+        _lang = getattr(event, 'language', 'hi')
+        _offline = {
+            'hi': '🙏 अभी सर्वर से जुड़ने में समस्या है। कृपया कुछ देर बाद पुनः प्रयास करें।\n\n📋 आधिकारिक जानकारी: https://myscheme.gov.in',
+            'ta': '🙏 இப்போது சேவையகத்துடன் சிக்கல். 📋 https://myscheme.gov.in',
+            'te': '🙏 సర్వర్ సమస్య. 📋 https://myscheme.gov.in',
+            'en': '🙏 Having trouble connecting right now. Please try again in a moment.\n\n📋 https://myscheme.gov.in',
+        }
+        fallback_text = _offline.get(_lang, _offline['en'])
+        return UnifiedResponse.success({
+            "session_id": event.session_id,
+            "transcript": event.message,
+            "response_text": fallback_text,
+            "audio_url": None,
+            "language": _lang,
+            "channel": getattr(event, 'channel', 'web'),
+            "confidence": 0.0,
+            "latency_ms": round((time.perf_counter() - start_time) * 1000, 2),
+        }), 200
 
     response_text = result.get("response", "")
     benefit_receipt = result.get("benefit_receipt")
     confidence = result.get("eligibility_score", 0.9)
     latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-    # Try to generate Polly audio (best-effort)
     audio_url = None
     try:
         from app.services.polly_service import PollyService
@@ -227,6 +239,15 @@ def unified_query():
         "benefit_receipt": benefit_receipt,
         "requires_input": result.get("requires_input", False),
         "is_terminal": result.get("is_terminal", False),
+        # Life Event Workflow — present only when a life event was detected
+        "life_event": {
+            "detected":  result.get("is_life_event", False),
+            "event_id":  result.get("life_event_id"),
+            "label":     result.get("life_event_label"),
+            "icon":      result.get("life_event_icon"),
+            "summary":   result.get("life_event_summary"),
+            "workflow":  result.get("life_event_workflow", []),
+        } if result.get("is_life_event") else None,
         "debug": {
             "model": "claude-3-haiku / rule-based",
             "latency_ms": latency_ms,
@@ -273,6 +294,147 @@ def audio_query():
         "channel": "web",
     }
     return unified_query()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IVR VOICE ENDPOINT — real-time speech pipeline with 9-agent trace
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# All 9 agents in pipeline order (matches agentcore/tools.py)
+_AGENT_ORDER = [
+    "IntentClassifier",
+    "KnowledgeRetriever",
+    "EligibilityValidator",
+    "RiskAssessor",
+    "ResponseGenerator",
+    "SchemeAdvisor",
+    "DocumentOrchestrator",
+    "NotificationAgent",
+    "HITLRouter",
+]
+
+# Map local result fields → agents that were invoked
+def _derive_agents_local(result: dict) -> list:
+    """Infer which agents ran based on local pipeline result fields."""
+    action = result.get("action_type", "")
+    activated = ["IntentClassifier"]  # always runs
+    if result.get("response"):
+        activated.append("KnowledgeRetriever")
+        activated.append("ResponseGenerator")
+    receipt = result.get("benefit_receipt") or {}
+    if receipt:
+        activated.extend(["EligibilityValidator", "RiskAssessor", "DocumentOrchestrator"])
+    if receipt.get("eligible"):
+        activated.extend(["SchemeAdvisor", "NotificationAgent"])
+    activated.append("HITLRouter")
+    # Keep canonical order
+    return [a for a in _AGENT_ORDER if a in activated]
+
+
+# Map AgentCore thoughts (tool_call traces) → agent names
+def _derive_agents_agentcore(thoughts: list) -> list:
+    _tool_to_agent = {
+        "classify_intent":       "IntentClassifier",
+        "retrieve_knowledge":    "KnowledgeRetriever",
+        "validate_eligibility":  "EligibilityValidator",
+        "compute_risk_score":    "RiskAssessor",
+        "generate_response":     "ResponseGenerator",
+        "fetch_live_schemes":    "SchemeAdvisor",
+        "create_benefit_receipt":"DocumentOrchestrator",
+        "send_sms_notification": "NotificationAgent",
+        "enqueue_hitl_case":     "HITLRouter",
+    }
+    seen: set = set()
+    agents = []
+    for t in thoughts:
+        if t.get("type") == "tool_call":
+            a = _tool_to_agent.get(t.get("tool", ""))
+            if a and a not in seen:
+                agents.append(a)
+                seen.add(a)
+    return agents or ["IntentClassifier", "KnowledgeRetriever", "ResponseGenerator"]
+
+
+@v1.route("/ivr/voice", methods=["POST"])
+def ivr_voice():
+    """
+    POST /v1/ivr/voice
+    Real-time agentic voice pipeline with 9-agent trace + Polly TTS.
+
+    Body: { session_id, text, language, channel, user_profile }
+    Returns: { response_text, audio_url, agents_activated, telemetry, is_terminal }
+    """
+    body = request.get_json(silent=True) or {}
+    session_id = body.get("session_id") or f"ivr-{uuid.uuid4().hex[:12]}"
+    text = (body.get("text") or "").strip()
+    language = body.get("language", "hi")
+    channel = body.get("channel", "web-ivr")
+    user_profile = body.get("user_profile") or {}
+
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+
+    start_time = time.perf_counter()
+    use_agentcore = os.getenv("USE_AGENTCORE", "false").lower() == "true"
+
+    try:
+        if use_agentcore:
+            from agentcore.invoke import invoke_agentcore
+            result = invoke_agentcore(
+                user_message=text,
+                session_id=session_id,
+                language=language,
+                channel=channel,
+            )
+            response_text = result.get("response_text") or result.get("response") or ""
+            agents_activated = _derive_agents_agentcore(result.get("thoughts", []))
+            thoughts = result.get("thoughts", [])
+            benefit_receipt = result.get("benefit_receipt")
+            is_terminal = result.get("is_terminal", False)
+        else:
+            result = process_user_input(
+                message=text,
+                session_id=session_id,
+                language=language,
+                user_profile=user_profile,
+                channel=channel,
+            )
+            response_text = result.get("response") or result.get("response_text") or ""
+            agents_activated = _derive_agents_local(result)
+            thoughts = []
+            benefit_receipt = result.get("benefit_receipt")
+            is_terminal = result.get("is_terminal", False)
+    except Exception as e:
+        logger.error(f"[ivr/voice] Engine error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+    # Polly TTS — synthesise in the requested language
+    audio_url = None
+    try:
+        from app.services.polly_service import PollyService
+        audio_url = PollyService().synthesize(response_text, language)
+    except Exception as pe:
+        logger.warning(f"[ivr/voice] Polly synthesis failed (non-fatal): {pe}")
+
+    latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    logger.info(f"[ivr/voice] lang={language} agents={agents_activated} latency={latency_ms}ms")
+
+    return jsonify({
+        "session_id": session_id,
+        "response_text": response_text,
+        "audio_url": audio_url,
+        "language": language,
+        "agents_activated": agents_activated,
+        "benefit_receipt": benefit_receipt,
+        "is_terminal": is_terminal,
+        "telemetry": {
+            "latency_ms": latency_ms,
+            "intent": result.get("action_type", ""),
+            "confidence": result.get("eligibility_score", result.get("confidence", 0.85)),
+            "agents_count": len(agents_activated),
+        },
+        "thoughts": thoughts,
+    }), 200
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -742,7 +904,19 @@ def civic_fraud_report():
 
 @v1.route("/civic/impact", methods=["GET"])
 def civic_impact():
-    return jsonify(civic_infra_service.get_impact_metrics()), 200
+    try:
+        return jsonify(civic_infra_service.get_impact_metrics()), 200
+    except Exception as e:
+        logger.error(f"[civic/impact] Unexpected error: {e}")
+        return jsonify({
+            "citizens_served": 0,
+            "applications_processed": 0,
+            "community_posts": 0,
+            "fraud_reports": 0,
+            "estimated_benefits_unlocked_inr": 0,
+            "estimated_trips_avoided": 0,
+            "grievances_resolved": 0,
+        }), 200
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # COMMUNITY / FORUM ENDPOINTS 
@@ -1003,6 +1177,7 @@ def agent_invoke():
 
         return jsonify({
             "session_id":         final_state.get("session_id", session_id),
+            "turn_id":            final_state.get("turn_id", f"turn-{uuid.uuid4().hex[:8]}"),
             "response_text":      final_state.get("response_text", ""),
             "intent":             final_state.get("intent", ""),
             "intent_confidence":  final_state.get("intent_confidence", 0),

@@ -4,51 +4,35 @@ import withPWAModule from "@ducanh2912/next-pwa";
 const withPWA = withPWAModule({
   dest: "public",
   register: true,
-  // skipWaiting: true, // Deprecated/Invalid in newer version
   disable: process.env.NODE_ENV === "development",
 });
 
-const isProduction = process.env.NODE_ENV === "production";
-const isStaticExport = true; // Enforced for AWS S3 deployment
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://b0z0h6knui.execute-api.us-east-1.amazonaws.com";
 
 const nextConfig: NextConfig = {
-  // Static export for S3 + CloudFront deployment (Only if explicitly requested)
-  ...(isStaticExport && { output: "export" }),
+  // SSR mode — Amplify handles build & hosting (no static export needed)
 
-  // Environment variables available in browser
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://jansathi.onrender.com",
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_Y2xlcmsuY2xlcmsuY29tJ",
+    NEXT_PUBLIC_API_URL: API_URL,
   },
 
-  // Rewrites only work in dev mode (not with static export)
-  ...(!isProduction && {
-    async rewrites() {
-      return [
-        {
-          source: "/query",
-          destination: "https://jansathi.onrender.com/query",
-        },
-        {
-          source: "/health",
-          destination: "https://jansathi.onrender.com/health",
-        },
-        {
-          source: "/schemes",
-          destination: "https://jansathi.onrender.com/schemes",
-        },
-        {
-          source: "/analyze",
-          destination: "https://jansathi.onrender.com/analyze",
-        },
-      ];
-    },
-  }),
+  // Proxy all /v1/* and /health* requests to Lambda — avoids CORS in production
+  async rewrites() {
+    return [
+      {
+        source: "/v1/:path*",
+        destination: `${API_URL}/v1/:path*`,
+      },
+      {
+        source: "/health",
+        destination: `${API_URL}/health`,
+      },
+    ];
+  },
 
-  // Image optimization disabled for static export
   images: {
     unoptimized: true,
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

@@ -12,6 +12,7 @@ scikit-learn==1.8.0
 numpy==2.4.1
 scipy==1.17.0
 beautifulsoup4==4.14.3
+duckduckgo-search==6.3.7
 pydantic==2.12.5
 mangum==0.19.0
 pyyaml==6.0.2

@@ -1,13 +1,13 @@
 import os
 import sys
-# Add current directory to path for local module resolution
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
+print("DEBUG: models.py basic imports done", flush=True)
 db = SQLAlchemy()
 
+print("DEBUG: Defining Conversation model...", flush=True)
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), index=True) 
@@ -30,6 +30,7 @@ class Conversation(db.Model):
             "timestamp": self.timestamp.isoformat()
         }
 
+print("DEBUG: Defining UserProfile model...", flush=True)
 class UserProfile(db.Model):
     """
     Rich citizen profile for scheme matching, IVR caller identification, and SMS alerts.
@@ -111,6 +112,7 @@ class UserProfile(db.Model):
             "preferred_language": self.preferred_language or "hi",
         }
 
+print("DEBUG: Defining AuditLog model...", flush=True)
 class AuditLog(db.Model):
     """Human-in-the-loop audit data."""
     id = db.Column(db.Integer, primary_key=True)
@@ -130,6 +132,7 @@ class AuditLog(db.Model):
             "timestamp": self.timestamp.isoformat()
         }
 
+print("DEBUG: Defining SchemeApplication model...", flush=True)
 class SchemeApplication(db.Model):
     """Tracks status of simulated/real applications."""
     id = db.Column(db.Integer, primary_key=True)
@@ -149,6 +152,7 @@ class SchemeApplication(db.Model):
             "updated_at": self.updated_at.isoformat()
         }
 
+print("DEBUG: Defining Scheme model...", flush=True)
 class Scheme(db.Model):
     """Government Scheme Data"""
     id = db.Column(db.String(100), primary_key=True)
@@ -176,6 +180,7 @@ class Scheme(db.Model):
             "version": self.version
         }
 
+print("DEBUG: Defining UserDocument model...", flush=True)
 class UserDocument(db.Model):
     """User Uploaded Documents"""
     id = db.Column(db.String(100), primary_key=True)
@@ -195,6 +200,7 @@ class UserDocument(db.Model):
             "date": self.uploaded_at.isoformat()
         }
 
+print("DEBUG: Defining CommunityPost model...", flush=True)
 class CommunityPost(db.Model):
     """Local Forum Posts"""
     id = db.Column(db.Integer, primary_key=True)
@@ -221,6 +227,7 @@ class CommunityPost(db.Model):
         }
 
 
+print("DEBUG: Defining LifeEventCase model...", flush=True)
 class LifeEventCase(db.Model):
     """Tracks execution state for life-event automation workflows."""
     id = db.Column(db.Integer, primary_key=True)
@@ -250,6 +257,7 @@ class LifeEventCase(db.Model):
         }
 
 
+print("DEBUG: Defining LifeEventStep model...", flush=True)
 class LifeEventStep(db.Model):
     """Individual step rows for each life-event case."""
     id = db.Column(db.Integer, primary_key=True)
@@ -274,6 +282,7 @@ class LifeEventStep(db.Model):
         }
 
 
+print("DEBUG: Defining CivicJourneyEvent model...", flush=True)
 class CivicJourneyEvent(db.Model):
     """Persistent journey timeline across channels."""
     id = db.Column(db.Integer, primary_key=True)
@@ -292,3 +301,4 @@ class CivicJourneyEvent(db.Model):
             "updated_at": self.created_at.isoformat() if self.created_at else None,
             "metadata": self.metadata_json or {},
         }
+print("DEBUG: models.py LOADED COMPLETELY", flush=True)

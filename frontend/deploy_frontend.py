@@ -2,10 +2,108 @@ import boto3
 import os
 import time
 import mimetypes
+from urllib.parse import urlparse
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 
 load_dotenv()
+load_dotenv('.env.local', override=True)
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', 'backend', '.env'), override=False)
+
+
+def _extract_api_domain() -> str | None:
+    """Read API URL from env and return host part (for CloudFront origin)."""
+    api_url = os.getenv("NEXT_PUBLIC_API_URL", "").strip()
+    if not api_url:
+        return None
+    parsed = urlparse(api_url)
+    return parsed.netloc or None
+
+
+def _ensure_cloudfront_api_routing(cloudfront, dist_id: str, api_domain: str) -> bool:
+    """Attach API Gateway as CloudFront origin and map API paths to it."""
+    api_origin_id = "jansathi-api-gateway-origin"
+    changed = False
+
+    config_resp = cloudfront.get_distribution_config(Id=dist_id)
+    etag = config_resp["ETag"]
+    config = config_resp["DistributionConfig"]
+
+    origins = config["Origins"]["Items"]
+    origin_exists = any(o["Id"] == api_origin_id for o in origins)
+    if not origin_exists:
+        origins.append(
+            {
+                "Id": api_origin_id,
+                "DomainName": api_domain,
+                "OriginPath": "",
+                "CustomHeaders": {"Quantity": 0},
+                "CustomOriginConfig": {
+                    "HTTPPort": 80,
+                    "HTTPSPort": 443,
+                    "OriginProtocolPolicy": "https-only",
+                    "OriginSslProtocols": {"Quantity": 1, "Items": ["TLSv1.2"]},
+                    "OriginReadTimeout": 30,
+                    "OriginKeepaliveTimeout": 5,
+                },
+                "ConnectionAttempts": 3,
+                "ConnectionTimeout": 10,
+                "OriginShield": {"Enabled": False},
+            }
+        )
+        config["Origins"]["Quantity"] = len(origins)
+        changed = True
+
+    existing_behaviors = config.get("CacheBehaviors", {}).get("Items", [])
+    existing_patterns = {b.get("PathPattern") for b in existing_behaviors}
+
+    api_patterns = ["/v1/*", "/health*"]
+    for pattern in api_patterns:
+        if pattern in existing_patterns:
+            continue
+
+        existing_behaviors.append(
+            {
+                "PathPattern": pattern,
+                "TargetOriginId": api_origin_id,
+                "TrustedSigners": {"Enabled": False, "Quantity": 0},
+                "TrustedKeyGroups": {"Enabled": False, "Quantity": 0},
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                    "Quantity": 7,
+                    "Items": ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"],
+                    "CachedMethods": {"Quantity": 2, "Items": ["GET", "HEAD"]},
+                },
+                "SmoothStreaming": False,
+                "Compress": True,
+                "LambdaFunctionAssociations": {"Quantity": 0},
+                "FunctionAssociations": {"Quantity": 0},
+                "FieldLevelEncryptionId": "",
+                # Disable cache for dynamic API traffic.
+                "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+                # Forward auth/query/cookies required by API Gateway and JWT-protected routes.
+                "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+                "GrpcConfig": {"Enabled": False},
+            }
+        )
+        changed = True
+
+    if not changed:
+        print("CloudFront API routing already configured.")
+        return False
+
+    config["CacheBehaviors"] = {
+        "Quantity": len(existing_behaviors),
+        "Items": existing_behaviors,
+    }
+
+    cloudfront.update_distribution(
+        Id=dist_id,
+        IfMatch=etag,
+        DistributionConfig=config,
+    )
+    print("Updated CloudFront distribution with API Gateway origin and API path behaviors.")
+    return True
 
 def deploy_frontend():
     region = 'us-east-1'
@@ -22,8 +120,28 @@ def deploy_frontend():
         print(f"Failed to get AWS identity. Check your credentials: {e}")
         return
 
-    # Use a stable bucket name
+    # Use a stable bucket name by default; override with existing CloudFront origin bucket when available.
     bucket_name = f"jansathi-frontend-{account_id}-prod"
+
+    existing_dist_id = None
+    existing_cf_domain = None
+    try:
+        dists = cloudfront.list_distributions().get('DistributionList', {}).get('Items', [])
+        for d in dists:
+            if 'JanSathi' in d.get('Comment', ''):
+                existing_dist_id = d['Id']
+                existing_cf_domain = d['DomainName']
+                cfg = cloudfront.get_distribution(Id=existing_dist_id)['Distribution']['DistributionConfig']
+                origin_domain = cfg['Origins']['Items'][0]['DomainName']
+                if '.s3-website-' in origin_domain:
+                    bucket_name = origin_domain.split('.s3-website-')[0]
+                elif '.s3.' in origin_domain:
+                    bucket_name = origin_domain.split('.s3.')[0]
+                print(f"Found existing distribution: {existing_dist_id} ({existing_cf_domain})")
+                print(f"Using CloudFront origin bucket: {bucket_name}")
+                break
+    except ClientError as e:
+        print(f"Could not inspect CloudFront distribution origin (AccessDenied). Using default bucket {bucket_name}.")
     
     print(f"Targeting S3 Bucket: {bucket_name}...")
     
@@ -129,23 +247,33 @@ def deploy_frontend():
 
     # 3. CloudFront Check/Update
     print("\nChecking for existing CloudFront distributions...")
-    dist_id = None
-    cf_domain = None
+    dist_id = existing_dist_id
+    cf_domain = existing_cf_domain
     
     try:
-        dists = cloudfront.list_distributions().get('DistributionList', {}).get('Items', [])
-        for d in dists:
-            if 'JanSathi' in d.get('Comment', ''):
-                dist_id = d['Id']
-                cf_domain = d['DomainName']
-                print(f"Found existing distribution: {dist_id} ({cf_domain})")
-                break
+        if not dist_id:
+            dists = cloudfront.list_distributions().get('DistributionList', {}).get('Items', [])
+            for d in dists:
+                if 'JanSathi' in d.get('Comment', ''):
+                    dist_id = d['Id']
+                    cf_domain = d['DomainName']
+                    print(f"Found existing distribution: {dist_id} ({cf_domain})")
+                    break
     except ClientError as e:
         print(f"Could not list distributions (AccessDenied). Proceeding with S3 URL.")
 
     if not dist_id:
         print("No existing JanSathi distribution found. You may need to create one manually if permissions are limited.")
     else:
+        api_domain = _extract_api_domain()
+        if api_domain:
+            try:
+                _ensure_cloudfront_api_routing(cloudfront, dist_id, api_domain)
+            except Exception as e:
+                print(f"CloudFront API routing update failed: {e}")
+        else:
+            print("NEXT_PUBLIC_API_URL not set; skipping CloudFront API routing setup.")
+
         # Optionally invalidate cache
         try:
             print(f"Invalidating CloudFront cache for {dist_id}...")

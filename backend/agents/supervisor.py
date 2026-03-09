@@ -3,23 +3,32 @@ supervisor.py — JanSathi LangGraph StateGraph Orchestrator
 ===========================================================
 Wires all 9 agent nodes into a compiled LangGraph graph.
 
-Flow:
+Flow (intent-aware smart routing):
   START
     ↓
-  telecom_agent       ← consent gate
+  telecom_agent            ← consent gate
     ↓ (conditional: END if no consent)
-  intent_agent        ← classify intent + detect scheme
-    ↓
-  rag_agent           ← retrieve knowledge
-    ↓
-  slot_collection_agent  ← collect user profile (may return early for more slots)
-    ↓ (conditional: loop back or proceed)
-  rules_agent         ← deterministic eligibility (no LLM)
-    ↓
-  verifier_agent      ← risk scoring + routing decision
-    ↓ (conditional)
-    ├─ AUTO_SUBMIT/NOT_ELIGIBLE → response_agent → notification_agent → END
-    └─ HITL_QUEUE              → hitl_agent → notification_agent → END
+  intent_agent             ← classify intent + detect scheme
+    ↓ (always)
+  rag_agent                ← retrieve knowledge (needed by ALL intents)
+    ↓ (conditional on intent)
+    │
+    ├─ apply ──────────────────────────────────────────────────────────────────
+    │    ↓
+    │  slot_collection_agent  ← collect user profile (may END early for more slots)
+    │    ↓ (slots complete)
+    │  rules_agent            ← deterministic eligibility (no LLM)
+    │    ↓
+    │  verifier_agent         ← risk scoring + routing decision
+    │    ↓ (conditional)
+    │    ├─ AUTO_SUBMIT/NOT_ELIGIBLE → response_agent → notification_agent → END
+    │    └─ HITL_QUEUE              → hitl_agent → notification_agent → END
+    │
+    └─ info / grievance / track / fallback ─────────────────────────────────
+         ↓
+       response_agent        ← generate answer directly from RAG context
+         ↓
+       notification_agent → END
 """
 import logging
 from typing import Literal
@@ -32,6 +41,7 @@ except ImportError:
 
 from .state import JanSathiState, initial_state
 from .telecom_agent import telecom_agent, should_continue_after_telecom
+from .life_event_agent import life_event_agent, route_after_life_event_check
 from .intent_agent import intent_agent
 from .rag_agent import rag_agent
 from .slot_collection_agent import slot_collection_agent, should_continue_slot_collection
@@ -42,6 +52,26 @@ from .notification_agent import notification_agent
 from .hitl_agent import hitl_agent
 
 logger = logging.getLogger(__name__)
+
+# ── Intent-based routing functions ───────────────────────────────────────────
+
+# Intents that need the full apply pipeline (slots → rules → verifier → HITL)
+_APPLY_PIPELINE_INTENTS = {"apply"}
+
+def route_after_rag(state: JanSathiState) -> str:
+    """
+    After RAG retrieval, decide whether to run the full apply pipeline
+    or jump straight to response generation.
+
+    - apply  → slot_collection_agent (needs profile, eligibility check, risk)
+    - info / grievance / track / fallback → response_agent (answer from RAG context)
+    """
+    intent = state.get("intent", "fallback")
+    if intent in _APPLY_PIPELINE_INTENTS:
+        logger.info(f"[Supervisor] intent='{intent}' → full apply pipeline")
+        return "slot_collection_agent"
+    logger.info(f"[Supervisor] intent='{intent}' → direct response (skipping slots/rules/verifier)")
+    return "response_agent"
 
 
 def create_graph():
@@ -67,6 +97,8 @@ def create_graph():
     graph.add_node("hitl_agent",             hitl_agent)
     graph.add_node("notification_agent",     notification_agent)
 
+    graph.add_node("life_event_agent", life_event_agent)
+
     # ── Entry point ───────────────────────────────────────────────────────────
     graph.set_entry_point("telecom_agent")
 
@@ -75,18 +107,39 @@ def create_graph():
         "telecom_agent",
         should_continue_after_telecom,
         {
-            "intent_agent": "intent_agent",
+            "life_event_agent": "life_event_agent",
             "__end__": END,
         },
     )
 
-    # ── Edge 2: Intent → RAG (always) ────────────────────────────────────────
+    # ── Edge 1b: Life event check ─────────────────────────────────────────────
+    # life event detected → response_agent (workflow already in state, skip LLM pipeline)
+    # no life event      → intent_agent (normal flow)
+    graph.add_conditional_edges(
+        "life_event_agent",
+        route_after_life_event_check,
+        {
+            "response_agent": "response_agent",
+            "intent_agent":   "intent_agent",
+        },
+    )
+
+    # ── Edge 2: Intent → RAG (always — all intents need knowledge context) ──────
     graph.add_edge("intent_agent", "rag_agent")
 
-    # ── Edge 3: RAG → Slot Collection ────────────────────────────────────────
-    graph.add_edge("rag_agent", "slot_collection_agent")
+    # ── Edge 3: RAG → smart routing based on intent ───────────────────────────
+    # apply  → slot_collection_agent (full eligibility pipeline)
+    # others → response_agent directly (no slots/rules/verifier overhead)
+    graph.add_conditional_edges(
+        "rag_agent",
+        route_after_rag,
+        {
+            "slot_collection_agent": "slot_collection_agent",
+            "response_agent":        "response_agent",
+        },
+    )
 
-    # ── Edge 4: Slot collection loop gate ────────────────────────────────────
+    # ── Edge 4: Slot collection loop gate (apply pipeline only) ─────────────
     # If slots incomplete → END early (client re-invokes with user's answer)
     # If slots complete  → rules_agent
     graph.add_conditional_edges(

@@ -19,11 +19,18 @@ class UnifiedEventObject(BaseModel):
     # Context injected by early lookup (e.g. caller DB match)
     user_context: Dict[str, Any] = Field(default_factory=dict, description="Metadata like caller phone, profile")
     
+    # Optional alias for user_context used by some clients
+    user_profile: Optional[Dict[str, Any]] = Field(default=None, description="Legacy alias for user_context")
+    
     # Metadata for specific channels
     channel_metadata: Dict[str, Any] = Field(default_factory=dict, description="Channel specific data (DTMF, Confidence)")
     
     # Security/Consent flags
     consent_given: bool = Field(default=False, description="Whether the user explicitly consented")
+
+    class Config:
+        extra = "allow"
+        arbitrary_types_allowed = True
 
     def __str__(self):
         return f"[{self.channel.upper()}] {self.session_id} - {self.language}: '{self.message}'"

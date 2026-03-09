@@ -1,3 +1,0 @@
-SCHEMES LOADED: ['Government Schemes']
-DEBUG: [Search] No RAG matches above 0.0. Falling back to search-based answer.
-SCORES: []

@@ -8,7 +8,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Authenticator, View, useTheme, useAuthenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 
-export default function SignUp() {
+// Inner component — must live inside Authenticator.Provider to use useAuthenticator
+function SignUpContent() {
     const router = useRouter();
     const { authStatus } = useAuthenticator(context => [context.authStatus]);
 
@@ -151,5 +152,14 @@ export default function SignUp() {
                 }
             `}</style>
         </div>
+    );
+}
+
+// Wrap with Authenticator.Provider so useAuthenticator works inside SignUpContent
+export default function SignUp() {
+    return (
+        <Authenticator.Provider>
+            <SignUpContent />
+        </Authenticator.Provider>
     );
 }

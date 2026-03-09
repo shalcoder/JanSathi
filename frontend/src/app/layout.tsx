@@ -11,6 +11,15 @@ import { configureAmplify } from "@/lib/cognito";
 // Configure Amplify/Cognito once at app boot
 configureAmplify();
 
+export const metadata = {
+  themeColor: '#2563eb',
+  description: 'JanSathi AI - Government scheme assistant for rural India',
+  manifest: '/manifest.json',
+  icons: {
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+};
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -28,11 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#2563eb" />
-        <meta name="description" content="JanSathi AI - Government scheme assistant for rural India" />
-      </head>
+      <head />
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased scrollbar-none`}

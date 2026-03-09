@@ -240,6 +240,7 @@ export default function Home() {
           <div className="flex items-center gap-6">
             <button
               onClick={() => setIsSidebarOpen(true)}
+              aria-label="Open sidebar"
               className="p-2 hover:bg-secondary rounded-lg lg:hidden transition-colors"
             >
               <Menu className="w-6 h-6 text-foreground" />
@@ -263,6 +264,7 @@ export default function Home() {
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
+                aria-label="Toggle notifications"
                 className="p-2.5 bg-secondary/50 hover:bg-secondary rounded-xl transition-colors border border-border/50 relative active:scale-95"
               >
                 <Bell className="w-5 h-5 text-secondary-foreground" />

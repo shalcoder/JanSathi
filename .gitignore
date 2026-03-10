@@ -5,7 +5,9 @@ Thumbs.db
 *.bak
 *.swp
 *.swo
-
+*.zip
+*.tar.gz
+*.war
 # IDEs
 .idea/
 .vscode/

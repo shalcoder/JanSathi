@@ -1,0 +1,136 @@
+name: Security Scan
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+jobs:
+  check-aws-keys:
+    name: Check for Exposed AWS Keys
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Scan for AWS Access Key IDs
+        id: scan_access_keys
+        run: |
+          echo "🔍 Scanning repository for exposed AWS Access Key IDs (AKIA...)..."
+          # Match AWS Access Key ID pattern: AKIA followed by 16 uppercase alphanumeric chars
+          # Exclude .git directory and this workflow file itself
+          MATCHES=$(grep -rn \
+            -E "AKIA[A-Z0-9]{16}" \
+            --exclude-dir=".git" \
+            --exclude="security-scan.yml" \
+            . 2>/dev/null || true)
+
+          if [ -n "$MATCHES" ]; then
+            echo "status=EXPOSED" >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "❌ EXPOSED AWS Access Key IDs found:"
+            echo "$MATCHES"
+          else
+            echo "status=CLEAN" >> "$GITHUB_OUTPUT"
+            echo "✅ No exposed AWS Access Key IDs found."
+          fi
+
+      - name: Scan for AWS Secret Access Keys
+        id: scan_secret_keys
+        run: |
+          echo "🔍 Scanning repository for exposed AWS Secret Access Keys..."
+          # AWS Secret Access Keys are 40-character base64 strings often appearing
+          # after keywords like aws_secret_access_key, AWS_SECRET_ACCESS_KEY, etc.
+          MATCHES=$(grep -rniE \
+            "(aws_secret_access_key|AWS_SECRET_ACCESS_KEY)[[:space:]]*[=:][[:space:]]*['\"]?[A-Za-z0-9/+=]{40}['\"]?" \
+            --exclude-dir=".git" \
+            --exclude="security-scan.yml" \
+            . 2>/dev/null || true)
+
+          if [ -n "$MATCHES" ]; then
+            echo "status=EXPOSED" >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "❌ Possible exposed AWS Secret Access Keys found:"
+            echo "$MATCHES"
+          else
+            echo "status=CLEAN" >> "$GITHUB_OUTPUT"
+            echo "✅ No exposed AWS Secret Access Keys found."
+          fi
+
+      - name: Report AWS Key Scan Summary
+        run: |
+          ACCESS_KEY_STATUS="${{ steps.scan_access_keys.outputs.status }}"
+          SECRET_KEY_STATUS="${{ steps.scan_secret_keys.outputs.status }}"
+
+          echo ""
+          echo "======================================"
+          echo "  🔐 AWS Key Exposure Report"
+          echo "======================================"
+          if [ "$ACCESS_KEY_STATUS" = "EXPOSED" ]; then
+            echo "  AWS Access Key IDs : ❌ EXPOSED"
+          else
+            echo "  AWS Access Key IDs : ✅ CLEAN"
+          fi
+          if [ "$SECRET_KEY_STATUS" = "EXPOSED" ]; then
+            echo "  AWS Secret Keys    : ❌ EXPOSED"
+          else
+            echo "  AWS Secret Keys    : ✅ CLEAN"
+          fi
+          echo "======================================"
+
+          if [ "$ACCESS_KEY_STATUS" = "EXPOSED" ] || [ "$SECRET_KEY_STATUS" = "EXPOSED" ]; then
+            echo ""
+            echo "🚨 ACTION REQUIRED: Remove exposed credentials immediately and rotate them in AWS IAM."
+            exit 1
+          fi
+
+  check-zip-files:
+    name: Check for ZIP Files in Repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Scan for ZIP Files
+        id: scan_zips
+        run: |
+          echo "🔍 Scanning repository for committed ZIP files..."
+          ZIP_FILES=$(find . -not -path "./.git/*" -type f \
+            \( -name "*.zip" -o -name "*.ZIP" \) 2>/dev/null || true)
+
+          if [ -n "$ZIP_FILES" ]; then
+            echo "status=FOUND" >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "❌ ZIP file(s) found in repository:"
+            echo "$ZIP_FILES"
+          else
+            echo "status=CLEAN" >> "$GITHUB_OUTPUT"
+            echo "✅ No ZIP files found in repository."
+          fi
+
+      - name: Report ZIP File Scan Summary
+        run: |
+          ZIP_STATUS="${{ steps.scan_zips.outputs.status }}"
+
+          echo ""
+          echo "======================================"
+          echo "  📦 ZIP File Report"
+          echo "======================================"
+          if [ "$ZIP_STATUS" = "FOUND" ]; then
+            echo "  ZIP files in repo : ❌ FOUND"
+          else
+            echo "  ZIP files in repo : ✅ NONE"
+          fi
+          echo "======================================"
+
+          if [ "$ZIP_STATUS" = "FOUND" ]; then
+            echo ""
+            echo "⚠️  ZIP files should not be committed. Remove them and add *.zip to .gitignore."
+            exit 1
+          fi
